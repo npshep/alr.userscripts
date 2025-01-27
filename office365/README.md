@@ -1,4 +1,19 @@
-MIT License
+A Little Office 365
+===================
+
+This folder contains a collection of userscripts that modify the behaviour and
+layout of various sections of Microsoft Office 365. See the top of each script
+for how to configure its behaviour.
+
+- `apprail2header.js` moves the app rail from the left to the header region,
+  replacing unwanted buttons in the header.
+- `apprail2none.js` removes the app rail altogether.
+- `disabletextsuggestions.js` disables the text suggestions widget that pops
+  up in OneDrive's text editor.
+
+I am not affiliated with Microsoft and all Microsoftd trademarks remain the
+property of Microsoft. Microsoft is free to change its site at any time in such
+a way that these scripts no longer work.
 
 Copyright (c) 2025 Nicholas Paul Sheppard (npsheppard@alittleresearch.com.au)
 
@@ -19,3 +34,16 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
+
+Known Bugs
+==========
+
+`apprail2header.js`
+- icons don't appear in the same order in the header as they in the app rail
+
+`disabletextsuggestions.js`
+- when the cursor is at the end of the line, the first press of the enter
+  key is consumed by the (invisible) suggestions box
+

@@ -1,4 +1,15 @@
-MIT License
+A Little ABC News
+=================
+
+This userscript streamlines the Australian Broadcasting Corporations's News
+web site, https://www.abc.net.au/news, by removing unwanted sections and
+hiding little-used sections. The appearance of each section can be configured
+by the siteConf structure at the top of streamline.js.
+
+I am not affiliated with the Australian Broadcasting Corporation and all
+ABC trademarks remain the property of the Australian Broadcasting Corporation.
+The ABC is free to change its site at any time in such a way that this script
+may no longer work.
 
 Copyright (c) 2025 Nicholas Paul Sheppard (npsheppard@alittleresearch.com.au)
 
@@ -19,3 +30,5 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
