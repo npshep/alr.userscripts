@@ -8,7 +8,7 @@ annoying as well.
 
 To use these scripts, you'll need to install a user script manager like
 Tampermonkey (https://www.tampermonkey.net) or
-Violentmonke ([https://violentmonkey.github.io).
+Violentmonkey (https://violentmonkey.github.io).
 
 Each sub-folder contains userscripts for a single web site as described below.
 Each script may be used by itself or in combination with others, though not
