@@ -7,15 +7,15 @@ web sites. From user forums, I gather many other people find them useless or
 annoying as well.
 
 To use these scripts, you'll need to install a user script manager like
-(Tampermonkey)[https://www.tampermonkey.net] or
-(Violentmonkey)[https://violentmonkey.github.io].
+Tampermonkey (https://www.tampermonkey.net) or
+Violentmonke ([https://violentmonkey.github.io).
 
 Each sub-folder contains userscripts for a single web site as described below.
 Each script may be used by itself or in combination with others, though not
 all combinations make sense.
 - `abcnews`: The Australian Broadcasting Corporation's news web site,
-   [https://www.abc.net.au/news]
-- `office365`: Microsoft Office 365, [https://www.office365.com]
+   https://www.abc.net.au/news
+- `office365`: Microsoft Office 365, https://www.office365.com
 
 See the README file in each sub-folder for a detailed description of the
 available tweaks. See the top of each userscript for configuration options
@@ -27,9 +27,9 @@ way that these tweaks no longer work.**
 
 Nick Sheppard
 E: npsheppard@alittleresearch.com.au
-W: [https://www.alittleresearch.com.au]
+W: https://www.alittleresearch.com.au
 
-Buy me a Ko-Fi: [https://ko-fi.com/npsheppard]
+Buy me a Ko-Fi: https://ko-fi.com/npsheppard
 
 Copyright (c) 2025 Nicholas Paul Sheppard
 
