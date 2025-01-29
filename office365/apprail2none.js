@@ -1,13 +1,11 @@
 // ==UserScript==
 // @name         Remove Outlook App Rail
 // @namespace    http://www.alittleresearch.com.au/
-// @version      2025-01-20
+// @version      2025-01-29
 // @description  Remove the app rail from Outlook.
 // @author       Nick Sheppard
-// @match        https://outlook.office.com/mail/*
-// @match        https://outlook.office.com/calendar/*
-// @match        https://outlook.live.com/mail/*
-// @match        https://outlook.live.com/calendar/*
+// @match        https://outlook.office.com/*
+// @match        https://outlook.live.com/*
 // @icon         https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant        none
 // ==/UserScript==
@@ -39,9 +37,6 @@
             }
         }
     });
-    leftRailObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
-
-})();
     leftRailObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
 
 })();

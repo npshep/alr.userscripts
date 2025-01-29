@@ -4,10 +4,8 @@
 // @version      2025-01-23
 // @description  Move Outlook's app rail to the header.
 // @author       Nick Sheppard
-// @match        https://outlook.office.com/mail/*
-// @match        https://outlook.office.com/calendar/*
-// @match        https://outlook.live.com/mail/*
-// @match        https://outlook.live.com/calendar/*
+// @match        https://outlook.office.com/*
+// @match        https://outlook.live.com/*
 // @icon         https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant        none
 // ==/UserScript==
@@ -118,9 +116,9 @@ function disconnectDocumentObserver() {
 // Respond to mutation of the header region.
 //
 // The header region is re-created many times over during building of the page,
-// and I haven't found any way of detecting the "final" creation. Therefore, this
-// function simply overwrites Outlook's header buttons region with the contents
-// of app rail every time Outlook comes up with a new header.
+// and I haven't found any way of detecting the "final" creation. Therefore,
+// this function simply overwrites Outlook's header buttons region with the
+// contents of the app rail every time Outlook comes up with a new header.
 //
 // Individual items from the app rail are identified by the class name
 // ___77lcry0, which is one out of many classes that they have.
@@ -154,21 +152,16 @@ function onO365HeaderMutation(mutations, observer) {
     // disconnect to document observer to prevent infinite recursion
     disconnectDocumentObserver();
 
-    // insert items from the app rail
+    // check for new items that have been added to the app rail
     const leftRailCollection = document.querySelectorAll("#LeftRail .___77lcry0");
     for (var k = 0; k < leftRailCollection.length; k++) {
         leftRailCollection.item(k).parentNode.removeChild(leftRailCollection.item(k));
         railButtons.push(leftRailCollection.item(k));
     }
+
+    // insert the app rail buttons at the start of the header button region
     for (var i = railButtons.length - 1; i >= 0 ; i--) {
-        // this inserts the buttons, but some other process removes them later
         headerButtonsRegion.insertAdjacentElement("afterbegin", railButtons[i]);
-
-        // this makes the buttons appear but they don't work
-        // headerButtonsRegion.insertAdjacentHTML("afterbegin", railButtons[i].outerHTML);
-
-        // this also makes the buttons appear but they don't work
-        // headerButtonsRegion.insertAdjacentElement("afterbegin", railButtons[i].cloneNode(true));
     }
 
     // reconnect the document observer

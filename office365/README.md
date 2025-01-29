@@ -11,7 +11,7 @@ for how to configure its behaviour.
 - `disabletextsuggestions.js` disables the text suggestions widget that pops
   up in OneDrive's text editor.
 
-I am not affiliated with Microsoft and all Microsoftd trademarks remain the
+I am not affiliated with Microsoft and all Microsoft trademarks remain the
 property of Microsoft. Microsoft is free to change its site at any time in such
 a way that these scripts no longer work.
 
@@ -41,7 +41,7 @@ Known Bugs
 ==========
 
 `apprail2header.js`
-- icons don't appear in the same order in the header as they in the app rail
+- icons don't appear in the same order in the header as in the app rail
 
 `disabletextsuggestions.js`
 - when the cursor is at the end of the line, the first press of the enter
