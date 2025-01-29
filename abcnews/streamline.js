@@ -122,6 +122,29 @@ function renderHidden(element) {
 // hovers over it. When clicked, the contents are hidden. Similarly, clicking
 // on the header region in the compressed state re-expands the component.
 //
+// The general structure of a rail component is as follows, where the xxxxx's
+// are code that differs from component to component but has no obvious
+// meaning.
+//
+//
+// <div id="..." or class="...">
+//   <!-- sometimes a div contains the Rail_root -->
+//     <div class="Rail_root__xxxxx Rail_sideScrolling__xxxxx">
+//       <div class="Rail_header__xxxxx">
+//         <h2>...</h2>
+//         <div>...</div>
+//       </div>
+//       <div class="Rail_scollNavigation__xxxxx">
+//         <button title="Move left"><svg .../></button>
+//         <button title="Move right"><svg .../></button>
+//       </div>
+//       <div class="Rail_content__xxxxx">
+//         <ul .../>
+//       </div>
+//     </div>
+//   <!-- end of optional containing div -->
+// </div>
+//
 // Input:
 //   element (DOMElement) - the root element of the rail component to be suppressed
 //   startCompressed (boolean) - true to start in the compressed state; false to start in the expanded state
