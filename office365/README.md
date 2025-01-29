@@ -7,6 +7,8 @@ for how to configure its behaviour.
 
 - `apprail2header.js` moves the app rail from the left to the header region,
   replacing unwanted buttons in the header.
+- `apprail2footer.js` moves the app rail to bottom of the left-hand panel,
+  where it was in previous versions of Outlook.
 - `apprail2none.js` removes the app rail altogether.
 - `disabletextsuggestions.js` disables the text suggestions widget that pops
   up in OneDrive's text editor.
@@ -40,10 +42,11 @@ Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
 Known Bugs
 ==========
 
-`apprail2header.js`
+`apprail2header.js` and `apprail2footer.js`
 - icons don't appear in the same order in the header as in the app rail
-- "More apps" doesn't always appear least, due to fault detection of this
+- "More apps" doesn't always appear least, due to faulty detection of this
   button in fetchAppRailCollection()
+- the unpin action requires re-loading to take effect
 
 `disabletextsuggestions.js`
 - when the cursor is at the end of the line, the first press of the enter
