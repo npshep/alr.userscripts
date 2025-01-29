@@ -42,6 +42,8 @@ Known Bugs
 
 `apprail2header.js`
 - icons don't appear in the same order in the header as in the app rail
+- "More apps" doesn't always appear least, due to fault detection of this
+  button in fetchAppRailCollection()
 
 `disabletextsuggestions.js`
 - when the cursor is at the end of the line, the first press of the enter

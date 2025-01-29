@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Outlook App Rail to Header
 // @namespace    http://www.alittleresearch.com.au/
-// @version      2025-01-23
+// @version      2025-01-29
 // @description  Move Outlook's app rail to the header.
 // @author       Nick Sheppard
 // @match        https://outlook.office.com/*
@@ -127,7 +127,6 @@ function disconnectDocumentObserver() {
 //   mutations - the mutations
 //   observer - the observer
 ///////////////////////////////////////////////////////////////////////////////
-var railButtons = [];
 function onO365HeaderMutation(mutations, observer) {
 
     // disconnect the observer; a new one will attach when Outlook re-creates the header region
@@ -152,19 +151,46 @@ function onO365HeaderMutation(mutations, observer) {
     // disconnect to document observer to prevent infinite recursion
     disconnectDocumentObserver();
 
-    // check for new items that have been added to the app rail
-    const leftRailCollection = document.querySelectorAll("#LeftRail .___77lcry0");
-    for (var k = 0; k < leftRailCollection.length; k++) {
-        leftRailCollection.item(k).parentNode.removeChild(leftRailCollection.item(k));
-        railButtons.push(leftRailCollection.item(k));
-    }
-
     // insert the app rail buttons at the start of the header button region
-    for (var i = railButtons.length - 1; i >= 0 ; i--) {
-        headerButtonsRegion.insertAdjacentElement("afterbegin", railButtons[i]);
+    const apps = fetchAppRailCollection();
+    for (var i = apps.length - 1; i >= 0 ; i--) {
+        headerButtonsRegion.insertAdjacentElement("afterbegin", apps[i]);
     }
 
     // reconnect the document observer
     connectDocumentObserver();
+
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Manage the collection of buttons on the app rail.
+//
+// App buttons appear on the app rail at various times during building of the
+// page. The fetchRailButtons() function checks for new buttons that have
+// appeared since the last invocation and moves them into the
+// appRailCollection array, from where they'll later be inserted into the
+// header region.
+///////////////////////////////////////////////////////////////////////////////
+var appRailCollection = [];
+function fetchAppRailCollection() {
+
+    // check for new items that have been added to the app rail
+    const leftRailCollection = document.querySelectorAll("#LeftRail .___77lcry0");
+    for (var i = 0; i < leftRailCollection.length; i++) {
+        // remove from the left rail
+        leftRailCollection.item(i).parentNode.removeChild(leftRailCollection.item(i));
+
+        // insert into the collection, leaving "More apps" last
+        if (appRailCollection.length > 0 &&
+            appRailCollection[appRailCollection.length - 1].ariaLabel === "More apps") {
+            appRailCollection.splice(appRailCollection.length, 0, leftRailCollection.item(i));
+        } else {
+            appRailCollection.push(leftRailCollection.item(i));
+        }
+    }
+
+    // return the collection for use by the callback
+    return appRailCollection;
 
 }
