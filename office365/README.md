@@ -43,12 +43,8 @@ Known Bugs
 ==========
 
 `apprail2header.js` and `apprail2footer.js`
-- icons don't appear in the same order in the header as in the app rail
-- "More apps" doesn't always appear least, due to faulty detection of this
-  button in fetchAppRailCollection()
 - the unpin action requires re-loading to take effect
 
 `disabletextsuggestions.js`
 - when the cursor is at the end of the line, the first press of the enter
   key is consumed by the (invisible) suggestions box
-

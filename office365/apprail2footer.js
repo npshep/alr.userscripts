@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Outlook App Rail to Footer
 // @namespace    http://www.alittleresearch.com.au/
-// @version      2025-01-29
+// @version      2025-02-12
 // @description  Move Outlook's app rail to the footer, where it was in older versions of Outlook.
 // @author       Nick Sheppard
 // @match        https://outlook.office.com/*
@@ -157,23 +157,41 @@ function onMainModuleMutation(mutations, observer) {
 // appeared since the last invocation and moves them into the
 // appRailCollection array, from where they'll later be inserted into the
 // header region.
+//
+// The app rail is a div with id LeftRail. This div is further divided into two
+// div more elements, one with class ___1w2h5wn that contains the applications
+// and another with class ___1fkhojs that contains the "More apps" button. Each
+// button is contained in a div with class ___77lcry0. We preserve the order of
+// the two div's using the appRailSeparator variable.
+//
 ///////////////////////////////////////////////////////////////////////////////
 var appRailCollection = [];
+var appRailSeparator = 0;
 function fetchAppRailCollection() {
 
-    // check for new items that have been added to the app rail
-    const leftRailCollection = document.querySelectorAll("#LeftRail .___77lcry0");
-    for (var i = 0; i < leftRailCollection.length; i++) {
-    	// remove from the left rail
-        leftRailCollection.item(i).parentNode.removeChild(leftRailCollection.item(i));
+    // check for new items added to the top div of the left rail
+    const leftRailCollection1 = document.querySelectorAll("#LeftRail .___1w2h5wn .___77lcry0");
+    for (let i = 0; i < leftRailCollection1.length; i++) {
+        // remove from the left rail
+        leftRailCollection1.item(i).parentNode.removeChild(leftRailCollection1.item(i));
 
-        // insert into the collection, leaving "More apps" last
-        if (appRailCollection.length > 0 &&
-        	appRailCollection[appRailCollection.length - 1].ariaLabel === "More apps") {
-        	appRailCollection.splice(appRailCollection.length, 0, leftRailCollection.item(i));
+        // insert into the collection before the separator
+        if (appRailCollection.length > 0) {
+            appRailCollection.splice(appRailSeparator, 0, leftRailCollection1.item(i));
         } else {
-            appRailCollection.push(leftRailCollection.item(i));
+            appRailCollection.push(leftRailCollection1.item(i));
         }
+        appRailSeparator++;
+    }
+
+    // check for new items added to the bottom div of the left rail
+    const leftRailCollection2 = document.querySelectorAll("#LeftRail .___1fkhojs .___77lcry0");
+    for (let i = 0; i < leftRailCollection2.length; i++) {
+        // remove from the left rail
+        leftRailCollection2.item(i).parentNode.removeChild(leftRailCollection2.item(i));
+
+        // insert into the collection at the end
+        appRailCollection.push(leftRailCollection2.item(i));
     }
 
     // return the collection for use by the callback
