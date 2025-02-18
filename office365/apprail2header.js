@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Outlook App Rail to Header
 // @namespace    http://www.alittleresearch.com.au/
-// @version      2025-02-18
+// @version      2025-02-19
 // @description  Move Outlook's app rail to the header.
 // @author       Nick Sheppard
 // @match        https://outlook.office.com/*
@@ -123,7 +123,7 @@ function disconnectDocumentObserver() {
 //
 // Each item from the app rail is contained by a div with class ___77lcry0,
 // which is one out of many classes they have. We don't need to identify them
-// individually, so the class names works for out purposes.
+// individually, so the class name works for our purposes.
 //
 // Input:
 //   mutations - the mutations
@@ -131,7 +131,7 @@ function disconnectDocumentObserver() {
 ///////////////////////////////////////////////////////////////////////////////
 function onMainModuleMutation(mutations, observer) {
 
-    // disconnect the observer; a new one will attach when Outlook re-creates the header region
+    // disconnect the observer; a new one will attach when Outlook updates the main module
     if (observer != null) {
         observer.disconnect();
     }

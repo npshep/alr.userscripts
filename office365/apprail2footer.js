@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Outlook App Rail to Footer
 // @namespace    http://www.alittleresearch.com.au/
-// @version      2025-02-12
+// @version      2025-02-19
 // @description  Move Outlook's app rail to the footer, where it was in older versions of Outlook.
 // @author       Nick Sheppard
 // @match        https://outlook.office.com/*
@@ -10,20 +10,9 @@
 // @grant        none
 // ==/UserScript==
 
-var documentObserver = null;
-
-(function() {
-    'use strict';
-
-    // create the document observer and start observing
-    createDocumentObserver();
-    connectDocumentObserver();
-
-})();
-
 
 ///////////////////////////////////////////////////////////////////////////////
-// Document observer functions.
+// Main function.
 //
 // The document observer looks for changes to the left rail (id LeftRail)
 // and the main module (id MainModule).
@@ -33,16 +22,16 @@ var documentObserver = null;
 //
 // The main module is rebuilt several times during construction of the page,
 // and again when switching from Mail to Calendar view, and vice versa. Each
-// time, we attach a new observer to it, which updates the footer for the
-// new main module.
+// time, we rebuild the app rail.
 ///////////////////////////////////////////////////////////////////////////////
 
-// Create the document observer
-function createDocumentObserver() {
+var leftRail = null;
+var mainModule = null;
 
-    documentObserver = new MutationObserver((mutations) => {
-        var leftRail = null;
-        var mainModule = null;
+(function() {
+    'use strict';
+
+    var documentObserver = new MutationObserver((mutations) => {
         for (const m of mutations) {
             for (const node of m.addedNodes) {
                 var ancestor = node;
@@ -65,29 +54,13 @@ function createDocumentObserver() {
             leftRail.style.display = "none";
         }
         if (mainModule != null) {
-            // observe the main module; the callback function will insert the rail items into the footer
-            var mainModuleObserver = new MutationObserver(onMainModuleMutation);
-            mainModuleObserver.observe(mainModule, { childList: true, subtree: true, attributes: false, characterData: false });
+            // update the app rail items in the footer
+            onMainModuleMutation(mutations, documentObserver);
         }
     });
-
-}
-
-
-// Start the document observer
-function connectDocumentObserver() {
-
     documentObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
 
-}
-
-
-// Stop the document observer
-function disconnectDocumentObserver() {
-
-    documentObserver.disconnect();
-
-}
+})();
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -108,7 +81,7 @@ function disconnectDocumentObserver() {
 ///////////////////////////////////////////////////////////////////////////////
 function onMainModuleMutation(mutations, observer) {
 
-    // disconnect the observer; a new one will attach when Outlook re-creates the main module
+    // disconnect the observerwhile we make our own modifications
     if (observer != null) {
         observer.disconnect();
     }
@@ -132,20 +105,22 @@ function onMainModuleMutation(mutations, observer) {
             calendarDiv.parentElement.appendChild(bottomRail);
         } else {
             console.log("Couldn't find a location for the bottom rail.");
-            return;
         }
     }
 
-    // disconnect to document observer to prevent infinite recursion
-    disconnectDocumentObserver();
-
-    const apps = fetchAppRailCollection();
-    for (var i = 0; i < apps.length ; i++) {
-        bottomRail.appendChild(apps[i]);
+    // insert the app rail buttons into the bottom rail
+    if (bottomRail != null) {
+        const apps = fetchAppRailCollection();
+        for (var i = 0; i < apps.length ; i++) {
+            bottomRail.appendChild(apps[i]);
+        }
     }
 
-    // reconnect the document observer
-    connectDocumentObserver();
+    // restart the observer
+    if (observer != null) {
+        observer.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    }
+
 }
 
 
