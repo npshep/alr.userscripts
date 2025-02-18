@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Outlook App Rail to Header
 // @namespace    http://www.alittleresearch.com.au/
-// @version      2025-02-12
+// @version      2025-02-18
 // @description  Move Outlook's app rail to the header.
 // @author       Nick Sheppard
 // @match        https://outlook.office.com/*
@@ -49,14 +49,15 @@ var documentObserver = null;
 // Document observer functions.
 //
 // The document observer looks for changes to the left rail (id LeftRail)
-// and the header region (id o365header).
+// and the main application panel (id MainModule).
 //
 // The left rail is only created once. As soon as we find it, we can set its
 // display style to none, with nothing further to do.
 //
-// The header region is rebuilt many times during construction of the page, so
-// we attach a new observer to it, which updates the contents of the header
-// buttons region (id headerButtonsRegionId) after each rebuild.
+// The main module is rebuilt several times during construction of the page,
+// and again when switching from Mail to Calendar view, and vice versa. Each
+// time, we attach a new observer to it, which updates the header buttons
+// region (id headerButtonsRegionId) for the new main module.
 ///////////////////////////////////////////////////////////////////////////////
 
 // Create the document observer
@@ -64,7 +65,7 @@ function createDocumentObserver() {
 
     documentObserver = new MutationObserver((mutations) => {
         var leftRail = null;
-        var o365header = null;
+        var mainModule = null;
         for (const m of mutations) {
             for (const node of m.addedNodes) {
                 var ancestor = node;
@@ -73,9 +74,9 @@ function createDocumentObserver() {
                         // found the left rail
                         leftRail = ancestor;
                         break;
-                    } else if (ancestor.id === "o365header") {
-                        // found the header region
-                        o365header = ancestor;
+                    } else if (ancestor.id === "MainModule") {
+                        // found the main module
+                        mainModule = ancestor;
                         break;
                     }
                     ancestor = ancestor.parentNode;
@@ -86,10 +87,10 @@ function createDocumentObserver() {
             // hide the left rail
             leftRail.style.display = "none";
         }
-        if (o365header != null) {
-            // observe the header region; the callback function will insert the rail items into the buttons region
-            var o365HeaderObserver = new MutationObserver(onO365HeaderMutation);
-            o365HeaderObserver.observe(o365header, { childList: true, subtree: true, attributes: false, characterData: false });
+        if (mainModule != null) {
+            // observe the main module; the callback function will insert the rail items into the header
+            var mainModuleObserver = new MutationObserver(onMainModuleMutation);
+            mainModuleObserver.observe(mainModule, { childList: true, subtree: true, attributes: false, characterData: false });
         }
     });
 
@@ -113,21 +114,22 @@ function disconnectDocumentObserver() {
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Respond to mutation of the header region.
+// Respond to mutation of the main module, inserting the app rail into the
+// header.
 //
-// The header region is re-created many times over during building of the page,
-// and I haven't found any way of detecting the "final" creation. Therefore,
-// this function simply overwrites Outlook's header buttons region with the
-// contents of the app rail every time Outlook comes up with a new header.
+// The header buttons are contained within a div with id headerButtonsRegionId.
+// Each button is identified by a class name, which is used as a key in the
+// headerButtonsConf structure.
 //
-// Individual items from the app rail are identified by the class name
-// ___77lcry0, which is one out of many classes that they have.
+// Each item from the app rail is contained by a div with class ___77lcry0,
+// which is one out of many classes they have. We don't need to identify them
+// individually, so the class names works for out purposes.
 //
 // Input:
 //   mutations - the mutations
 //   observer - the observer
 ///////////////////////////////////////////////////////////////////////////////
-function onO365HeaderMutation(mutations, observer) {
+function onMainModuleMutation(mutations, observer) {
 
     // disconnect the observer; a new one will attach when Outlook re-creates the header region
     if (observer != null) {
