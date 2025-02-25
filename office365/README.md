@@ -5,13 +5,15 @@ This folder contains a collection of userscripts that modify the behaviour and
 layout of various sections of Microsoft Office 365. See the top of each script
 for how to configure its behaviour.
 
-- `apprail2header.js` moves the app rail from the left to the header region,
-  replacing unwanted buttons in the header.
-- `apprail2footer.js` moves the app rail to bottom of the left-hand panel,
-  where it was in previous versions of Outlook.
-- `apprail2none.js` removes the app rail altogether.
+- `apprail2header.js` moves Outlook's app rail from the left to the header
+  region, replacing unwanted buttons in the header.
+- `apprail2footer.js` moves Outlook's app rail to bottom of the left-hand
+  panel, where it was in previous versions of Outlook.
+- `apprail2none.js` removes Outlook's app rail altogether.
 - `disabletextsuggestions.js` disables the text suggestions widget that pops
   up in OneDrive's text editor.
+- `texteditorstatusbar.js` adds a status bar the OneDrive text editor
+  (currently showing only the cursor position).
 
 I am not affiliated with Microsoft and all Microsoft trademarks remain the
 property of Microsoft. Microsoft is free to change its site at any time in such
