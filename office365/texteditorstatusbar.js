@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OneDrive Text Editor Status Bar
 // @namespace    https://www.alittleresearch.com.au
-// @version      2025-02-25
+// @version      2025-02-28
 // @description  Add a status bar to OneDrive's text editor.
 // @author       Nick Sheppard
 // @match        https://*.sharepoint.com/my*
@@ -95,8 +95,9 @@ function fetchStatusBar() {
             // add some styling
             const statusStyle = document.createElement("style");
             statusStyle.type = "text/css";
-            statusStyle.innerText = "." + statusBarClassName + " { " +
-                "padding: 0px 8px 0px 0px;" +
+            statusStyle.innerText ="." + statusBarClassName + ":not(:first-child) { " +
+                "float: right;" +
+                "padding: 0px 8px 0px 8px;" +
             "}";
             document.head.appendChild(statusStyle);
         }
@@ -137,6 +138,7 @@ function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
 
 }
 
+
 // Get the cursor position corresponding to a given number of pixels from the left
 // edge, based very loosely on the measureText() method from
 // https://www.geeksforgeeks.org/calculate-the-width-of-the-text-in-javascript/.
@@ -167,7 +169,7 @@ function getCharactersForHorizontalOffset(pixels, fontSize, fontFamily) {
     }
     graphicsContext.font = fontSize + fontFamily;
 
-    // extend the cursors stops until we have one for the desired number of pixels
+    // extend the cursor stops until we have one for the desired number of pixels
     var sampleText = "x".repeat(cursorStops.length);
     var sampleWidth = graphicsContext.measureText(sampleText).width;
     while (sampleWidth < pixels) {
