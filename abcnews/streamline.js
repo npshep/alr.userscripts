@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         A Little ABC News
 // @namespace    http://www.alittleresearch.com.au
-// @version      2025-01-22
+// @version      2025-04-27
 // @description  Remove undesired components from the ABC News web site.
 // @author       Nick Sheppard
 // @match        https://www.abc.net.au/news
@@ -38,7 +38,7 @@ const siteConf = {
   'stateTopStories': 'default',
   'justIn': 'default',
   'todaysTopics': 'expanded',
-  'Home_forYouFeeds__4ntGm': 'compressed',
+  'Home_mainSecondary__HRz6J': 'compressed',
   'localNews': 'default',
   'videoShorts': 'compressed',
   'moreNews': 'expanded',
