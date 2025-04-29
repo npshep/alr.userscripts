@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         A Little ABC News
 // @namespace    http://www.alittleresearch.com.au
-// @version      2025-04-27
+// @version      2025-04-30
 // @description  Remove undesired components from the ABC News web site.
 // @author       Nick Sheppard
 // @match        https://www.abc.net.au/news
@@ -17,13 +17,17 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// The ABC News site identifies some components by an ID and others by a class
-// name. The structure below maps each ID and class name of interest to how it
-// will be rendered. Options are as follows:
+// The ABC News site identifies some components by an ID, some by a class name,
+// and some not at all. Each key of the siteConf structure identifies a
+// component by (i) id if the key begins with #; (ii) class name if the key
+// begins with .; or (iii) the conents of an <h2> element otherwise.
+//
+// The value for each key controls how that component will be rendered. Options
+// are as follows:
 //
 // 'default': display as usual
 // 'hidden': do not display
-// 'compressed': show only the header, which can be expanded by clicking 
+// 'compressed': show only the header, which can be expanded by clicking
 // 'expanded': the same as 'expandable', but starting in the expanded state
 //
 // Note that the compressed/expanded state isn't saved between visits;
@@ -34,26 +38,59 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 const siteConf = {
-  'topStories': 'default',
-  'stateTopStories': 'default',
-  'justIn': 'default',
-  'todaysTopics': 'expanded',
-  'Home_mainSecondary__HRz6J': 'compressed',
-  'localNews': 'default',
-  'videoShorts': 'compressed',
-  'moreNews': 'expanded',
-  'theBigPicture': 'compressed',
-  'aroundAustralia': 'expanded',
-  'politics': 'expanded',
-  'world': 'expanded',
-  'business': 'expanded',
-  'sport': 'expanded',
-  'lifestyle': 'expanded',
-  'entertainment': 'expanded',
-  // the extra Just In box that sticks to the right when scrolling down
-  'Home_justin__mrrHu Home_justinSticky__EkueF': 'hidden',
-  // the category headings that appear above each story
-  'Tag_container__7_5W6': 'default'
+    // Top Stories
+    '#topStories': 'default',
+
+    // State Top Storeis
+    '#stateTopStories': 'default',
+
+    // the fixed copy of Just In that appears at the top right)
+    '#justIn': 'default',
+
+    // Today's Topics
+    '#todaysTopics': 'expanded',
+
+    // For You
+    'For You': 'compressed',
+
+    // Local News
+    '#localNews': 'default',
+
+    // Video Shorts
+    '#videoShorts': 'compressed',
+
+    // More News
+    '#moreNews': 'expanded',
+
+    // Everyone's Talking About...
+    '#theBigPicture': 'compressed',
+
+    // Around Australia
+    '#aroundAustralia': 'expanded',
+
+    // Politics
+    '#politics': 'expanded',
+
+    // World
+    '#world': 'expanded',
+
+    // Business
+    '#business': 'expanded',
+
+    // Sport
+    '#sport': 'expanded',
+
+    // Lifestyle
+    '#lifestyle': 'expanded',
+
+    // Entertainment
+    '#entertainment': 'expanded',
+
+    // the floating copy of Just In box that sticks to the right when scrolling done
+    '.Home_justin__mrrHu Home_justinSticky__EkueF': 'hidden',
+
+    // the category headings that appear above each story
+    '.Tag_container__7_5W6': 'default'
 };
 
 (function() {
@@ -81,30 +118,76 @@ const siteConf = {
 })();
 
 
-// Apply a renderer to all of the elements with a given id or class name.
+// Apply a renderer to all of the elements matching a given key from the
+// siteConf structure.
 //
 // Input:
-//   key - the id or class name of the element
+//   key - the key from the siteConf structure
 //   render - a function taking a single DOMElement object as input
 function applyRenderer(key, render) {
 
-    // search for an element with the given id
-    const element = document.getElementById(key);
-    if (element != null) {
-    	render(element);
-    	return;
-    }
+    if (key.charAt(0) === "#") {
 
-    // search for elements with the given class name
-    const elements = document.getElementsByClassName(key);
-    if (elements != null) {
-        for (var i = 0; i < elements.length; i++) {
-            render(elements[i]);
+        // component identified by id
+        const element = document.getElementById(key.substring(1, key.length));
+        if (element != null) {
+            render(element);
+        }
+
+    } else if (key.charAt(0) === ".") {
+
+        // component identified by class name
+        const elements = document.getElementsByClassName(key.substring(1, key.length));
+        if (elements != null) {
+            for (let i = 0; i < elements.length; i++) {
+                render(elements[i]);
+            }
+        }
+
+    } else {
+
+        // component identified by <h2>
+        const headings = document.getElementsByTagName("H2");
+        if (headings != null) {
+            for (let i = 0; i < headings.length; i++) {
+                if (headings[i].innerHTML === key) {
+                    render(findRailRoot(headings[i]));
+                }
+            }
         }
     }
 
 }
 
+
+// Find the root element of a rail component associated with a given
+// element. The rail component may either enclose the element, or be
+// contained within the element.
+//
+// Input:
+//  element (DOMElement) - an element with the rail component
+//
+// Returns: the root element of the rail component, or null if no element is found
+function findRailRoot(element) {
+
+    // first, search downwards for a rail component contained within the element
+    let railRootElement = element;
+    while (railRootElement != null && (!railRootElement.className == null || !railRootElement.className.startsWith("Rail_root__"))) {
+        railRootElement = railRootElement.firstElementChild;
+    }
+    if (railRootElement != null) {
+        return railRootElement;
+    }
+
+    // now search upwards for a rail component containing the element
+    railRootElement = element;
+    while (railRootElement != null && (!railRootElement.className == null || !railRootElement.className.startsWith("Rail_root__"))) {
+        railRootElement = railRootElement.parentElement;
+    }
+
+    return railRootElement;
+
+}
 
 // Hide a component by setting its display style to "none".
 //
@@ -151,10 +234,7 @@ function renderHidden(element) {
 function renderExpandable(element, startCompressed = false) {
 
     // find the rail root
-    var railRootElement = element;
-    while (railRootElement != null && (!railRootElement.className == null || !railRootElement.className.startsWith("Rail_root__"))) {
-        railRootElement = railRootElement.firstElementChild;
-    }
+    let railRootElement = findRailRoot(element);
     if (railRootElement == null) {
         // couldn't find the rail root; bail out
         console.log("Couldn't find the rail root for " + element);
@@ -162,10 +242,10 @@ function renderExpandable(element, startCompressed = false) {
     }
 
     // get the components of the rail root
-    var railHeaderElement = null;
-    var railNavigationElement = null;
-    var railContentElement = null;
-    var railChild = railRootElement.firstElementChild;
+    let railHeaderElement = null;
+    let railNavigationElement = null;
+    let railContentElement = null;
+    let railChild = railRootElement.firstElementChild;
     while (railChild != null) {
         if(railChild.className != null) {
             if (railChild.className.startsWith("Rail_header__")) {
