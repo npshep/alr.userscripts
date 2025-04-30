@@ -111,6 +111,14 @@ const siteConf = {
         		applyRenderer(key, (element) => { renderExpandable(element, false); });
         		break;
 
+            case 'default':
+                // do nothing
+                break;
+
+            default:
+                console.log("Invalid value '" + siteConf[key] + "' for configuration key " + key);
+                break;
+
         }
 
     }
