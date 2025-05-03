@@ -1,12 +1,14 @@
 // ==UserScript==
-// @name         Outlook App Rail to Header
-// @namespace    http://www.alittleresearch.com.au/
-// @version      2025-02-19
-// @description  Move Outlook's app rail to the header.
-// @author       Nick Sheppard
-// @match        https://outlook.office.com/*
-// @match        https://outlook.live.com/*
-// @icon         https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
+// @name             Outlook App Rail to Header
+// @namespace        http://www.alittleresearch.com.au/
+// @version          2025-05-03
+// @description      Move Outlook's app rail to the header.
+// @author           Nick Sheppard
+// @license          MIT
+// @contributionURL  https://ko-fi.com/npsheppard
+// @match            https://outlook.office.com/*
+// @match            https://outlook.live.com/*
+// @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant        none
 // ==/UserScript==
 

@@ -1,11 +1,13 @@
 // ==UserScript==
-// @name         A Little ABC News
-// @namespace    http://www.alittleresearch.com.au
-// @version      2025-04-30
-// @description  Remove undesired components from the ABC News web site.
-// @author       Nick Sheppard
-// @match        https://www.abc.net.au/news
-// @icon         https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
+// @name             A Little ABC News
+// @namespace        https://www.alittleresearch.com.au
+// @version          2025-05-03
+// @description      Remove undesired components from the ABC News web site.
+// @author           Nick Sheppard
+// @license          MIT
+// @contributionURL  https://ko-fi.com/npsheppard
+// @match            https://www.abc.net.au/news
+// @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant        none
 // ==/UserScript==
 
@@ -20,7 +22,7 @@
 // The ABC News site identifies some components by an ID, some by a class name,
 // and some not at all. Each key of the siteConf structure identifies a
 // component by (i) id if the key begins with #; (ii) class name if the key
-// begins with .; or (iii) the conents of an <h2> element otherwise.
+// begins with .; or (iii) the contents of an <h2> element otherwise.
 //
 // The value for each key controls how that component will be rendered. Options
 // are as follows:
