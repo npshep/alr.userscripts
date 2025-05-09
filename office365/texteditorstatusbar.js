@@ -1,15 +1,18 @@
 // ==UserScript==
-// @name         OneDrive Text Editor Status Bar
-// @namespace    https://www.alittleresearch.com.au
-// @version      2025-02-28
-// @description  Add a status bar to OneDrive's text editor.
-// @author       Nick Sheppard
-// @match        https://*.sharepoint.com/my*
-// @match        https://*.sharepoint.com/personal/*
-// @match        https://m365.cloud.microsoft/onedrive/*
-// @match        https://onedrive.live.com/*
-// @icon         https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
-// @grant        none
+// @name             OneDrive Text Editor Status Bar
+// @namespace        https://www.alittleresearch.com.au
+// @version          2025-05-09
+// @description      Add a status bar to OneDrive's text editor.
+// @author           Nick Sheppard
+// @author           Nick Sheppard
+// @license          MIT
+// @contributionURL  https://ko-fi.com/npsheppard
+// @match            https://*.sharepoint.com/my*
+// @match            https://*.sharepoint.com/personal/*
+// @match            https://m365.cloud.microsoft/onedrive/*
+// @match            https://onedrive.live.com/*
+// @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
+// @grant            none
 // ==/UserScript==
 
 // Main function.
@@ -18,7 +21,7 @@
 // in others it's contained in .od-OneUpTextFile-editor > .TextViewer-frame > .monaco-editor.
 //
 // Either way, the editorObserver object waits for the monaco-editor element to appear, then
-// build the status bar and attaches observers for each event that would update the status.
+// builds the status bar and attaches observers for each event that would update the status.
 (function() {
     'use strict';
 
