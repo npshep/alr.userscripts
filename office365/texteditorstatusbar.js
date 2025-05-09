@@ -4,7 +4,6 @@
 // @version          2025-05-09
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
-// @author           Nick Sheppard
 // @license          MIT
 // @contributionURL  https://ko-fi.com/npsheppard
 // @match            https://*.sharepoint.com/my*
@@ -67,33 +66,56 @@ function fetchStatusBar() {
     // Get the title bar.
     //
     // In some versions, the title bar is a DIV with class od-OneUpTextFile-title;
-    // in others, it is OneUpTextFileTitle_04a30d0d. I don't know what the
-    // 04a30d0d means.
+    // in others, it is like OneUpTextFileTitle_xxxxxxxx, where xxxxxxxx is a
+    // hexadecimal number that changes from time to time.
     //
     // We choose a class name for the status bar that follows the convention used
     // in whatever version of the text editor that we're working with
-    var titleBar = document.getElementsByClassName("od-OneUpTextFile-title");
-    var statusBarClassName = "od-OneUpTextFile-status";
-    if (titleBar.length == 0) {
-        titleBar = document.getElementsByClassName("OneUpTextFileTitle_04a30d0d");
-        statusBarClassName = "OneUpTextFileStatus_04a30d0d";
+    let titleBar = null;
+    let titleBarList = document.getElementsByClassName("od-OneUpTextFile-title");
+    let statusBarClassName = "od-OneUpTextFile-status";
+    if (titleBarList.length == 0) {
+        // search upwards from oneUpTextEditor to find the OneUpTextFileContent_xxxxxxxx container
+        let textEditor = document.getElementsByClassName("oneUpTextEditor");
+        let textFileContent = (textEditor.length > 0) ? textEditor[0] : null;
+        while (textFileContent != null && (textFileContent.className == null ||
+            !textFileContent.className.startsWith("OneUpTextFileContent"))) {
+            textFileContent = textFileContent.parentElement;
+        }
+
+        // now search for the OneUpTextFileTitle_xxxxxxxx child
+        let textFileTitle = (textFileContent != null)? textFileContent.firstElementChild : null;
+        while (textFileTitle != null && (textFileTitle.className == null ||
+            !textFileTitle.className.startsWith("OneUpTextFileTitle"))) {
+            textFileTitle = textFileTitle.nextElementSibling;
+        }
+
+        // finally, set the status bar class name
+        statusBarClassName = "OneUpTextFileStatus";
+        if (textFileTitle != null) {
+            titleBar = textFileTitle;
+            statusBarClassName = statusBarClassName +
+                textFileTitle.classList.item(0).slice(18, textFileTitle.classList.item(0).length);
+        }
+    } else {
+        titleBar = titleBarList.item(0);
     }
 
-    if (titleBar.length > 0) {
-        if (titleBar[0].childElementCount == 0) {
+    if (titleBar != null) {
+        if (titleBar.childElementCount == 0) {
             // filename section
             const filenameSpan = document.createElement("span");
             filenameSpan.className = statusBarClassName;
-            filenameSpan.innerHTML = titleBar[0].innerHTML;
+            filenameSpan.innerHTML = titleBar.innerHTML;
 
             // cursor position section
             const cursorSpan = document.createElement("span");
             cursorSpan.className = statusBarClassName;
 
             // replace the original title bar with the status bar
-            titleBar[0].innerHTML = "";
-            titleBar[0].appendChild(filenameSpan);
-            titleBar[0].appendChild(cursorSpan);
+            titleBar.innerHTML = "";
+            titleBar.appendChild(filenameSpan);
+            titleBar.appendChild(cursorSpan);
 
             // add some styling
             const statusStyle = document.createElement("style");
@@ -124,7 +146,7 @@ function fetchStatusBar() {
 function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
 
     // find the div containing the cursor
-    var cursor = document.querySelector(".cursors-layer > .cursor");
+    let cursor = document.querySelector(".cursors-layer > .cursor");
     if (cursor != null) {
         // update the status bar
         const statusBar = document.getElementsByClassName(statusBarClassName);
@@ -157,7 +179,7 @@ var graphicsContext = null;
 function getCharactersForHorizontalOffset(pixels, fontSize, fontFamily) {
 
     // look for an existing cursor stop matching the input number of pixels
-    var i = 0;
+    let i = 0;
     while (i < cursorStops.length && cursorStops[i] < pixels) {
         i++;
     }
@@ -173,8 +195,8 @@ function getCharactersForHorizontalOffset(pixels, fontSize, fontFamily) {
     graphicsContext.font = fontSize + fontFamily;
 
     // extend the cursor stops until we have one for the desired number of pixels
-    var sampleText = "x".repeat(cursorStops.length);
-    var sampleWidth = graphicsContext.measureText(sampleText).width;
+    let sampleText = "x".repeat(cursorStops.length);
+    let sampleWidth = graphicsContext.measureText(sampleText).width;
     while (sampleWidth < pixels) {
         cursorStops.push[sampleWidth];
         i++;
