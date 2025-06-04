@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2025-05-09
+// @version          2025-06-04
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -13,6 +13,11 @@
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant            none
 // ==/UserScript==
+
+
+// true to display the text suggestions widget, false to suppress it
+let showSuggestWidget = false;
+
 
 // Main function.
 //
@@ -46,6 +51,15 @@
                         var cursorObserver = new MutationObserver((mutations) => { onCursorsLayerMutation(mutations, statusBarClassName, 1) });
                         cursorObserver.observe(cursorsLayer[0], { childList: false, subtree: true, attributes: true, characterData: false });
                     }
+                }
+
+                // The suggestions box is a DIV with class "suggest-widget" created
+                // the first time the text editor makes a suggestion. Thereafter,
+                // its visibility is toggled by adding and removing the "visible"
+                // class.
+                if (node.tagName === "DIV" && node.classList !== undefined && node.classList.contains("suggest-widget")) {
+                    let suggestWidgetObserver = new MutationObserver(onSuggestWidgetMutation);
+                    suggestWidgetObserver.observe(node, { childList: false, subtree: false, attributes: true, characterData: false });
                 }
             }
         }
@@ -112,10 +126,21 @@ function fetchStatusBar() {
             const cursorSpan = document.createElement("span");
             cursorSpan.className = statusBarClassName;
 
+            // text suggestions section
+            const suggestionsSpan = document.createElement("span");
+            suggestionsSpan.className = statusBarClassName;
+            const suggestionsButton = document.createElement("button");
+            suggestionsSpan.appendChild(suggestionsButton);
+            suggestionsButton.className = "ms-Button ms-Button--commandBar ms-CommandBarItem-link";
+            suggestionsButton.onclick = function() { onStatusBarSuggestClick(statusBarClassName, 2) };
+            suggestionsButton.innerHTML = "<span class=\"ms-Button-label\">" +
+                "Text Suggestions: " + (showSuggestWidget ? "On" : "Off") + "</span>";
+
             // replace the original title bar with the status bar
             titleBar.innerHTML = "";
             titleBar.appendChild(filenameSpan);
             titleBar.appendChild(cursorSpan);
+            titleBar.appendChild(suggestionsSpan);
 
             // add some styling
             const statusStyle = document.createElement("style");
@@ -129,6 +154,22 @@ function fetchStatusBar() {
     }
 
     return statusBarClassName;
+}
+
+
+// Respond to a click on text suggestions control in the status bar.
+//
+// Input:
+//   statusBarClassName - the class name of the status bar elements
+//   statusBarIndex - the index of the cursor position in the status bar
+function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
+
+    showSuggestWidget = !showSuggestWidget;
+    const statusBar = document.getElementsByClassName(statusBarClassName);
+    if (statusBarIndex < statusBar.length) {
+        statusBar[statusBarIndex].firstChild.firstChild.innerText = "Text Suggestions: " + (showSuggestWidget ? "On" : "Off");
+    }
+
 }
 
 
@@ -163,6 +204,24 @@ function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
 
 }
 
+
+// Respond to the appearance of the text suggestions widget.
+//
+// Input:
+//   mutations - the list of mutations
+//   observer - the observer that triggered this event
+function onSuggestWidgetMutation(mutations, observer) {
+
+    for (const m of mutations) {
+        if (m.attributeName === "class") {
+            // disconnect before changing the style, otherwise we get an infinite loop
+            observer.disconnect();
+            m.target.style.display = showSuggestWidget ? "" : "none";
+            observer.observe(m.target, { childList: false, subtree: false, attributes: true, characterData: false });
+        }
+    }
+
+}
 
 // Get the cursor position corresponding to a given number of pixels from the left
 // edge, based very loosely on the measureText() method from
