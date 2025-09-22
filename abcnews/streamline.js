@@ -52,6 +52,9 @@ const siteConf = {
     // Dive Deeper (formerly called Today's Topics)
     '#todaysTopics': 'expanded',
 
+    // Story Feeds
+    'Story Feeds': 'compressed',
+
     // For You
     'For You': 'compressed',
 
