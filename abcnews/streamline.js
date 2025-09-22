@@ -98,6 +98,7 @@ const siteConf = {
     '.Tag_container__7_5W6': 'default'
 };
 
+
 (function() {
     'use strict';
 
@@ -123,9 +124,7 @@ const siteConf = {
             default:
                 console.log("Invalid value '" + siteConf[key] + "' for configuration key " + key);
                 break;
-
         }
-
     }
 
 })();
@@ -297,4 +296,5 @@ function renderExpandable(element, startCompressed = false) {
 function renderHidden(element) {
 
     element.style.display = "none";
+
 }
