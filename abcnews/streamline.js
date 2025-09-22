@@ -49,7 +49,7 @@ const siteConf = {
     // the fixed copy of Just In that appears at the top right)
     '#justIn': 'default',
 
-    // Today's Topics
+    // Dive Deeper (formerly called Today's Topics)
     '#todaysTopics': 'expanded',
 
     // For You
