@@ -199,16 +199,6 @@ function findRailRoot(element) {
 
 }
 
-// Hide a component by setting its display style to "none".
-//
-// Input:
-//   element (DOMElement) - the DOM element at the root of the component to be suppressed
-//
-function renderHidden(element) {
-
-    element.style.display = "none";
-}
-
 
 // Make a "rail" component expandable. In the expanded state, the component
 // displays as usual, but its header region changes colour when the cursor
@@ -293,4 +283,15 @@ function renderExpandable(element, startCompressed = false) {
         }
     }
 
+}
+
+
+// Hide a component by setting its display style to "none".
+//
+// Input:
+//   element (DOMElement) - the DOM element at the root of the component to be suppressed
+//
+function renderHidden(element) {
+
+    element.style.display = "none";
 }
