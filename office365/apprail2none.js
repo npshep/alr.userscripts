@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Remove Outlook App Rail
 // @namespace    http://www.alittleresearch.com.au/
-// @version      2025-01-29
+// @version      2025-11-12
 // @description  Remove the app rail from Outlook.
 // @author       Nick Sheppard
 // @match        https://outlook.office.com/*
+// @match        https://outlook.office365.com/*
 // @match        https://outlook.live.com/*
 // @icon         https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant        none

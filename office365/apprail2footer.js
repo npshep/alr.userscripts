@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Outlook App Rail to Footer
 // @namespace    http://www.alittleresearch.com.au/
-// @version      2025-02-19
+// @version      2025-11-12
 // @description  Move Outlook's app rail to the footer, where it was in older versions of Outlook.
 // @author       Nick Sheppard
 // @match        https://outlook.office.com/*
+// @match        https://outlook.office365.com/*
 // @match        https://outlook.live.com/*
 // @icon         https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant        none
