@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2025-06-04
+// @version          2025-11-15
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -192,8 +192,10 @@ function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
         // update the status bar
         const statusBar = document.getElementsByClassName(statusBarClassName);
         if (statusBarIndex < statusBar.length) {
-            const lineNumber = parseInt(cursor.style.top) / parseInt(cursor.style.lineHeight);
-            const columnNumber = getCharactersForHorizontalOffset(
+            const lineNumber = getLineNumberForVerticalOffset(
+                parseInt(cursor.style.top)
+            );
+            const columnNumber = getColumnNumberForHorizontalOffset(
                 parseInt(cursor.style.left),
                 cursor.style.fontSize,
                 cursor.style.fontFamily
@@ -223,7 +225,56 @@ function onSuggestWidgetMutation(mutations, observer) {
 
 }
 
-// Get the cursor position corresponding to a given number of pixels from the left
+
+// Get the line number corresponding to a given cursor position within the view window.
+//
+// Input:
+//   cursorTop - the 'top' value of the cursor (i.e. the number of pixels from the top of the cursor layer)
+//
+// Returns: the corresponding line number of the document
+var lastCursorLine = 1;
+function getLineNumberForVerticalOffset(cursorTop) {
+
+    // The line numbers are contained within a div with class margin-view-overlays,
+    // with each child of this div corresponding to one line of the display.
+    //
+    // The children aren't in any particular order, so we use this utility function
+    // to search for the one whose position matches the cursor's.
+    function findMarginViewLinePos(marginViewLines, top) {
+        for (let pos = 0; pos < marginViewLines.length; pos++) {
+            if (parseInt(marginViewLines.item(pos).style.top) == top) {
+                return pos;
+            }
+        }
+        return -1;
+    }
+
+    // find the margin view line corresponding to the cursor position
+    let marginViewLines = document.querySelectorAll(".margin > .margin-view-overlays > div");
+    let marginViewLinePos = findMarginViewLinePos(marginViewLines, cursorTop);
+    if (marginViewLinePos < 0) {
+        // the cursor is outside the display area; return the previously-computed position
+        return lastCursorLine;
+    }
+
+    // If the view line has wrapped from a previous line, its corresponding
+    // margin line is empty, so go up a line until we find a number.
+    let cursorLineTop = cursorTop;
+    while (marginViewLinePos >= 0 && marginViewLines.item(marginViewLinePos).textContent == "") {
+        cursorLineTop = cursorLineTop - marginViewLines.item(marginViewLinePos).style.height;
+        marginViewLinePos = findMarginViewLinePos(marginViewLines, cursorLineTop);
+    }
+
+    // update the last known cursor position
+    if (marginViewLinePos >= 0) {
+        lastCursorLine = parseInt(marginViewLines.item(marginViewLinePos).textContent);
+    }
+
+    return lastCursorLine;
+}
+
+
+// Get the column number corresponding to a given number of pixels from the left
 // edge, based very loosely on the measureText() method from
 // https://www.geeksforgeeks.org/calculate-the-width-of-the-text-in-javascript/.
 //
@@ -232,10 +283,10 @@ function onSuggestWidgetMutation(mutations, observer) {
 //   fontSize - the font size
 //   fontFamily - the font family
 //
-// Returns: the number of characters in the given font corresponding the number of pixels
+// Returns: the number of characters in the given font corresponding to the given number of pixels
 var cursorStops = [ 0 ];
 var graphicsContext = null;
-function getCharactersForHorizontalOffset(pixels, fontSize, fontFamily) {
+function getColumnNumberForHorizontalOffset(pixels, fontSize, fontFamily) {
 
     // look for an existing cursor stop matching the input number of pixels
     let i = 0;
