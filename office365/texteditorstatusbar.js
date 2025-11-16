@@ -217,9 +217,7 @@ function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
                 // update the cursor left position and line
                 lastCursorPosition.left = newLeft;
                 lastCursorPosition.column = getColumnNumberForHorizontalOffset(
-                    newLeft,
-                    cursor.style.fontSize,
-                    cursor.style.fontFamily
+                    newLeft
                 );
             }
 
@@ -321,22 +319,23 @@ function getLineNumberForVerticalOffset(offset) {
 // https://www.geeksforgeeks.org/calculate-the-width-of-the-text-in-javascript/.
 //
 // Input:
-//   pixels - the number of pixels from the left edge
+//   offset - the number of pixels from the left edge
 //   fontSize - the font size
 //   fontFamily - the font family
 //
 // Returns: the number of characters in the given font corresponding to the given number of pixels
-var cursorStops = [ 0 ];
-var graphicsContext = null;
-function getColumnNumberForHorizontalOffset(pixels, fontSize, fontFamily) {
+let cursorStops = [ 0 ];
+let graphicsContext = null;
+function getColumnNumberForHorizontalOffset(offset) {
 
-    // look for an existing cursor stop matching the input number of pixels
+    // look for an existing cursor stop matching the input offset
     let i = 0;
-    while (i < cursorStops.length && cursorStops[i] < pixels) {
+    while (i < cursorStops.length && cursorStops[i] < offset) {
         i++;
     }
     if (i < cursorStops.length) {
-        return i;
+        // cursorStops is zero-based but column numbers are 1-based
+        return i + 1;
     }
 
     // make sure we have a graphics context before building new cursor stops
@@ -344,17 +343,27 @@ function getColumnNumberForHorizontalOffset(pixels, fontSize, fontFamily) {
         const canvas = document.createElement("canvas");
         graphicsContext = canvas.getContext("2d");
     }
-    graphicsContext.font = fontSize + fontFamily;
+
+    // The font family and size are set by the .view-lines element, which
+    // contains all the displayed text.
+    //
+    // The font family is specified by a list of three fonts, with the first
+    // being a specific font (Consolas or Droid Sans Mono) and the other two
+    // being "monospace" with and without quotes. It seems to be impossible to
+    // know for sure which one the browser chooses, but I've found that using
+    // "monospace" calcuate the correct width in all the browers I use.
+    const viewLines = document.querySelector(".view-lines");
+    graphicsContext.font = viewLines.style.fontSize + " monospace";
 
     // extend the cursor stops until we have one for the desired number of pixels
     let sampleText = "x".repeat(cursorStops.length);
     let sampleWidth = graphicsContext.measureText(sampleText).width;
-    while (sampleWidth < pixels) {
+    while (sampleWidth < offset) {
         cursorStops.push(sampleWidth);
         i++;
         sampleText = sampleText + "x";
         sampleWidth = graphicsContext.measureText(sampleText).width;
     }
 
-    return i;
+    return i + 1;
 }
