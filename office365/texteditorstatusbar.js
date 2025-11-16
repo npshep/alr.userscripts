@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2025-11-15
+// @version          2025-11-16
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -226,51 +226,72 @@ function onSuggestWidgetMutation(mutations, observer) {
 }
 
 
-// Get the line number corresponding to a given cursor position within the view window.
+// Get the line number corresponding to a given vertical position with the
+// document.
 //
 // Input:
-//   cursorTop - the 'top' value of the cursor (i.e. the number of pixels from the top of the cursor layer)
+//   offset - the offset (number of pixels) from the top of the document
 //
 // Returns: the corresponding line number of the document
-var lastCursorLine = 1;
-function getLineNumberForVerticalOffset(cursorTop) {
+var lastOffsetLine = 1;
+function getLineNumberForVerticalOffset(offset) {
 
     // The line numbers are contained within a div with class margin-view-overlays,
     // with each child of this div corresponding to one line of the display.
     //
-    // The children aren't in any particular order, so we use this utility function
-    // to search for the one whose position matches the cursor's.
-    function findMarginViewLinePos(marginViewLines, top) {
-        for (let pos = 0; pos < marginViewLines.length; pos++) {
-            if (parseInt(marginViewLines.item(pos).style.top) == top) {
-                return pos;
+    // The children aren't in any particular order, but they have a 'top'
+    // property that describes their absolute location in the document. We use
+    // this property to find the margin view line matching the given offset.
+    //
+    // Where a long line wraps at the right-hand margin, the line number
+    // appears (only) on the first margin view line, so we need to find the
+    // margin view line that contains a number that is nearest to, but above,
+    // the offset.
+    //
+    // Finally, if the given offset isn't within the range implied by the tops
+    // of the margin view lines, it refers to a position that has scrolled off
+    // the display. In this case, we return the last computed line stored in
+    // lastOffsetLine.
+    let marginViewLines = document.querySelectorAll(".margin > .margin-view-overlays > div");
+    let offsetViewLinePos = NaN;
+    let offsetViewLineTop = NaN;
+    let minMarginViewTop = NaN;
+    let maxMarginViewTop = NaN;
+    for (let i = 0; i < marginViewLines.length; i++) {
+
+        // extract values of interest from the margin view line
+        let marginViewLineNumber = parseInt(marginViewLines.item(i).textContent);
+        let marginViewLineTop = parseInt(marginViewLines.item(i).style.top);
+
+        // update minimum and maximum 'top' values found so far
+        if (isNaN(minMarginViewTop) || marginViewLineTop < minMarginViewTop) {
+            minMarginViewTop = marginViewLineTop;
+        }
+        if (isNaN(maxMarginViewTop) || marginViewLineTop > maxMarginViewTop) {
+            maxMarginViewTop = marginViewLineTop;
+        }
+
+        // check for a line number in the margin
+        if (!isNaN(marginViewLineNumber)) {
+            // check if this line is closer than the nearest found so far
+            if (isNaN(offsetViewLinePos) || marginViewLineTop > offsetViewLineTop) {
+                if (marginViewLineTop <= offset) {
+                    offsetViewLinePos = i;
+                    offsetViewLineTop = marginViewLineTop;
+                }
             }
         }
-        return -1;
     }
 
-    // find the margin view line corresponding to the cursor position
-    let marginViewLines = document.querySelectorAll(".margin > .margin-view-overlays > div");
-    let marginViewLinePos = findMarginViewLinePos(marginViewLines, cursorTop);
-    if (marginViewLinePos < 0) {
-        // the cursor is outside the display area; return the previously-computed position
-        return lastCursorLine;
-    }
-
-    // If the view line has wrapped from a previous line, its corresponding
-    // margin line is empty, so go up a line until we find a number.
-    let cursorLineTop = cursorTop;
-    while (marginViewLinePos >= 0 && marginViewLines.item(marginViewLinePos).textContent == "") {
-        cursorLineTop = cursorLineTop - marginViewLines.item(marginViewLinePos).style.height;
-        marginViewLinePos = findMarginViewLinePos(marginViewLines, cursorLineTop);
+    if (isNaN(offsetViewLineTop) || offset < minMarginViewTop || offset > maxMarginViewTop) {
+        // the offset is outside the display area; return the previously-computed position
+        return lastOffsetLine;
     }
 
     // update the last known cursor position
-    if (marginViewLinePos >= 0) {
-        lastCursorLine = parseInt(marginViewLines.item(marginViewLinePos).textContent);
-    }
+    lastOffsetLine = parseInt(marginViewLines.item(offsetViewLinePos).textContent);
 
-    return lastCursorLine;
+    return lastOffsetLine;
 }
 
 
