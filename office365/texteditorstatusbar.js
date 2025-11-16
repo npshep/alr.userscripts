@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2025-11-16
+// @version          2025-11-17
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -177,30 +177,56 @@ function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
 //
 // Because blinking of the cursor is implemented by changing its visibility
 // from "inherit" to "hidden" and back, the observer is triggered at every
-// blink as well as changes of cursor position, but I haven't found any way
-// to suppress the redundant updates.
+// blink as well as changes of cursor position. To reduce the amount of
+// searching for the cursor, we store the last known position in
+// lastCursorPosition, and only invoke getLineNumberForVerticalOffset and
+// get ColumnNumberForHorizontalOffset when the position changes.
 //
 // Input:
 //   mutations - the list of mutations
 //   statusBarClassName - the class name of the status bar elements
 //   statusBarIndex - the index of the cursor position in the status bar
+let lastCursorPosition = {
+    'top': 0,
+    'left': 0,
+    'line': 1,
+    'column': 1
+};
 function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
 
     // find the div containing the cursor
     let cursor = document.querySelector(".cursors-layer > .cursor");
     if (cursor != null) {
-        // update the status bar
         const statusBar = document.getElementsByClassName(statusBarClassName);
         if (statusBarIndex < statusBar.length) {
-            const lineNumber = getLineNumberForVerticalOffset(
-                parseInt(cursor.style.top)
-            );
-            const columnNumber = getColumnNumberForHorizontalOffset(
-                parseInt(cursor.style.left),
-                cursor.style.fontSize,
-                cursor.style.fontFamily
-            );
-            statusBar[statusBarIndex].innerHTML = "Line: " + lineNumber + " Column: " + columnNumber;
+
+            // get the new cursor position
+            const newTop = parseInt(cursor.style.top);
+            const newLeft = parseInt(cursor.style.left);
+
+            if (!isNaN(newTop) && newTop != lastCursorPosition.top) {
+                // update the cursor top position and line number
+                lastCursorPosition.top = newTop;
+                const newLine = getLineNumberForVerticalOffset(newTop);
+                if (!isNaN(newLine)) {
+                    // only update the line number if the cursor is within the display area
+                    lastCursorPosition.line = newLine;
+                }
+            }
+            if (!isNaN(newLeft) && newLeft != lastCursorPosition.left) {
+                // update the cursor left position and line
+                lastCursorPosition.left = newLeft;
+                lastCursorPosition.column = getColumnNumberForHorizontalOffset(
+                    newLeft,
+                    cursor.style.fontSize,
+                    cursor.style.fontFamily
+                );
+            }
+
+            // update the status bar
+            statusBar[statusBarIndex].innerHTML =
+                "Line: " + lastCursorPosition.line +
+                " Column: " + lastCursorPosition.column;
         }
     }
 
@@ -232,8 +258,7 @@ function onSuggestWidgetMutation(mutations, observer) {
 // Input:
 //   offset - the offset (number of pixels) from the top of the document
 //
-// Returns: the corresponding line number of the document
-var lastOffsetLine = 1;
+// Returns: the corresponding line number of the document, or NaN if the line has scrolled off the display
 function getLineNumberForVerticalOffset(offset) {
 
     // The line numbers are contained within a div with class margin-view-overlays,
@@ -250,8 +275,7 @@ function getLineNumberForVerticalOffset(offset) {
     //
     // Finally, if the given offset isn't within the range implied by the tops
     // of the margin view lines, it refers to a position that has scrolled off
-    // the display. In this case, we return the last computed line stored in
-    // lastOffsetLine.
+    // the display. In this case, we return NaN.
     let marginViewLines = document.querySelectorAll(".margin > .margin-view-overlays > div");
     let offsetViewLinePos = NaN;
     let offsetViewLineTop = NaN;
@@ -284,14 +308,11 @@ function getLineNumberForVerticalOffset(offset) {
     }
 
     if (isNaN(offsetViewLineTop) || offset < minMarginViewTop || offset > maxMarginViewTop) {
-        // the offset is outside the display area; return the previously-computed position
-        return lastOffsetLine;
+        // the offset is outside the display area
+        return NaN;
     }
 
-    // update the last known cursor position
-    lastOffsetLine = parseInt(marginViewLines.item(offsetViewLinePos).textContent);
-
-    return lastOffsetLine;
+    return parseInt(marginViewLines.item(offsetViewLinePos).textContent);
 }
 
 
