@@ -350,7 +350,7 @@ function getColumnNumberForHorizontalOffset(pixels, fontSize, fontFamily) {
     let sampleText = "x".repeat(cursorStops.length);
     let sampleWidth = graphicsContext.measureText(sampleText).width;
     while (sampleWidth < pixels) {
-        cursorStops.push[sampleWidth];
+        cursorStops.push(sampleWidth);
         i++;
         sampleText = sampleText + "x";
         sampleWidth = graphicsContext.measureText(sampleText).width;
