@@ -10,10 +10,7 @@ for how to configure its behaviour.
 - `apprail2footer.js` moves Outlook's app rail to bottom of the left-hand
   panel, where it was in previous versions of Outlook.
 - `apprail2none.js` removes Outlook's app rail altogether.
-- `disabletextsuggestions.js` disables the text suggestions widget that pops
-  up in OneDrive's text editor.
-- `texteditorstatusbar.js` adds a status bar the OneDrive text editor
-  (currently showing only the cursor position).
+- `texteditorstatusbar.js` adds a status bar the OneDrive text editor.
 
 I am not affiliated with Microsoft and all Microsoft trademarks remain the
 property of Microsoft. Microsoft is free to change its site at any time in such
@@ -47,6 +44,7 @@ Known Bugs
 `apprail2header.js` and `apprail2footer.js`
 - the unpin action requires re-loading to take effect
 
-`disabletextsuggestions.js`
+`texteditorstatusbar.js`
 - when the cursor is at the end of the line, the first press of the enter
-  key is consumed by the (invisible) suggestions box
+  key is consumed by the (invisible) suggestions box, even when suggestions
+  are turned off
