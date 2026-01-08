@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name             Outlook App Rail to Header
+// @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2025-11-12
-// @description      Move Outlook's app rail to the header.
+// @version          2026-01-08
+// @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
 // @contributionURL  https://ko-fi.com/npsheppard
@@ -14,10 +14,13 @@
 // ==/UserScript==
 
 ///////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2025 Nicholas Paul Sheppard. See README.md for details
+// Copyright (c) 2025-6 Nicholas Paul Sheppard. See README.md for details
 //
 // Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
 ///////////////////////////////////////////////////////////////////////////////
+
+// set the position of the app rail - 'default', 'header', 'footer' or 'none'
+const appRailPosition = 'header';
 
 
 // set which buttons should remain in the header buttons region
@@ -86,12 +89,12 @@ function createDocumentObserver() {
                 }
             }
         }
-        if (leftRail != null) {
+        if (leftRail != null && appRailPosition !== 'default') {
             // hide the left rail
             leftRail.style.display = "none";
         }
         if (mainModule != null) {
-            // observe the main module; the callback function will insert the rail items into the header
+            // observe the main module; the callback function will insert the rail items into the target region
             var mainModuleObserver = new MutationObserver(onMainModuleMutation);
             mainModuleObserver.observe(mainModule, { childList: true, subtree: true, attributes: false, characterData: false });
         }
@@ -139,31 +142,95 @@ function onMainModuleMutation(mutations, observer) {
         observer.disconnect();
     }
 
-    // remove unwanted children
-    const headerButtonsRegion = document.getElementById("headerButtonsRegionId");
-    var child = headerButtonsRegion.firstElementChild;
-    while (child != null) {
-        const next = child.nextElementSibling;
-        if (child.id in headerButtonsConf && !headerButtonsConf[child.id]) {
-            headerButtonsRegion.removeChild(child);
+    if (appRailPosition === 'header') {
+        // remove unwanted header buttons
+        const headerButtonsRegion = document.getElementById("headerButtonsRegionId");
+        var child = headerButtonsRegion.firstElementChild;
+        while (child != null) {
+            const next = child.nextElementSibling;
+            if (child.id in headerButtonsConf && !headerButtonsConf[child.id]) {
+                headerButtonsRegion.removeChild(child);
+            }
+            if (child.classList.contains("___77lcry0")) {
+                headerButtonsRegion.removeChild(child);
+            }
+            child = next;
         }
-        if (child.classList.contains("___77lcry0")) {
-           headerButtonsRegion.removeChild(child);
-        }
-        child = next;
     }
 
-    // disconnect to document observer to prevent infinite recursion
+    // disconnect the document observer to prevent infinite recursion
     disconnectDocumentObserver();
 
-    // insert the app rail buttons at the start of the header button region
-    const apps = fetchAppRailCollection();
-    for (var i = apps.length - 1; i >= 0 ; i--) {
-        headerButtonsRegion.insertAdjacentElement("afterbegin", apps[i]);
+    // insert the app rail buttons into the target region
+    const targetRegion = getAppRailRegion();
+    if (targetRegion != null) {
+        const apps = fetchAppRailCollection();
+        for (var i = apps.length - 1; i >= 0 ; i--) {
+            targetRegion.insertAdjacentElement("afterbegin", apps[i]);
+        }
     }
 
     // reconnect the document observer
     connectDocumentObserver();
+
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Find the bottom rail, creating it if it doesn't exist.
+//
+// On the mail screen, the folder tree is contained in a DIV with id
+// folderPaneDroppableContainer. We insert the bottom rail at the end
+// of this container.
+//
+// On the calendar screen, the left panel is a DIV with class SFJ5T. A
+// child DIV with class AMOVa contains the calendars. We insert the
+// bottom rail within SFJ5T after AMOVa.
+///////////////////////////////////////////////////////////////////////////////
+function fetchBottomRail() {
+
+    var bottomRail = document.getElementById("bottomRail");
+    if (bottomRail == null) {
+        // create an element for the bottom rail
+        bottomRail = document.createElement("DIV");
+        bottomRail.id = "bottomRail";
+        bottomRail.style.display = "flex";
+
+        // look for a place to put it
+        const folderPaneDroppableContainer = document.getElementById("folderPaneDroppableContainer");
+        const calendarDiv = document.querySelector(".SFJ5T > .AMOVa");
+        if (folderPaneDroppableContainer != null) {
+            // mail screen
+            folderPaneDroppableContainer.appendChild(bottomRail);
+        } else if (calendarDiv != null) {
+            // calendar screen
+            calendarDiv.parentElement.appendChild(bottomRail);
+        } else {
+            console.log("Couldn't find a location for the bottom rail.");
+        }
+    }
+
+    return bottomRail;
+
+}
+
+
+// Get the region (DIV element) into which the app rail will be inserted
+function getAppRailRegion() {
+
+    switch (appRailPosition) {
+       case 'header':
+           return document.getElementById("headerButtonsRegionId");
+
+       case 'footer':
+           return fetchBottomRail();
+
+       case 'none':
+           return null;
+
+        default:
+            return document.getElementById("leftRail");
+    }
 
 }
 
