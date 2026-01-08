@@ -136,7 +136,7 @@ function fetchStatusBar() {
             suggestionsButton.className = "ms-Button ms-Button--commandBar ms-CommandBarItem-link";
             suggestionsButton.onclick = function() { onStatusBarSuggestClick(statusBarClassName, 2) };
             suggestionsButton.innerHTML = "<span class=\"ms-Button-label\">" +
-                "Text Suggestions: " + (showSuggestWidget ? "On" : "Off") + "</span>";
+                getSuggestionsButtonLabel() + "</span>";
 
             // replace the original title bar with the status bar
             titleBar.innerHTML = "";
@@ -159,6 +159,16 @@ function fetchStatusBar() {
 }
 
 
+// Get the the label for the text suggestions button.
+//
+// Returns: the label corresponding to the current state of the text suggestions widget
+function getSuggestionsButtonLabel() {
+
+    return "Suggestions: " + (showSuggestWidget ? "On" : "Off");
+
+}
+
+
 // Respond to a click on text suggestions control in the status bar.
 //
 // Input:
@@ -173,7 +183,7 @@ function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
     // update the status bar display
     const statusBar = document.getElementsByClassName(statusBarClassName);
     if (statusBarIndex < statusBar.length) {
-        statusBar[statusBarIndex].firstChild.firstChild.innerText = "Text Suggestions: " + (showSuggestWidget ? "On" : "Off");
+        statusBar[statusBarIndex].firstChild.firstChild.innerText = getSuggestionsButtonLabel();
     }
 
 }
