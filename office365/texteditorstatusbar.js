@@ -15,6 +15,12 @@
 // @grant            GM_setValue
 // ==/UserScript==
 
+///////////////////////////////////////////////////////////////////////////////
+// Copyright (c) 2026 Nicholas Paul Sheppard. See README.md for details
+//
+// Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
+///////////////////////////////////////////////////////////////////////////////
+
 // Configuration.
 //
 // showSuggestWidget - true to display the text suggestions widget, false to suppress it
