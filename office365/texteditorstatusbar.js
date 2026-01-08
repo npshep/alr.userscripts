@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2025-11-17
+// @version          2026-01-08
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -11,12 +11,14 @@
 // @match            https://m365.cloud.microsoft/onedrive/*
 // @match            https://onedrive.live.com/*
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
-// @grant            none
+// @grant            GM_getValue
+// @grant            GM_setValue
 // ==/UserScript==
 
-
-// true to display the text suggestions widget, false to suppress it
-let showSuggestWidget = false;
+// Configuration.
+//
+// showSuggestWidget - true to display the text suggestions widget, false to suppress it
+let showSuggestWidget = GM_getValue("showSuggestWidget", true);
 
 
 // Main function.
@@ -164,7 +166,11 @@ function fetchStatusBar() {
 //   statusBarIndex - the index of the cursor position in the status bar
 function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
 
+    // update the suggest widget flag
     showSuggestWidget = !showSuggestWidget;
+    GM_setValue("showSuggestWidget", showSuggestWidget);
+
+    // update the status bar display
     const statusBar = document.getElementsByClassName(statusBarClassName);
     if (statusBarIndex < statusBar.length) {
         statusBar[statusBarIndex].firstChild.firstChild.innerText = "Text Suggestions: " + (showSuggestWidget ? "On" : "Off");
