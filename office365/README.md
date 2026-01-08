@@ -16,7 +16,7 @@ I am not affiliated with Microsoft and all Microsoft trademarks remain the
 property of Microsoft. Microsoft is free to change its site at any time in such
 a way that these scripts no longer work.
 
-Copyright (c) 2025 Nicholas Paul Sheppard (npsheppard@alittleresearch.com.au)
+Copyright (c) 2025-6 Nicholas Paul Sheppard (npsheppard@alittleresearch.com.au)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

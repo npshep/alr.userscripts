@@ -31,7 +31,7 @@ W: https://www.alittleresearch.com.au
 
 Buy me a Ko-Fi: https://ko-fi.com/npsheppard
 
-Copyright (c) 2025 Nicholas Paul Sheppard
+Copyright (c) 2025-6 Nicholas Paul Sheppard
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
