@@ -136,7 +136,7 @@ function fetchStatusBar() {
             suggestionsButton.className = "ms-Button ms-Button--commandBar ms-CommandBarItem-link";
             suggestionsButton.onclick = function() { onStatusBarSuggestClick(statusBarClassName, 2) };
             suggestionsButton.innerHTML = "<span class=\"ms-Button-label\">" +
-                getSuggestionsButtonLabel() + "</span>";
+                getSuggestionsButtonLabel(showSuggestWidget) + "</span>";
 
             // replace the original title bar with the status bar
             titleBar.innerHTML = "";
@@ -214,6 +214,18 @@ function getColumnNumberForHorizontalOffset(offset) {
 }
 
 
+// Get the label for the cursor position element.
+//
+// Input:
+//   line - the line number of the cursor
+//   column - the column number of the cursor
+function getCursorPositionLabel(line, column) {
+
+    return "Line: " + line + " Column: " + column;
+
+}
+
+
 // Get the line number corresponding to a given vertical position with the
 // document.
 //
@@ -280,10 +292,13 @@ function getLineNumberForVerticalOffset(offset) {
 
 // Get the the label for the text suggestions button.
 //
+// Input:
+//   showWidget - true when the widget is shown, false otherwise
+//
 // Returns: the label corresponding to the current state of the text suggestions widget
-function getSuggestionsButtonLabel() {
+function getSuggestionsButtonLabel(showWidget) {
 
-    return "Suggestions: " + (showSuggestWidget ? "On" : "Off");
+    return "Suggestions: " + (showWidget ? "On" : "Off");
 
 }
 
@@ -337,9 +352,10 @@ function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
             }
 
             // update the status bar
-            statusBar[statusBarIndex].innerHTML =
-                "Line: " + lastCursorPosition.line +
-                " Column: " + lastCursorPosition.column;
+            statusBar[statusBarIndex].innerHTML = getCursorPositionLabel(
+                lastCursorPosition.line,
+                lastCursorPosition.column
+            );
         }
     }
 
@@ -360,7 +376,7 @@ function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
     // update the status bar display
     const statusBar = document.getElementsByClassName(statusBarClassName);
     if (statusBarIndex < statusBar.length) {
-        statusBar[statusBarIndex].firstChild.firstChild.innerText = getSuggestionsButtonLabel();
+        statusBar[statusBarIndex].firstChild.firstChild.innerText = getSuggestionsButtonLabel(showSuggestWidget);
     }
 
 }
