@@ -159,110 +159,58 @@ function fetchStatusBar() {
 }
 
 
-// Get the the label for the text suggestions button.
-//
-// Returns: the label corresponding to the current state of the text suggestions widget
-function getSuggestionsButtonLabel() {
-
-    return "Suggestions: " + (showSuggestWidget ? "On" : "Off");
-
-}
-
-
-// Respond to a click on text suggestions control in the status bar.
+// Get the column number corresponding to a given number of pixels from the left
+// edge, based very loosely on the measureText() method from
+// https://www.geeksforgeeks.org/calculate-the-width-of-the-text-in-javascript/.
 //
 // Input:
-//   statusBarClassName - the class name of the status bar elements
-//   statusBarIndex - the index of the cursor position in the status bar
-function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
+//   offset - the number of pixels from the left edge
+//   fontSize - the font size
+//   fontFamily - the font family
+//
+// Returns: the number of characters in the given font corresponding to the given number of pixels
+let cursorStops = [ 0 ];
+let graphicsContext = null;
+function getColumnNumberForHorizontalOffset(offset) {
 
-    // update the suggest widget flag
-    showSuggestWidget = !showSuggestWidget;
-    GM_setValue("showSuggestWidget", showSuggestWidget);
-
-    // update the status bar display
-    const statusBar = document.getElementsByClassName(statusBarClassName);
-    if (statusBarIndex < statusBar.length) {
-        statusBar[statusBarIndex].firstChild.firstChild.innerText = getSuggestionsButtonLabel();
+    // look for an existing cursor stop matching the input offset
+    let i = 0;
+    while (i < cursorStops.length && cursorStops[i] < offset) {
+        i++;
+    }
+    if (i < cursorStops.length) {
+        // cursorStops is zero-based but column numbers are 1-based
+        return i + 1;
     }
 
-}
-
-
-// Respond to a change in the cursors layer.
-//
-// Because blinking of the cursor is implemented by changing its visibility
-// from "inherit" to "hidden" and back, the observer is triggered at every
-// blink as well as changes of cursor position. To reduce the amount of
-// searching for the cursor, we store the last known position in
-// lastCursorPosition, and only invoke getLineNumberForVerticalOffset and
-// get ColumnNumberForHorizontalOffset when the position changes.
-//
-// Input:
-//   mutations - the list of mutations
-//   statusBarClassName - the class name of the status bar elements
-//   statusBarIndex - the index of the cursor position in the status bar
-let lastCursorPosition = {
-    'top': 0,
-    'left': 0,
-    'line': 1,
-    'column': 1
-};
-function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
-
-    // find the div containing the cursor
-    let cursor = document.querySelector(".cursors-layer > .cursor");
-    if (cursor != null) {
-        const statusBar = document.getElementsByClassName(statusBarClassName);
-        if (statusBarIndex < statusBar.length) {
-
-            // get the new cursor position
-            const newTop = parseInt(cursor.style.top);
-            const newLeft = parseInt(cursor.style.left);
-
-            if (!isNaN(newTop) && newTop != lastCursorPosition.top) {
-                // update the cursor top position and line number
-                lastCursorPosition.top = newTop;
-                const newLine = getLineNumberForVerticalOffset(newTop);
-                if (!isNaN(newLine)) {
-                    // only update the line number if the cursor is within the display area
-                    lastCursorPosition.line = newLine;
-                }
-            }
-            if (!isNaN(newLeft) && newLeft != lastCursorPosition.left) {
-                // update the cursor left position and line
-                lastCursorPosition.left = newLeft;
-                lastCursorPosition.column = getColumnNumberForHorizontalOffset(
-                    newLeft
-                );
-            }
-
-            // update the status bar
-            statusBar[statusBarIndex].innerHTML =
-                "Line: " + lastCursorPosition.line +
-                " Column: " + lastCursorPosition.column;
-        }
+    // make sure we have a graphics context before building new cursor stops
+    if (graphicsContext == null) {
+        const canvas = document.createElement("canvas");
+        graphicsContext = canvas.getContext("2d");
     }
 
-}
+    // The font family and size are set by the .view-lines element, which
+    // contains all the displayed text.
+    //
+    // The font family is specified by a list of three fonts, with the first
+    // being a specific font (Consolas or Droid Sans Mono) and the other two
+    // being "monospace" with and without quotes. It seems to be impossible to
+    // know for sure which one the browser chooses, but I've found that using
+    // "monospace" calcuate the correct width in all the browers I use.
+    const viewLines = document.querySelector(".view-lines");
+    graphicsContext.font = viewLines.style.fontSize + " monospace";
 
-
-// Respond to the appearance of the text suggestions widget.
-//
-// Input:
-//   mutations - the list of mutations
-//   observer - the observer that triggered this event
-function onSuggestWidgetMutation(mutations, observer) {
-
-    for (const m of mutations) {
-        if (m.attributeName === "class") {
-            // disconnect before changing the style, otherwise we get an infinite loop
-            observer.disconnect();
-            m.target.style.display = showSuggestWidget ? "" : "none";
-            observer.observe(m.target, { childList: false, subtree: false, attributes: true, characterData: false });
-        }
+    // extend the cursor stops until we have one for the desired number of pixels
+    let sampleText = "x".repeat(cursorStops.length);
+    let sampleWidth = graphicsContext.measureText(sampleText).width;
+    while (sampleWidth < offset) {
+        cursorStops.push(sampleWidth);
+        i++;
+        sampleText = sampleText + "x";
+        sampleWidth = graphicsContext.measureText(sampleText).width;
     }
 
+    return i + 1;
 }
 
 
@@ -330,56 +278,108 @@ function getLineNumberForVerticalOffset(offset) {
 }
 
 
-// Get the column number corresponding to a given number of pixels from the left
-// edge, based very loosely on the measureText() method from
-// https://www.geeksforgeeks.org/calculate-the-width-of-the-text-in-javascript/.
+// Get the the label for the text suggestions button.
+//
+// Returns: the label corresponding to the current state of the text suggestions widget
+function getSuggestionsButtonLabel() {
+
+    return "Suggestions: " + (showSuggestWidget ? "On" : "Off");
+
+}
+
+
+// Respond to a change in the cursors layer.
+//
+// Because blinking of the cursor is implemented by changing its visibility
+// from "inherit" to "hidden" and back, the observer is triggered at every
+// blink as well as changes of cursor position. To reduce the amount of
+// searching for the cursor, we store the last known position in
+// lastCursorPosition, and only invoke getLineNumberForVerticalOffset and
+// get ColumnNumberForHorizontalOffset when the position changes.
 //
 // Input:
-//   offset - the number of pixels from the left edge
-//   fontSize - the font size
-//   fontFamily - the font family
+//   mutations - the list of mutations
+//   statusBarClassName - the class name of the status bar elements
+//   statusBarIndex - the index of the cursor position in the status bar
+let lastCursorPosition = {
+    'top': 0,
+    'left': 0,
+    'line': 1,
+    'column': 1
+};
+function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
+
+    // find the div containing the cursor
+    let cursor = document.querySelector(".cursors-layer > .cursor");
+    if (cursor != null) {
+        const statusBar = document.getElementsByClassName(statusBarClassName);
+        if (statusBarIndex < statusBar.length) {
+
+            // get the new cursor position
+            const newTop = parseInt(cursor.style.top);
+            const newLeft = parseInt(cursor.style.left);
+
+            if (!isNaN(newTop) && newTop != lastCursorPosition.top) {
+                // update the cursor top position and line number
+                lastCursorPosition.top = newTop;
+                const newLine = getLineNumberForVerticalOffset(newTop);
+                if (!isNaN(newLine)) {
+                    // only update the line number if the cursor is within the display area
+                    lastCursorPosition.line = newLine;
+                }
+            }
+            if (!isNaN(newLeft) && newLeft != lastCursorPosition.left) {
+                // update the cursor left position and line
+                lastCursorPosition.left = newLeft;
+                lastCursorPosition.column = getColumnNumberForHorizontalOffset(
+                    newLeft
+                );
+            }
+
+            // update the status bar
+            statusBar[statusBarIndex].innerHTML =
+                "Line: " + lastCursorPosition.line +
+                " Column: " + lastCursorPosition.column;
+        }
+    }
+
+}
+
+
+// Respond to a click on text suggestions control in the status bar.
 //
-// Returns: the number of characters in the given font corresponding to the given number of pixels
-let cursorStops = [ 0 ];
-let graphicsContext = null;
-function getColumnNumberForHorizontalOffset(offset) {
+// Input:
+//   statusBarClassName - the class name of the status bar elements
+//   statusBarIndex - the index of the cursor position in the status bar
+function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
 
-    // look for an existing cursor stop matching the input offset
-    let i = 0;
-    while (i < cursorStops.length && cursorStops[i] < offset) {
-        i++;
-    }
-    if (i < cursorStops.length) {
-        // cursorStops is zero-based but column numbers are 1-based
-        return i + 1;
-    }
+    // update the suggest widget flag
+    showSuggestWidget = !showSuggestWidget;
+    GM_setValue("showSuggestWidget", showSuggestWidget);
 
-    // make sure we have a graphics context before building new cursor stops
-    if (graphicsContext == null) {
-        const canvas = document.createElement("canvas");
-        graphicsContext = canvas.getContext("2d");
+    // update the status bar display
+    const statusBar = document.getElementsByClassName(statusBarClassName);
+    if (statusBarIndex < statusBar.length) {
+        statusBar[statusBarIndex].firstChild.firstChild.innerText = getSuggestionsButtonLabel();
     }
 
-    // The font family and size are set by the .view-lines element, which
-    // contains all the displayed text.
-    //
-    // The font family is specified by a list of three fonts, with the first
-    // being a specific font (Consolas or Droid Sans Mono) and the other two
-    // being "monospace" with and without quotes. It seems to be impossible to
-    // know for sure which one the browser chooses, but I've found that using
-    // "monospace" calcuate the correct width in all the browers I use.
-    const viewLines = document.querySelector(".view-lines");
-    graphicsContext.font = viewLines.style.fontSize + " monospace";
+}
 
-    // extend the cursor stops until we have one for the desired number of pixels
-    let sampleText = "x".repeat(cursorStops.length);
-    let sampleWidth = graphicsContext.measureText(sampleText).width;
-    while (sampleWidth < offset) {
-        cursorStops.push(sampleWidth);
-        i++;
-        sampleText = sampleText + "x";
-        sampleWidth = graphicsContext.measureText(sampleText).width;
+
+// Respond to the appearance of the text suggestions widget.
+//
+// Input:
+//   mutations - the list of mutations
+//   observer - the observer that triggered this event
+function onSuggestWidgetMutation(mutations, observer) {
+
+    for (const m of mutations) {
+        if (m.attributeName === "class") {
+            // disconnect before changing the style, otherwise we get an infinite loop
+            observer.disconnect();
+            m.target.style.display = showSuggestWidget ? "" : "none";
+            observer.observe(m.target, { childList: false, subtree: false, attributes: true, characterData: false });
+        }
     }
 
-    return i + 1;
 }
