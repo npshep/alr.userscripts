@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-01-08
+// @version          2026-01-09
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -20,7 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // set the position of the app rail - 'default', 'header', 'footer' or 'none'
-const appRailPosition = 'header';
+var appRailPosition = 'header';
 
 
 // set which buttons should remain in the header buttons region
@@ -57,13 +57,13 @@ var documentObserver = null;
 // The document observer looks for changes to the left rail (id LeftRail)
 // and the main application panel (id MainModule).
 //
-// The left rail is only created once. As soon as we find it, we can set its
-// display style to none, with nothing further to do.
+// The left rail is only created once. Once we've found it, we make it
+// invisible, unless it's in its default position.
 //
 // The main module is rebuilt several times during construction of the page,
 // and again when switching from Mail to Calendar view, and vice versa. Each
-// time, we attach a new observer to it, which updates the header buttons
-// region (id headerButtonsRegionId) for the new main module.
+// time, we attach a new observer to it, which updates the buttons in the
+// rail.
 ///////////////////////////////////////////////////////////////////////////////
 
 // Create the document observer
@@ -89,9 +89,11 @@ function createDocumentObserver() {
                 }
             }
         }
-        if (leftRail != null && appRailPosition !== 'default') {
-            // hide the left rail
-            leftRail.style.display = "none";
+		if (leftRail != null) {
+            leftRail.draggable = true;
+			if (appRailPosition !== 'default') {
+                leftRail.style.display = "none";
+            }
         }
         if (mainModule != null) {
             // observe the main module; the callback function will insert the rail items into the target region
@@ -142,9 +144,9 @@ function onMainModuleMutation(mutations, observer) {
         observer.disconnect();
     }
 
-    if (appRailPosition === 'header') {
+    const headerButtonsRegion = document.getElementById("headerButtonsRegionId");
+    if (headerButtonsRegion != null && appRailPosition === 'header') {
         // remove unwanted header buttons
-        const headerButtonsRegion = document.getElementById("headerButtonsRegionId");
         var child = headerButtonsRegion.firstElementChild;
         while (child != null) {
             const next = child.nextElementSibling;
@@ -161,13 +163,41 @@ function onMainModuleMutation(mutations, observer) {
     // disconnect the document observer to prevent infinite recursion
     disconnectDocumentObserver();
 
-    // insert the app rail buttons into the target region
+    // hide the rails we don't want
+	const leftRail = document.getElementById("leftRail");
+	const bottomRail = document.getElementById("bottomRail");
+    if (leftRail != null && appRailPosition !== 'default') {
+        leftRail.style.display = "none";
+    }
+	if (bottomRail != null && appRailPosition !== 'footer') {
+        bottomRail.style.display = "none";
+    }
+
+    // insert the app rail buttons into the target region and make it visible
     const targetRegion = getAppRailRegion();
     if (targetRegion != null) {
         const apps = fetchAppRailCollection();
         for (var i = apps.length - 1; i >= 0 ; i--) {
             targetRegion.insertAdjacentElement("afterbegin", apps[i]);
         }
+        targetRegion.style.display = "";
+    }
+
+    // set up drag-and-drop targets
+    if (headerButtonsRegion != null) {
+		makeDragDropRail(headerButtonsRegion, appRailPosition === 'header');
+    }
+	if (bottomRail != null) {
+        makeDragDropRail(bottomRail, appRailPosition === 'footer');
+    }
+	const leftPanel = findLeftPanel();
+	if (leftPanel != null) {
+        makeDragDropRail(leftPanel, false);
+    }
+    const appLauncher = document.getElementById("O365_MainLink_NavMenu");
+    if (appLauncher != null) {
+        // when the app rail is invisible, dragging the app launcher brings it back
+        makeDragDropRail(appLauncher, appRailPosition === 'none');
     }
 
     // reconnect the document observer
@@ -176,17 +206,10 @@ function onMainModuleMutation(mutations, observer) {
 }
 
 
-///////////////////////////////////////////////////////////////////////////////
 // Find the bottom rail, creating it if it doesn't exist.
 //
-// On the mail screen, the folder tree is contained in a DIV with id
-// folderPaneDroppableContainer. We insert the bottom rail at the end
-// of this container.
-//
-// On the calendar screen, the left panel is a DIV with class SFJ5T. A
-// child DIV with class AMOVa contains the calendars. We insert the
-// bottom rail within SFJ5T after AMOVa.
-///////////////////////////////////////////////////////////////////////////////
+// The rail is placed at the bottom of the left panel, as determined by
+// findLeftPanel().
 function fetchBottomRail() {
 
     var bottomRail = document.getElementById("bottomRail");
@@ -197,14 +220,9 @@ function fetchBottomRail() {
         bottomRail.style.display = "flex";
 
         // look for a place to put it
-        const folderPaneDroppableContainer = document.getElementById("folderPaneDroppableContainer");
-        const calendarDiv = document.querySelector(".SFJ5T > .AMOVa");
-        if (folderPaneDroppableContainer != null) {
-            // mail screen
-            folderPaneDroppableContainer.appendChild(bottomRail);
-        } else if (calendarDiv != null) {
-            // calendar screen
-            calendarDiv.parentElement.appendChild(bottomRail);
+        const leftPanel = findLeftPanel();
+        if (leftPanel != null) {
+            leftPanel.appendChild(bottomRail);
         } else {
             console.log("Couldn't find a location for the bottom rail.");
         }
@@ -215,7 +233,31 @@ function fetchBottomRail() {
 }
 
 
-// Get the region (DIV element) into which the app rail will be inserted
+// Find the left panel (where the bottom rail will be placed).
+//
+// On the mail screen, the folder tree is contained in a DIV with id
+// folderPaneDroppableContainer. The bottom rail is inserted at the end
+// of this container.
+//
+// On the calendar screen, the left panel is a DIV with class SFJ5T. A
+// child DIV with class AMOVa contains the calendars. The bottom rail is
+// is inserted within SFJ5T after AMOVa.
+function findLeftPanel() {
+
+    const folderPaneDroppableContainer = document.getElementById("folderPaneDroppableContainer");
+    const calendarDiv = document.querySelector(".SFJ5T > .AMOVa");
+    if (folderPaneDroppableContainer != null) {
+        // mail screen
+        return folderPaneDroppableContainer;
+    } else if (calendarDiv != null) {
+        // calendar screen
+        return calendarDiv.parentElement;
+    }
+
+    return null;
+}
+
+// Get the region (DIV element) into which the app rail will be inserted.
 function getAppRailRegion() {
 
     switch (appRailPosition) {
@@ -229,8 +271,70 @@ function getAppRailRegion() {
            return null;
 
         default:
-            return document.getElementById("leftRail");
+            return document.getElementById("LeftRail");
     }
+
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Handlers for dragging-and-dropping of the app rail.
+//
+// draggingAppRail tracks whether the app rail is currently being dragged.
+///////////////////////////////////////////////////////////////////////////////
+var draggingAppRail = false;
+
+
+// Add drag-and-drop event handlers to an element.
+function makeDragDropRail(e, draggable) {
+
+    // TODO: check that this doesn't result in multiple event handlers being added
+    e.draggable = draggable;
+    e.addEventListener('dragover', onDragOverAllowDropRail);
+	e.addEventListener('drop', onDropRail);
+    if (draggable) {
+        e.addEventListener('dragstart', onDragRailStart);
+    }
+}
+
+
+// Allow dropping into an element.
+function onDragOverAllowDropRail(e) {
+
+    if (draggingAppRail) {
+        e.preventDefault();
+    }
+
+}
+
+
+// Handle the beginning of a rail drag event.
+function onDragRailStart(e) {
+
+    draggingAppRail = true;
+
+}
+
+
+// Handle dropping into one of the target regions.
+function onDropRail(e) {
+
+    e.preventDefault();
+    if (e.target.id === "O365_MainLink_NavMenu") {
+        if (appRailPosition === 'default') {
+            // dropping the default app rail into the app launcher means "remove the app rail"
+            appRailPosition = 'none';
+        } else {
+            appRailPosition = 'default';
+        }
+    }
+    if (e.target.id === "headerButtonsRegionId") {
+        appRailPosition = 'header';
+    }
+	draggingAppRail = false;
+
+    // invoke onMainModuleMutation to re-draw the app rail and reset the observer
+    onMainModuleMutation(null, null);
 
 }
 
@@ -242,13 +346,13 @@ function getAppRailRegion() {
 // page. The fetchRailButtons() function checks for new buttons that have
 // appeared since the last invocation and moves them into the
 // appRailCollection array, from where they'll later be inserted into the
-// header region.
+// target region.
 //
-// The app rail is a div with id LeftRail. This div is further divided into two
-// div more elements, one with class ___1w2h5wn that contains the applications
-// and another with class ___1fkhojs that contains the "More apps" button. Each
-// button is contained in a div with class ___77lcry0. We preserve the order of
-// the two div's using the appRailSeparator variable.
+// The original app rail is a div with id LeftRail. This div is further divided
+// into two div more elements, one with class ___1w2h5wn that contains the
+// applications and another with class ___1fkhojs that contains the "More apps"
+// button. Each button is contained in a div with class ___77lcry0. We preserve
+// the order of the two div's using the appRailSeparator variable.
 //
 ///////////////////////////////////////////////////////////////////////////////
 var appRailCollection = [];
