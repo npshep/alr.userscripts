@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-01-09
+// @version          2026-01-12
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -165,7 +165,7 @@ function onMainModuleMutation(mutations, observer) {
     }
 
     // set up drag-and-drop targets
-    const headerButtonsRegion = document.getElementById("headerButtonsRegionId");
+    const headerButtonsRegion = findHeaderButtonsRegion();
     if (headerButtonsRegion != null) {
 		makeDragDropRail(headerButtonsRegion, appRailPosition === 'header');
     }
@@ -176,7 +176,7 @@ function onMainModuleMutation(mutations, observer) {
 	if (leftPanel != null) {
         makeDragDropRail(leftPanel, false);
     }
-    const appLauncher = document.getElementById("O365_MainLink_NavMenu");
+    const appLauncher = findAppLauncher();
     if (appLauncher != null) {
         // when the app rail is invisible, dragging the app launcher brings it back
         makeDragDropRail(appLauncher, appRailPosition === 'none');
@@ -215,6 +215,26 @@ function fetchBottomRail() {
 }
 
 
+// Find the app launcher.
+//
+// The app laucher is a div with id O365_MainLink_NavMenu.
+function findAppLauncher() {
+
+    return document.getElementById("O365_MainLink_NavMenu");
+
+}
+
+
+// Find the header buttons region.
+//
+// The header buttons are contained within a div with id headerButtonsRegionId.
+function findHeaderButtonsRegion() {
+
+    return document.getElementById("headerButtonsRegionId")
+
+}
+
+
 // Find the left panel (where the bottom rail will be placed).
 //
 // On the mail screen, the folder tree is contained in a DIV with id
@@ -244,7 +264,7 @@ function getAppRailRegion() {
 
     switch (appRailPosition) {
        case 'header':
-           return document.getElementById("headerButtonsRegionId");
+           return findHeaderButtonsRegion();
 
        case 'footer':
            return fetchBottomRail();
@@ -301,22 +321,30 @@ function onDragRailStart(e) {
 // Handle dropping into one of the target regions.
 function onDropRail(e) {
 
-    e.preventDefault();
-    if (e.target.id === "O365_MainLink_NavMenu") {
-        if (appRailPosition === 'default') {
-            // dropping the default app rail into the app launcher means "remove the app rail"
-            appRailPosition = 'none';
-        } else {
-            appRailPosition = 'default';
+    if (draggingAppRail) {
+        e.preventDefault();
+
+        // find which region the rail has been dropped into (TODO: accept dropping into the mail list)
+        const appLauncher = findAppLauncher();
+        const leftPanel = findLeftPanel();
+        const headerButtonsRegion = findHeaderButtonsRegion();
+        if (appLauncher != null && appLauncher.contains(e.target)) {
+            if (appRailPosition === 'default') {
+                // dropping the default app rail into the app launcher means "remove the app rail"
+                appRailPosition = 'none';
+            } else {
+                appRailPosition = 'default';
+            }
+        } else if (leftPanel != null && leftPanel.contains(e.target)) {
+            appRailPosition = 'footer';
+        } else if (headerButtonsRegion != null && headerButtonsRegion.contains(e.target)) {
+            appRailPosition = 'header';
         }
-    }
-    if (e.target.id === "headerButtonsRegionId") {
-        appRailPosition = 'header';
+
+        // invoke onMainModuleMutation to re-draw the app rail and reset the observer
+        onMainModuleMutation(null, null);
     }
 	draggingAppRail = false;
-
-    // invoke onMainModuleMutation to re-draw the app rail and reset the observer
-    onMainModuleMutation(null, null);
 
 }
 
@@ -417,4 +445,3 @@ function restoreHeaderButtons() {
         }
     }
 }
-
