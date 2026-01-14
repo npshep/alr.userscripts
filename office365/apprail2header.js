@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-01-12
+// @version          2026-01-14
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -145,7 +145,7 @@ function onMainModuleMutation(mutations, observer) {
     } else {
         restoreHeaderButtons();
     }
-	const leftRail = document.getElementById("leftRail");
+	const leftRail = document.getElementById("LeftRail");
     if (leftRail != null && appRailPosition !== 'default') {
         leftRail.style.display = "none";
     }
@@ -165,6 +165,9 @@ function onMainModuleMutation(mutations, observer) {
     }
 
     // set up drag-and-drop targets
+    if (leftRail != null) {
+        makeDragDropRail(leftRail, appRailPosition === 'default');
+    }
     const headerButtonsRegion = findHeaderButtonsRegion();
     if (headerButtonsRegion != null) {
 		makeDragDropRail(headerButtonsRegion, appRailPosition === 'header');
