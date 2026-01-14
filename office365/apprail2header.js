@@ -161,7 +161,7 @@ function onMainModuleMutation(mutations, observer) {
         for (var i = apps.length - 1; i >= 0 ; i--) {
             targetRegion.insertAdjacentElement("afterbegin", apps[i]);
         }
-        targetRegion.style.display = "";
+        targetRegion.style.display = "flex";
     }
 
     // set up drag-and-drop targets
