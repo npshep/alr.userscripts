@@ -30,8 +30,8 @@
 // 'footer'  - at the bottom of the left-hand panel, where it is in "old" Outlook
 // 'header'  - in the header, replacing the header buttons according to the
 //             headerButtonsConf configuration below
-// 'none'    - no app rail at all; drag the App Launcher into a position to bring
-//             it back
+// 'none'    - no app rail at all; drag the App Launcher into the header or
+//             footer to bring it back
 //
 // headerButtonsConf sets which buttons remain in the header buttons region
 // when the app rail is in the header. The setting button is the only one that

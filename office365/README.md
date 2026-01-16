@@ -5,8 +5,8 @@ This folder contains a collection of userscripts that modify the behaviour and
 layout of various sections of Microsoft Office 365. See the top of each script
 for how to configure its behaviour.
 
-- `apprail2header.js` moves Outlook's app rail from the left to either the
-   header or footer region (where it was in previous versions of Outlook).
+- `moveapprail.js` moves Outlook's app rail from the left to either the header
+   or footer region (where it was in previous versions of Outlook).
 - `texteditorstatusbar.js` adds a status bar the OneDrive text editor.
 
 I am not affiliated with Microsoft and all Microsoft trademarks remain the
@@ -38,7 +38,7 @@ Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
 Known Bugs
 ==========
 
-`apprail2header.js` and `apprail2footer.js`
+`moveapprail.js`
 - the unpin action requires re-loading to take effect
 
 `texteditorstatusbar.js`
