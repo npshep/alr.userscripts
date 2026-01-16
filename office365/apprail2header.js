@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-01-14
+// @version          2026-01-16
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -10,7 +10,8 @@
 // @match            https://outlook.office365.com/*
 // @match            https://outlook.live.com/*
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
-// @grant            none
+// @grant            GM_getValue
+// @grant            GM_setValue
 // ==/UserScript==
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -19,11 +20,24 @@
 // Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
 ///////////////////////////////////////////////////////////////////////////////
 
-// set the position of the app rail - 'default', 'header', 'footer' or 'none'
-var appRailPosition = 'header';
-
-
-// set which buttons should remain in the header buttons region
+///////////////////////////////////////////////////////////////////////////////
+// Configuration.
+//
+// appRailPosition stores the current position of the app rail, which can be
+// one of:
+//
+// 'default' - in the left rail, where it is in "new" Outlook
+// 'footer'  - at the bottom of the left-hand panel, where it is in "old" Outlook
+// 'header'  - in the header, replacing the header buttons according to the
+//             headerButtonsConf configuration below
+// 'none'    - no app rail at all; drag the App Launcher into a position to bring
+//             it back
+//
+// headerButtonsConf sets which buttons remain in the header buttons region
+// when the app rail is in the header. The setting button is the only one that
+// I use, but feel free to re-enable any other buttons you find useful here.
+///////////////////////////////////////////////////////////////////////////////
+var appRailPosition = GM_getValue('appRailPosition', 'default');
 const headerButtonsConf = {
     'owaMeetNowButton_container': false,
     'teams_container': false,
@@ -38,9 +52,12 @@ const headerButtonsConf = {
     'OwaMergedNotificationPane_container': false
 };
 
-var documentObserver = null;
 
-// main function
+///////////////////////////////////////////////////////////////////////////////
+// Main function. This just creates the document observer and connects to the
+// parts that we want to monitor.
+///////////////////////////////////////////////////////////////////////////////
+var documentObserver = null;
 (function() {
     'use strict';
 
@@ -343,6 +360,7 @@ function onDropRail(e) {
         } else if (headerButtonsRegion != null && headerButtonsRegion.contains(e.target)) {
             appRailPosition = 'header';
         }
+        GM_setValue('appRailPosition', appRailPosition);
 
         // invoke onMainModuleMutation to re-draw the app rail and reset the observer
         onMainModuleMutation(null, null);
@@ -402,6 +420,7 @@ function fetchAppRailCollection() {
 
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // Manage the collection of header buttons.
 //
@@ -415,7 +434,6 @@ function fetchAppRailCollection() {
 // header.
 ///////////////////////////////////////////////////////////////////////////////
 var headerButtonsCollection = []
-
 function removeHeaderButtons() {
 
     const headerButtonsRegion = document.getElementById("headerButtonsRegionId");
