@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-01-16
+// @version          2026-01-20
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -23,8 +23,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Configuration.
 //
-// appRailPosition stores the current position of the app rail, which can be
-// one of:
+// appRailConf sets the default position of the app rail, which can be one of:
 //
 // 'default' - in the left rail, where it is in "new" Outlook
 // 'footer'  - at the bottom of the left-hand panel, where it is in "old" Outlook
@@ -33,11 +32,15 @@
 // 'none'    - no app rail at all; drag the App Launcher into the header or
 //             footer to bring it back
 //
+// Dragging the app rail moves it to one of the other positions above. The
+// current position persists through the 'appRailPosition' value stored by
+// GM_setValue().
+//
 // headerButtonsConf sets which buttons remain in the header buttons region
 // when the app rail is in the header. The setting button is the only one that
 // I use, but feel free to re-enable any other buttons you find useful here.
 ///////////////////////////////////////////////////////////////////////////////
-var appRailPosition = GM_getValue('appRailPosition', 'default');
+const appRailConf = 'default';
 const headerButtonsConf = {
     'owaMeetNowButton_container': false,
     'teams_container': false,
@@ -86,38 +89,7 @@ var documentObserver = null;
 // Create the document observer
 function createDocumentObserver() {
 
-    documentObserver = new MutationObserver((mutations) => {
-        var leftRail = null;
-        var mainModule = null;
-        for (const m of mutations) {
-            for (const node of m.addedNodes) {
-                var ancestor = node;
-                while (ancestor != null) {
-                    if (ancestor.id === "LeftRail") {
-                        // found the left rail
-                        leftRail = ancestor;
-                        break;
-                    } else if (ancestor.id === "MainModule") {
-                        // found the main module
-                        mainModule = ancestor;
-                        break;
-                    }
-                    ancestor = ancestor.parentNode;
-                }
-            }
-        }
-		if (leftRail != null) {
-            leftRail.draggable = true;
-			if (appRailPosition !== 'default') {
-                leftRail.style.display = "none";
-            }
-        }
-        if (mainModule != null) {
-            // observe the main module; the callback function will insert the rail items into the target region
-            var mainModuleObserver = new MutationObserver(onMainModuleMutation);
-            mainModuleObserver.observe(mainModule, { childList: true, subtree: true, attributes: false, characterData: false });
-        }
-    });
+    documentObserver = new MutationObserver(onDocumentMutation);
 
 }
 
@@ -125,7 +97,9 @@ function createDocumentObserver() {
 // Start the document observer
 function connectDocumentObserver() {
 
-    documentObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    if (document.body != null) {
+        documentObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    }
 
 }
 
@@ -134,6 +108,42 @@ function connectDocumentObserver() {
 function disconnectDocumentObserver() {
 
     documentObserver.disconnect();
+
+}
+
+// Respond to a page rebuild.
+function onDocumentMutation(mutations) {
+
+    var leftRail = null;
+    var mainModule = null;
+    for (const m of mutations) {
+        for (const node of m.addedNodes) {
+            var ancestor = node;
+            while (ancestor != null) {
+                if (ancestor.id === "LeftRail") {
+                    // found the left rail
+                    leftRail = ancestor;
+                    break;
+                } else if (ancestor.id === "MainModule") {
+                    // found the main module
+                    mainModule = ancestor;
+                    break;
+                }
+                ancestor = ancestor.parentNode;
+            }
+        }
+    }
+    if (leftRail != null) {
+        leftRail.draggable = true;
+        if (getAppRailPosition() !== 'default') {
+            leftRail.style.display = "none";
+        }
+    }
+    if (mainModule != null) {
+        // observe the main module; the callback function will insert the rail items into the target region
+        var mainModuleObserver = new MutationObserver(onMainModuleMutation);
+        mainModuleObserver.observe(mainModule, { childList: true, subtree: true, attributes: false, characterData: false });
+    }
 
 }
 
@@ -157,17 +167,17 @@ function onMainModuleMutation(mutations, observer) {
     disconnectDocumentObserver();
 
     // hide the rails we don't want
-    if (appRailPosition === 'header') {
+    if (getAppRailPosition() === 'header') {
         removeHeaderButtons();
     } else {
         restoreHeaderButtons();
     }
 	const leftRail = document.getElementById("LeftRail");
-    if (leftRail != null && appRailPosition !== 'default') {
+    if (leftRail != null && getAppRailPosition() !== 'default') {
         leftRail.style.display = "none";
     }
 	const bottomRail = document.getElementById("bottomRail");
-	if (bottomRail != null && appRailPosition !== 'footer') {
+	if (bottomRail != null && getAppRailPosition() !== 'footer') {
         bottomRail.style.display = "none";
     }
 
@@ -183,14 +193,14 @@ function onMainModuleMutation(mutations, observer) {
 
     // set up drag-and-drop targets
     if (leftRail != null) {
-        makeDragDropRail(leftRail, appRailPosition === 'default');
+        makeDragDropRail(leftRail, getAppRailPosition() === 'default');
     }
     const headerButtonsRegion = findHeaderButtonsRegion();
     if (headerButtonsRegion != null) {
-		makeDragDropRail(headerButtonsRegion, appRailPosition === 'header');
+		makeDragDropRail(headerButtonsRegion, getAppRailPosition() === 'header');
     }
 	if (bottomRail != null) {
-        makeDragDropRail(bottomRail, appRailPosition === 'footer');
+        makeDragDropRail(bottomRail, getAppRailPosition() === 'footer');
     }
 	const leftPanel = findLeftPanel();
 	if (leftPanel != null) {
@@ -199,7 +209,7 @@ function onMainModuleMutation(mutations, observer) {
     const appLauncher = findAppLauncher();
     if (appLauncher != null) {
         // when the app rail is invisible, dragging the app launcher brings it back
-        makeDragDropRail(appLauncher, appRailPosition === 'none');
+        makeDragDropRail(appLauncher, getAppRailPosition === 'none');
     }
 
     // reconnect the document observer
@@ -279,10 +289,18 @@ function findLeftPanel() {
     return null;
 }
 
+
+// Get the app rail position ('default', 'header', 'footer', or 'none')
+function getAppRailPosition() {
+
+    return GM_getValue('appRailPosition', appRailConf);
+
+}
+
 // Get the region (DIV element) into which the app rail will be inserted.
 function getAppRailRegion() {
 
-    switch (appRailPosition) {
+    switch (getAppRailPosition()) {
        case 'header':
            return findHeaderButtonsRegion();
 
@@ -294,6 +312,24 @@ function getAppRailRegion() {
 
         default:
             return document.getElementById("LeftRail");
+    }
+
+}
+
+
+// Set the app rail position
+function setAppRailPosition(position) {
+
+    switch (position) {
+        case 'default':
+        case 'header':
+        case 'footer':
+        case 'none':
+            GM_setValue('appRailPosition', position);
+            break;
+
+        default:
+            console.log("Invalid setting for appRailPosition: " + position);
     }
 
 }
@@ -349,18 +385,17 @@ function onDropRail(e) {
         const leftPanel = findLeftPanel();
         const headerButtonsRegion = findHeaderButtonsRegion();
         if (appLauncher != null && appLauncher.contains(e.target)) {
-            if (appRailPosition === 'default') {
+            if (getAppRailPosition() === 'default') {
                 // dropping the default app rail into the app launcher means "remove the app rail"
-                appRailPosition = 'none';
+                setAppRailPosition('none');
             } else {
-                appRailPosition = 'default';
+                setAppRailPosition('default');
             }
         } else if (leftPanel != null && leftPanel.contains(e.target)) {
-            appRailPosition = 'footer';
+            setAppRailPosition('footer');
         } else if (headerButtonsRegion != null && headerButtonsRegion.contains(e.target)) {
-            appRailPosition = 'header';
+            setAppRailPosition('header');
         }
-        GM_setValue('appRailPosition', appRailPosition);
 
         // invoke onMainModuleMutation to re-draw the app rail and reset the observer
         onMainModuleMutation(null, null);
