@@ -45,3 +45,7 @@ Known Bugs
 - when the cursor is at the end of the line, the first press of the enter
   key is consumed by the (invisible) suggestions box, even when suggestions
   are turned off
+
+`office365.spec.js`
+- ideally, tests would run against a real version of Office 365, to detect
+  changes in the application that require changes to the userscripts

@@ -7,17 +7,17 @@
 // Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
 ///////////////////////////////////////////////////////////////////////////////
 
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // moveapprail.js tests
 //
-//////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 describe('moveapprail.js functions', () => {
 
     let workingSpace;
 
     // before each test, create a skeleton of the page, containing only the components we want to test
     beforeEach(() => {
-        // clear the persistent values
+        // clear persistent values
         GM_clearValues();
 
         // create working space that will be reset at the end of each test
@@ -305,3 +305,190 @@ function simulateMailScreen(root) {
     root.appendChild(folderPane);
 
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+// texteditorstatusbar.js tests
+//
+///////////////////////////////////////////////////////////////////////////////
+describe('texteditorstatusbar.js', () => {
+
+    let workingSpace;
+
+    beforeEach(() => {
+        // clear persistent values
+        GM_clearValues();
+        
+        // create working space that will be reset at the end of each test
+        workingSpace = document.createElement('div');
+        document.body.appendChild(workingSpace);
+
+        // mock title bar
+        const titleBar = document.createElement('div');
+        titleBar.className = 'od-OneUpTextFile-title';
+        workingSpace.appendChild(titleBar);
+
+        // mock margin with view lines
+        const margin = document.createElement('div');
+        margin.className = 'margin';
+        workingSpace.appendChild(margin);
+        const marginViewOverlays = document.createElement('div');
+        marginViewOverlays.className = 'margin-view-overlays';
+        margin.appendChild(marginViewOverlays);
+        const marginViewLines = [
+            document.createElement('div'),
+            document.createElement('div'),
+            document.createElement('div'),
+            document.createElement('div'),
+            document.createElement('div')
+        ];
+        marginViewLines[0].textContent = '1';
+        marginViewLines[1].textContent = '';    // testing text wrapped from line above
+        marginViewLines[2].textContent = '2';
+        marginViewLines[3].textContent = '4';   // testing out-of-order line
+        marginViewLines[4].textContent = '3';
+        marginViewLines[0].style.top = '0px';
+        marginViewLines[1].style.top = '20px';
+        marginViewLines[2].style.top = '40px';
+        marginViewLines[3].style.top = '80px';
+        marginViewLines[4].style.top = '60px';
+        for (let marginViewLine of marginViewLines) {
+            marginViewOverlays.appendChild(marginViewLine);
+        }
+
+        // mock viewing area
+        const viewLines = document.createElement('div');
+        viewLines.className = 'view-lines';
+        viewLines.style.fontSize = '14px';
+        workingSpace.appendChild(viewLines);
+
+        // mock cursor ".cursors-layer > .cursor"
+        const cursorsLayer = document.createElement('div');
+        cursorsLayer.className = 'cursors-layer';
+        workingSpace.appendChild(cursorsLayer);
+        const cursor = document.createElement('div');
+        cursor.className = 'cursor';
+        cursorsLayer.appendChild(cursor);
+    });
+  
+    afterEach(() => {
+        // remove the working space
+        document.body.removeChild(workingSpace);
+    });
+
+    it('fetchStatusBar', () => {
+        const statusBarClassName = fetchStatusBar();
+        expect(statusBarClassName).toBe('od-OneUpTextFile-status');
+
+        // TODO: check that the status bar has the correct structure
+    });
+
+    it('getCursorPositionLabel returns correct label', () => {
+        expect(getCursorPositionLabel(1, 1)).toBe('Line: 1 Column: 1');
+        expect(getCursorPositionLabel(5, 10)).toBe('Line: 5 Column: 10');
+    });
+
+
+    it('getSuggestionsButtonLabel returns correct label', () => {
+        expect(getSuggestionsButtonLabel(true)).toBe('Suggestions: On');
+        expect(getSuggestionsButtonLabel(false)).toBe('Suggestions: Off');
+    });
+
+    it('getColumnNumberForHorizontalOffset', () => {
+        // font size 14px gives 8.43 pixels per character in a monospace font
+        // getColumnNumber rounds the column number up, so 0 = column 1, 0.5 of a character = column 2, etc.
+        expect(getColumnNumberForHorizontalOffset(0)).toBe(1);
+        expect(getColumnNumberForHorizontalOffset(1)).toBe(2);
+        expect(getColumnNumberForHorizontalOffset(15)).toBe(3);
+        expect(getColumnNumberForHorizontalOffset(665)).toBe(80);
+    });
+
+    it('getLineNumberForVerticalOffset', () => {
+        // valid offsets
+        expect(getLineNumberForVerticalOffset(0)).toBe(1);
+        expect(getLineNumberForVerticalOffset(20)).toBe(1); // wrapped from line above
+        expect(getLineNumberForVerticalOffset(40)).toBe(2);
+        expect(getLineNumberForVerticalOffset(59)).toBe(2);
+        expect(getLineNumberForVerticalOffset(60)).toBe(3);
+        expect(getLineNumberForVerticalOffset(80)).toBe(4);
+
+        // invalid offsets return NaN
+        expect(isNaN(getLineNumberForVerticalOffset(-1))).toBeTrue();
+        expect(isNaN(getLineNumberForVerticalOffset(100))).toBeTrue();
+    });
+
+    it('getStatusBarClassName', () => {
+        let statusBarClassName = getStatusBarClassName();
+
+        // in the simplest case, the status bar has class od-OneUpTextFile-status
+        expect(statusBarClassName).toBe('od-OneUpTextFile-status');
+
+        // TODO: status bars with class OneUpTextFileStatus_xxxxxxxx
+    });
+
+    it('getTitleBar', () => {
+        // in the simplest case, the title bar has class od-OneUpTextFile-title
+        let titleBar = getTitleBar();
+        expect(titleBar.className).toBe('od-OneUpTextFile-title');
+
+        // TODO: title bars with class OneUpTextFileTitle_xxxxxxxx
+    });
+
+    it('onCursorsLayerMutation', () => {
+        const statusBarName = fetchStatusBar();
+        const statusBarCursorIndex = 2;
+
+        // cursor starts at pixels (0, 0) and characters (1, 1)
+        expect(lastCursorPosition.top).toBe(0);
+        expect(lastCursorPosition.left).toBe(0);
+        expect(lastCursorPosition.line).toBe(1);
+        expect(lastCursorPosition.column).toBe(1);
+
+        // simulate moving the cursor to pixels (20, 30)
+        let cursor = workingSpace.querySelector(".cursors-layer > .cursor");
+        cursor.style.top = '20px';
+        cursor.style.left = '30px';
+        onCursorsLayerMutation([], statusBarClassName, statusBarCursorIndex);
+        expect(lastCursorPosition.top).toBe(20);
+        expect(lastCursorPosition.left).toBe(30);
+        expect(lastCursorPosition.line).toBe(getLineNumberForVerticalOffset(20));
+        expect(lastCursorPosition.column).toBe(getColumnNumberForHorizontalOffset(30));
+
+        // simulate scrolling the cursor outside the display area (line number should be unchanged)
+        cursor.style.top = '100px';
+        cursor.style.left = '0px';
+        onCursorsLayerMutation([], statusBarClassName, statusBarCursorIndex);
+        expect(lastCursorPosition.top).toBe(100);
+        expect(lastCursorPosition.left).toBe(0);
+        expect(lastCursorPosition.line).toBe(getLineNumberForVerticalOffset(20));
+        expect(lastCursorPosition.column).toBe(getColumnNumberForHorizontalOffset(0));
+
+        // TODO: check that the status bar cell has been updated
+
+    });
+
+    it('onStatusBarSuggestClick', () => {
+        const statusBarClassName = fetchStatusBar();
+        const statusBarSuggestButtonIndex = 2;
+
+        // default showSuggestWidget value is true
+        expect(showSuggestWidget).toBeTrue();
+
+        // clicking the suggesions button changes the value to false
+        onStatusBarSuggestClick(statusBarClassName, statusBarSuggestButtonIndex);
+        expect(showSuggestWidget).toBeFalse();
+        expect(GM_getValue('showSuggestWidget', null)).toBeFalse();
+
+        // clicking again returns the value to true
+        onStatusBarSuggestClick(statusBarClassName, statusBarSuggestButtonIndex);
+        expect(showSuggestWidget).toBeTrue();
+        expect(GM_getValue('showSuggestWidget', null)).toBeTrue();
+
+        // TODO: check the status bar button has been updated
+    });
+
+    it('onSuggestWidgetMutation', () => {
+        // TODO
+    });
+
+});

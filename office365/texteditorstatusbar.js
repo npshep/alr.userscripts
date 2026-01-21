@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-01-08
+// @version          2026-01-20
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -72,10 +72,66 @@ let showSuggestWidget = GM_getValue("showSuggestWidget", true);
             }
         }
     });
-    editorObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    if (document.body) {
+        editorObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    }
 
 })();
 
+
+// Get the title bar.
+//
+// In some versions, the title bar is a DIV with class od-OneUpTextFile-title;
+// in others, it is like OneUpTextFileTitle_xxxxxxxx, where xxxxxxxx is a
+// hexadecimal number that changes from time to time.
+function getTitleBar() {
+
+    let titleBar = document.querySelector(".od-OneUpTextFile-title");
+    if (titleBar == null) {
+        // search upwards from oneUpTextEditor to find the OneUpTextFileContent_xxxxxxxx container
+        let textFileContent = document.querySelector(".oneUpTextEditor");
+        while (textFileContent != null && (textFileContent.className == null ||
+            !textFileContent.className.startsWith("OneUpTextFileContent"))) {
+            textFileContent = textFileContent.parentElement;
+        }
+
+        // now search for the OneUpTextFileTitle_xxxxxxxx child
+        titleBar = (textFileContent != null)? textFileContent.firstElementChild : null;
+        while (titleBar != null && (titleBar.className == null ||
+            !titleBar.className.startsWith("OneUpTextFileTitle"))) {
+            titleBar = titleBar.nextElementSibling;
+        }
+    }
+
+    return titleBar;
+
+}
+
+
+// Get a class name for the status bar. We choose class name for the status
+// bar that follows the convention used in whatever version of the text editor
+// that we're working with.
+let statusBarClassName = null;
+function getStatusBarClassName() {
+
+    if (statusBarClassName == null) {
+        // default to the naming style of a title bar with class od-OneUpTextFile-title
+        statusBarClassName = "od-OneUpTextFile-status";
+
+        // check for a title bar with class OneUpTextFileTitle_xxxxxxxx
+        let titleBar = getTitleBar();
+        if (titleBar != null) {
+            for (let className of titleBar.classList) {
+                if (className.startsWith("OneUpTextFileTitle")) {
+                    statusBarClassName = "OneUpTextFileStatus" + className.slice(18, className.length);
+                    break;
+                }
+            }
+        }
+    }
+
+    return statusBarClassName;
+}
 
 // Get a handle to the status bar, building the status bar if necessary.
 //
@@ -85,44 +141,7 @@ let showSuggestWidget = GM_getValue("showSuggestWidget", true);
 // Returns: the class name of the span elements in the bar
 function fetchStatusBar() {
 
-    // Get the title bar.
-    //
-    // In some versions, the title bar is a DIV with class od-OneUpTextFile-title;
-    // in others, it is like OneUpTextFileTitle_xxxxxxxx, where xxxxxxxx is a
-    // hexadecimal number that changes from time to time.
-    //
-    // We choose a class name for the status bar that follows the convention used
-    // in whatever version of the text editor that we're working with
-    let titleBar = null;
-    let titleBarList = document.getElementsByClassName("od-OneUpTextFile-title");
-    let statusBarClassName = "od-OneUpTextFile-status";
-    if (titleBarList.length == 0) {
-        // search upwards from oneUpTextEditor to find the OneUpTextFileContent_xxxxxxxx container
-        let textEditor = document.getElementsByClassName("oneUpTextEditor");
-        let textFileContent = (textEditor.length > 0) ? textEditor[0] : null;
-        while (textFileContent != null && (textFileContent.className == null ||
-            !textFileContent.className.startsWith("OneUpTextFileContent"))) {
-            textFileContent = textFileContent.parentElement;
-        }
-
-        // now search for the OneUpTextFileTitle_xxxxxxxx child
-        let textFileTitle = (textFileContent != null)? textFileContent.firstElementChild : null;
-        while (textFileTitle != null && (textFileTitle.className == null ||
-            !textFileTitle.className.startsWith("OneUpTextFileTitle"))) {
-            textFileTitle = textFileTitle.nextElementSibling;
-        }
-
-        // finally, set the status bar class name
-        statusBarClassName = "OneUpTextFileStatus";
-        if (textFileTitle != null) {
-            titleBar = textFileTitle;
-            statusBarClassName = statusBarClassName +
-                textFileTitle.classList.item(0).slice(18, textFileTitle.classList.item(0).length);
-        }
-    } else {
-        titleBar = titleBarList.item(0);
-    }
-
+    let titleBar = getTitleBar();
     if (titleBar != null) {
         if (titleBar.childElementCount == 0) {
             // filename section
@@ -202,7 +221,7 @@ function getColumnNumberForHorizontalOffset(offset) {
     // being a specific font (Consolas or Droid Sans Mono) and the other two
     // being "monospace" with and without quotes. It seems to be impossible to
     // know for sure which one the browser chooses, but I've found that using
-    // "monospace" calcuate the correct width in all the browers I use.
+    // "monospace" calculates the correct width in all the browers I use.
     const viewLines = document.querySelector(".view-lines");
     graphicsContext.font = viewLines.style.fontSize + " monospace";
 
@@ -372,7 +391,7 @@ function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
 //
 // Input:
 //   statusBarClassName - the class name of the status bar elements
-//   statusBarIndex - the index of the cursor position in the status bar
+//   statusBarIndex - the index of the suggestions button in the status bar
 function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
 
     // update the suggest widget flag
