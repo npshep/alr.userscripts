@@ -166,7 +166,7 @@ function onMainModuleMutation(mutations, observer) {
     // disconnect the document observer to prevent infinite recursion
     disconnectDocumentObserver();
 
-    // hide the rails we don't want
+    // hide the header buttons we don't want
     if (getAppRailPosition() === 'header') {
         removeHeaderButtons();
     } else {

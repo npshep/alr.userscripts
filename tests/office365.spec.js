@@ -14,6 +14,7 @@
 describe('moveapprail.js functions', () => {
 
     let workingSpace;
+    let observerSpy;
 
     // before each test, create a skeleton of the page, containing only the components we want to test
     beforeEach(() => {
@@ -57,26 +58,39 @@ describe('moveapprail.js functions', () => {
         const mainModule = document.createElement('div');
         mainModule.id = 'MainModule';
         workingSpace.appendChild(mainModule);
+
+        // spy for tracking observers
+        observerSpy = spyOn(MutationObserver.prototype, 'observe').and.callThrough();
     });
   
     afterEach(() => {
-        // remove the working space
+        // remove the working space and spy
         document.body.removeChild(workingSpace);
+        observerSpy.and.callThrough();
     });
   
     // test response to page rebuilding
     it('onDocumentMutation', () => {
 
-        // trigger a page rebuild event; TODO: test rebuilds with the leftRail in different positions
+        // trigger a page rebuild event
         const leftRail = document.getElementById("LeftRail");
         const mainModule = document.getElementById("MainModule");
         onDocumentMutation([{ addedNodes: [leftRail, mainModule] }]);
     
         // the default leftRail is draggable and unhidden 
-        expect(leftRail.draggable).toBe(true);
+        expect(leftRail.draggable).toBeTrue();
         expect(leftRail.style.display).toBe('');
 
-        // TODO: verify that observers have been created
+        // verify that mainModule is under observation
+        expect(observerSpy).toHaveBeenCalledWith( mainModule,
+            { childList: true, subtree: true, attributes: false, characterData: false }
+        );
+
+        // move the rail to the header; the left rail should no longer be visible
+        setAppRailPosition('header');
+        onDocumentMutation([{ addedNodes: [leftRail, mainModule] }]);
+        expect(leftRail.style.display).toBe('none');
+
     });
     
     
