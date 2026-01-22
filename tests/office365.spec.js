@@ -164,7 +164,7 @@ describe('moveapprail.js functions', () => {
         expect(getAppRailPosition()).toBe(appRailConf);
 
         // check valid values for appRailPosition
-        for (let pos of [ 'default', 'header', 'footer', 'none' ]) {
+        for (const pos of [ 'default', 'header', 'footer', 'none' ]) {
             setAppRailPosition(pos);
             expect(GM_getValue('appRailPosition', null)).toBe(pos);
             expect(getAppRailPosition()).toBe(pos);
@@ -368,7 +368,7 @@ describe('texteditorstatusbar.js', () => {
         marginViewLines[2].style.top = '40px';
         marginViewLines[3].style.top = '80px';
         marginViewLines[4].style.top = '60px';
-        for (let marginViewLine of marginViewLines) {
+        for (const marginViewLine of marginViewLines) {
             marginViewOverlays.appendChild(marginViewLine);
         }
 
@@ -400,7 +400,7 @@ describe('texteditorstatusbar.js', () => {
         // check there exists exactly three spans with class statusBarClassName
         expect(statusBar.length).toBe(3);
         expect(document.getElementsByClassName(statusBarClassName).length).toBe(statusBar.length);
-        for (let element of statusBar) {
+        for (const element of statusBar) {
             expect(element.tagName).toBe('SPAN');
             expect(element.className).toBe(statusBarClassName);
         }
@@ -493,6 +493,10 @@ describe('texteditorstatusbar.js', () => {
         expect(lastCursorPosition.left).toBe(30);
         expect(lastCursorPosition.line).toBe(getLineNumberForVerticalOffset(20));
         expect(lastCursorPosition.column).toBe(getColumnNumberForHorizontalOffset(30));
+        expect(statusBar[cursorIndex].textContent).toBe(getCursorPositionLabel(
+            getLineNumberForVerticalOffset(20),
+            getColumnNumberForHorizontalOffset(30)
+        ));
 
         // simulate scrolling the cursor outside the display area (line number should be unchanged)
         cursor.style.top = '100px';
@@ -502,29 +506,35 @@ describe('texteditorstatusbar.js', () => {
         expect(lastCursorPosition.left).toBe(0);
         expect(lastCursorPosition.line).toBe(getLineNumberForVerticalOffset(20));
         expect(lastCursorPosition.column).toBe(getColumnNumberForHorizontalOffset(0));
-
-        // TODO: check that the status bar cell has been updated
+        expect(statusBar[cursorIndex].textContent).toBe(getCursorPositionLabel(
+            getLineNumberForVerticalOffset(20),
+            getColumnNumberForHorizontalOffset(0)
+        ));
 
     });
 
     it('onStatusBarSuggestClick', () => {
+
         const statusBar = fetchStatusBar();
         const suggestButtonIndex = 2;
+        const suggestButton = statusBar[suggestButtonIndex].querySelector('button');
 
         // default showSuggestWidget value is true
         expect(showSuggestWidget).toBeTrue();
+        expect(suggestButton.textContent).toBe(getSuggestionsButtonLabel(true));
 
         // clicking the suggesions button changes the value to false
         onStatusBarSuggestClick(suggestButtonIndex);
         expect(showSuggestWidget).toBeFalse();
         expect(GM_getValue('showSuggestWidget', null)).toBeFalse();
+        expect(suggestButton.textContent).toBe(getSuggestionsButtonLabel(false));
 
         // clicking again returns the value to true
         onStatusBarSuggestClick(suggestButtonIndex);
         expect(showSuggestWidget).toBeTrue();
         expect(GM_getValue('showSuggestWidget', null)).toBeTrue();
+        expect(suggestButton.textContent).toBe(getSuggestionsButtonLabel(true));
 
-        // TODO: check the status bar button has been updated
     });
 
     it('onSuggestWidgetMutation', () => {
