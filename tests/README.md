@@ -1,19 +1,22 @@
-A Little Office 365
-===================
+A Little Tweak Test Suite
+=========================
 
-This folder contains a collection of userscripts that modify the behaviour and
-layout of various sections of Microsoft Office 365. See the top of each script
-for how to configure its behaviour.
+This directory contains Jasmine unit tests for each collection of userscripts.
+To execute the tests:
 
-- `moveapprail.js` moves Outlook's app rail from the left to either the header
-   or footer region (where it was in previous versions of Outlook).
-- `texteditorstatusbar.js` adds a status bar the OneDrive text editor.
+1. Install the Jasmine from https://jasmine.github.io
+2. Make a link 'jasmine' in the current directory that points to your Jasmine
+   installation.
+3. If necessary, update the Jasmine version in each of *.tests.html.
+4. Open *.tests.html in a web brower.
 
-I am not affiliated with Microsoft and all Microsoft trademarks remain the
-property of Microsoft. Microsoft is free to change its site at any time in such
-a way that these scripts no longer work.
+Nick Sheppard
+E: npsheppard@alittleresearch.com.au
+W: https://www.alittleresearch.com.au
 
-Copyright (c) 2025-6 Nicholas Paul Sheppard (npsheppard@alittleresearch.com.au)
+Buy me a Ko-Fi: https://ko-fi.com/npsheppard
+
+Copyright (c) 2026 Nicholas Paul Sheppard
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -33,15 +36,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
-
 Known Bugs
 ==========
 
-`moveapprail.js`
-- the unpin action requires re-loading to take effect
-
-`texteditorstatusbar.js`
-- when the cursor is at the end of the line, the first press of the enter
-  key is consumed by the (invisible) suggestions box, even when suggestions
-  are turned off
+- ideally, tests would run against a real version of the target web site, to
+  detect changes in the application that require changes to the userscripts
