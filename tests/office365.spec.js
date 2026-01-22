@@ -338,10 +338,11 @@ describe('texteditorstatusbar.js', () => {
         workingSpace = document.createElement('div');
         document.body.appendChild(workingSpace);
 
-        // mock title bar
-        const titleBar = document.createElement('div');
-        titleBar.className = 'od-OneUpTextFile-title';
-        workingSpace.appendChild(titleBar);
+        // mock title bar (individual tests may update with simulateSimpleTitleBar() and simulateComplexTitleBar())
+        const titleBarContainer = document.createElement('div');
+        titleBarContainer.id = 'TitleBar';
+        workingSpace.appendChild(titleBarContainer);
+        simulateSimpleTitleBar();
 
         // mock margin with view lines
         const margin = document.createElement('div');
@@ -445,23 +446,35 @@ describe('texteditorstatusbar.js', () => {
     });
 
     it('getStatusBarClassName', () => {
-        let statusBarClassName = getStatusBarClassName();
 
         // in the simplest case, the status bar has class od-OneUpTextFile-status
-        expect(statusBarClassName).toBe('od-OneUpTextFile-status');
+        simulateSimpleTitleBar();
+        expect(getStatusBarClassName()).toBe('od-OneUpTextFile-status');
 
-        // TODO: status bars with class OneUpTextFileStatus_xxxxxxxx
+        // in the complex case, the status bar has class OneUpTextFileStatus_xxxxxxxx
+        const nonce = getHexNonce(8);
+        simulateComplexTitleBar(nonce);
+        expect(getStatusBarClassName()).toBe('OneUpTextFileStatus_' + nonce);
     });
 
     it('getTitleBar', () => {
+
         // in the simplest case, the title bar has class od-OneUpTextFile-title
+        simulateSimpleTitleBar();
         let titleBar = getTitleBar();
         expect(titleBar.className).toBe('od-OneUpTextFile-title');
 
-        // TODO: title bars with class OneUpTextFileTitle_xxxxxxxx
+        // in the complex case, the title bar has class OneUpTextFileTitle_xxxxxxxx
+        const nonce = getHexNonce(8);
+        simulateComplexTitleBar(nonce);
+        titleBar = getTitleBar();
+        expect(titleBar.className).toBe('OneUpTextFileTitle_' + nonce);
+
     });
 
     it('onCursorsLayerMutation', () => {
+
+        // build the title bar and status bar
         const statusBar = fetchStatusBar();
         const cursorIndex = 2;
 
@@ -519,3 +532,63 @@ describe('texteditorstatusbar.js', () => {
     });
 
 });
+
+
+// get a nonce for simulating hex digits appended to class names
+function getHexNonce(length) {
+
+    const hexDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
+    let nonce = '';
+     for (let i = 0; i < length; i++) {
+        nonce += hexDigits[Math.floor(Math.random() * 16)];
+    }
+
+    return nonce;
+}
+
+
+// mock the simple version of the title bar
+function simulateSimpleTitleBar() {
+
+    // clear the cached status bar class name
+    statusBarClassName = null;
+
+    // clear any existing title bar
+    const titleBarContainer = document.getElementById('TitleBar');
+    titleBarContainer.innerHTML = '';
+
+    // the simple title bar is a div with class od-OneUpTextFile-title
+    const titleBar = document.createElement('div');
+    titleBar.className = 'od-OneUpTextFile-title';
+    titleBarContainer.appendChild(titleBar);
+
+}
+
+
+// mock the complex version of the title bar
+function simulateComplexTitleBar(titleBarNonce) {
+
+    // clear the cached status bar class name
+    statusBarClassName = null;
+
+    // clear any existing title bar
+    const titleBarContainer = document.getElementById('TitleBar');
+    titleBarContainer.innerHTML = '';
+
+    // the complex title bar is a div with class OneUpTextFileTitle_xxxxxxxx,
+    // which is child of OneUpTextFileContent_xxxxxxxx
+    const textFileContent = document.createElement('div');
+    textFileContent.className = 'OneUpTextFileContent_' + titleBarNonce;
+    titleBarContainer.appendChild(textFileContent);
+    titleBar = document.createElement('div');
+    titleBar.className = 'OneUpTextFileTitle_' + titleBarNonce;
+    textFileContent.appendChild(titleBar);
+
+    // finding the title bar requires a descendent with a ficed class name oneUpTextEditor
+    const textEditorParent = document.createElement('div');
+    textFileContent.appendChild(textEditorParent);
+    const textEditor = document.createElement('div');
+    textEditor.className = 'oneUpTextEditor';
+    textEditorParent.appendChild(textEditor);
+
+}
