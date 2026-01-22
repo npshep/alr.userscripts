@@ -62,13 +62,14 @@ describe('moveapprail.js functions', () => {
         // spy for tracking observers
         observerSpy = spyOn(MutationObserver.prototype, 'observe').and.callThrough();
     });
-  
+
     afterEach(() => {
         // remove the working space and spy
         document.body.removeChild(workingSpace);
         observerSpy.and.callThrough();
     });
-  
+
+
     // test response to page rebuilding
     it('onDocumentMutation', () => {
 
@@ -92,7 +93,7 @@ describe('moveapprail.js functions', () => {
         expect(leftRail.style.display).toBe('none');
 
     });
-    
+
     
     it('fetchBottomRail appends the bottom rail to the mail screen', () => {
 
@@ -384,17 +385,29 @@ describe('texteditorstatusbar.js', () => {
         cursor.className = 'cursor';
         cursorsLayer.appendChild(cursor);
     });
-  
+
     afterEach(() => {
         // remove the working space
         document.body.removeChild(workingSpace);
     });
 
     it('fetchStatusBar', () => {
-        const statusBarClassName = fetchStatusBar();
-        expect(statusBarClassName).toBe('od-OneUpTextFile-status');
 
-        // TODO: check that the status bar has the correct structure
+        const statusBar = fetchStatusBar();
+        const statusBarClassName = getStatusBarClassName();
+
+        // check there exists exactly three spans with class statusBarClassName
+        expect(statusBar.length).toBe(3);
+        expect(document.getElementsByClassName(statusBarClassName).length).toBe(statusBar.length);
+        for (let element of statusBar) {
+            expect(element.tagName).toBe('SPAN');
+            expect(element.className).toBe(statusBarClassName);
+        }
+
+        // check that the suggestions button section contains a button
+        const suggestButtonIndex = 2;
+        expect(statusBar[suggestButtonIndex].firstElementChild.tagName).toBe('BUTTON');
+
     });
 
     it('getCursorPositionLabel returns correct label', () => {
@@ -449,8 +462,8 @@ describe('texteditorstatusbar.js', () => {
     });
 
     it('onCursorsLayerMutation', () => {
-        const statusBarName = fetchStatusBar();
-        const statusBarCursorIndex = 2;
+        const statusBar = fetchStatusBar();
+        const cursorIndex = 2;
 
         // cursor starts at pixels (0, 0) and characters (1, 1)
         expect(lastCursorPosition.top).toBe(0);
@@ -462,7 +475,7 @@ describe('texteditorstatusbar.js', () => {
         let cursor = workingSpace.querySelector(".cursors-layer > .cursor");
         cursor.style.top = '20px';
         cursor.style.left = '30px';
-        onCursorsLayerMutation([], statusBarClassName, statusBarCursorIndex);
+        onCursorsLayerMutation([], cursorIndex);
         expect(lastCursorPosition.top).toBe(20);
         expect(lastCursorPosition.left).toBe(30);
         expect(lastCursorPosition.line).toBe(getLineNumberForVerticalOffset(20));
@@ -471,7 +484,7 @@ describe('texteditorstatusbar.js', () => {
         // simulate scrolling the cursor outside the display area (line number should be unchanged)
         cursor.style.top = '100px';
         cursor.style.left = '0px';
-        onCursorsLayerMutation([], statusBarClassName, statusBarCursorIndex);
+        onCursorsLayerMutation([], cursorIndex);
         expect(lastCursorPosition.top).toBe(100);
         expect(lastCursorPosition.left).toBe(0);
         expect(lastCursorPosition.line).toBe(getLineNumberForVerticalOffset(20));
@@ -482,19 +495,19 @@ describe('texteditorstatusbar.js', () => {
     });
 
     it('onStatusBarSuggestClick', () => {
-        const statusBarClassName = fetchStatusBar();
-        const statusBarSuggestButtonIndex = 2;
+        const statusBar = fetchStatusBar();
+        const suggestButtonIndex = 2;
 
         // default showSuggestWidget value is true
         expect(showSuggestWidget).toBeTrue();
 
         // clicking the suggesions button changes the value to false
-        onStatusBarSuggestClick(statusBarClassName, statusBarSuggestButtonIndex);
+        onStatusBarSuggestClick(suggestButtonIndex);
         expect(showSuggestWidget).toBeFalse();
         expect(GM_getValue('showSuggestWidget', null)).toBeFalse();
 
         // clicking again returns the value to true
-        onStatusBarSuggestClick(statusBarClassName, statusBarSuggestButtonIndex);
+        onStatusBarSuggestClick(suggestButtonIndex);
         expect(showSuggestWidget).toBeTrue();
         expect(GM_getValue('showSuggestWidget', null)).toBeTrue();
 

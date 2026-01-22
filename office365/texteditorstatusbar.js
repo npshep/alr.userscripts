@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-01-20
+// @version          2026-01-22
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -42,8 +42,8 @@ let showSuggestWidget = GM_getValue("showSuggestWidget", true);
             for (const node of m.addedNodes) {
                 if (node.classList !== undefined && node.classList.contains("monaco-editor")) {
 
-                    // Get a handle to the status bar, creating the bar if it doesn't exist
-                    const statusBarClassName = fetchStatusBar();
+                    // make sure the status bar exists
+                    const statusBar = fetchStatusBar();
 
                     // Watch for changes in the cursor position.
                     //
@@ -56,7 +56,7 @@ let showSuggestWidget = GM_getValue("showSuggestWidget", true);
                     // for changes to the cursor DIV, then updates the status bar accordingly.
                     const cursorsLayer = document.getElementsByClassName("cursors-layer");
                     if (cursorsLayer.length > 0) {
-                        var cursorObserver = new MutationObserver((mutations) => { onCursorsLayerMutation(mutations, statusBarClassName, 1) });
+                        var cursorObserver = new MutationObserver((mutations) => { onCursorsLayerMutation(mutations, 1) });
                         cursorObserver.observe(cursorsLayer[0], { childList: false, subtree: true, attributes: true, characterData: false });
                     }
                 }
@@ -138,20 +138,31 @@ function getStatusBarClassName() {
 // The status bar divides the title bar in the original text editor into a series
 // of span elements whose class name is returned by the function.
 //
-// Returns: the class name of the span elements in the bar
+// Returns: an array containg the span elements in the status bar
 function fetchStatusBar() {
 
-    let titleBar = getTitleBar();
-    if (titleBar != null) {
-        if (titleBar.childElementCount == 0) {
+    // check for an existing status bar
+    const statusBarClassName = getStatusBarClassName();
+    let statusBar = [];
+    for (let elem of document.getElementsByClassName(statusBarClassName)) {
+        statusBar.push(elem);
+    }
+
+    // if the status bar doesn't exist, create it
+    if (statusBar.length == 0) {
+        let titleBar = getTitleBar();
+        if (titleBar != null) {
+
             // filename section
             const filenameSpan = document.createElement("span");
             filenameSpan.className = statusBarClassName;
             filenameSpan.innerHTML = titleBar.innerHTML;
+            statusBar.push(filenameSpan);
 
             // cursor position section
             const cursorSpan = document.createElement("span");
             cursorSpan.className = statusBarClassName;
+            statusBar.push(cursorSpan);
 
             // text suggestions section
             const suggestionsSpan = document.createElement("span");
@@ -159,15 +170,16 @@ function fetchStatusBar() {
             const suggestionsButton = document.createElement("button");
             suggestionsSpan.appendChild(suggestionsButton);
             suggestionsButton.className = "ms-Button ms-Button--commandBar ms-CommandBarItem-link";
-            suggestionsButton.onclick = function() { onStatusBarSuggestClick(statusBarClassName, 2) };
+            suggestionsButton.onclick = function() { onStatusBarSuggestClick(2) };
             suggestionsButton.innerHTML = "<span class=\"ms-Button-label\">" +
                 getSuggestionsButtonLabel(showSuggestWidget) + "</span>";
+            statusBar.push(suggestionsSpan);
 
             // replace the original title bar with the status bar
             titleBar.innerHTML = "";
-            titleBar.appendChild(filenameSpan);
-            titleBar.appendChild(cursorSpan);
-            titleBar.appendChild(suggestionsSpan);
+            for (let span of statusBar) {
+                titleBar.appendChild(span);
+            }
 
             // add some styling
             const statusStyle = document.createElement("style");
@@ -180,7 +192,7 @@ function fetchStatusBar() {
         }
     }
 
-    return statusBarClassName;
+    return statusBar;
 }
 
 
@@ -339,7 +351,6 @@ function getSuggestionsButtonLabel(showWidget) {
 //
 // Input:
 //   mutations - the list of mutations
-//   statusBarClassName - the class name of the status bar elements
 //   statusBarIndex - the index of the cursor position in the status bar
 let lastCursorPosition = {
     'top': 0,
@@ -347,12 +358,12 @@ let lastCursorPosition = {
     'line': 1,
     'column': 1
 };
-function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
+function onCursorsLayerMutation(mutations, statusBarIndex) {
 
     // find the div containing the cursor
     let cursor = document.querySelector(".cursors-layer > .cursor");
     if (cursor != null) {
-        const statusBar = document.getElementsByClassName(statusBarClassName);
+        const statusBar = fetchStatusBar();
         if (statusBarIndex < statusBar.length) {
 
             // get the new cursor position
@@ -390,16 +401,15 @@ function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
 // Respond to a click on text suggestions control in the status bar.
 //
 // Input:
-//   statusBarClassName - the class name of the status bar elements
 //   statusBarIndex - the index of the suggestions button in the status bar
-function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
+function onStatusBarSuggestClick(statusBarIndex) {
 
     // update the suggest widget flag
     showSuggestWidget = !showSuggestWidget;
     GM_setValue("showSuggestWidget", showSuggestWidget);
 
     // update the status bar display
-    const statusBar = document.getElementsByClassName(statusBarClassName);
+    const statusBar = fetchStatusBar();
     if (statusBarIndex < statusBar.length) {
         statusBar[statusBarIndex].firstChild.firstChild.innerText = getSuggestionsButtonLabel(showSuggestWidget);
     }
