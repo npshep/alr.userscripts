@@ -209,7 +209,7 @@ function onMainModuleMutation(mutations, observer) {
     const appLauncher = findAppLauncher();
     if (appLauncher != null) {
         // when the app rail is invisible, dragging the app launcher brings it back
-        makeDragDropRail(appLauncher, getAppRailPosition === 'none');
+        makeDragDropRail(appLauncher, getAppRailPosition() === 'none');
     }
 
     // reconnect the document observer
