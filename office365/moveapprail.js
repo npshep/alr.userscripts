@@ -346,7 +346,6 @@ var draggingAppRail = false;
 // Add drag-and-drop event handlers to an element.
 function makeDragDropRail(e, draggable) {
 
-    // TODO: check that this doesn't result in multiple event handlers being added
     e.draggable = draggable;
     e.addEventListener('dragover', onDragOverAllowDropRail);
 	e.addEventListener('drop', onDropRail);
