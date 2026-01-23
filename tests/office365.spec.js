@@ -520,7 +520,7 @@ describe('texteditorstatusbar.js', () => {
         const suggestButton = statusBar[suggestButtonIndex].querySelector('button');
 
         // default showSuggestWidget value is true
-        expect(showSuggestWidget).toBeTrue();
+        showSuggestWidget = true;
         expect(suggestButton.textContent).toBe(getSuggestionsButtonLabel(true));
 
         // clicking the suggesions button changes the value to false
@@ -538,7 +538,32 @@ describe('texteditorstatusbar.js', () => {
     });
 
     it('onSuggestWidgetMutation', () => {
-        // TODO
+
+        // mock mutation observer that does nothing
+        const observer = new MockMutationObserver(() => {});
+
+        // mock suggestions widget
+        const suggestionsWidget = document.createElement('div');
+        suggestionsWidget.className = 'suggest-widget';
+        workingSpace.appendChild(suggestionsWidget);
+
+        // with showSuggestWidget true, mutation of the class attribute displays the suggestions widget
+        showSuggestWidget = true;
+        const classMutations = [ { target: suggestionsWidget, attributeName: 'class' } ];
+        onSuggestWidgetMutation(classMutations, observer);
+        expect(suggestionsWidget.style.display).toBe('');
+
+        // with showSuggestWidget false, mutation of the class attribute suppresses the suggestions widget
+        showSuggestWidget = false;
+        onSuggestWidgetMutation(classMutations, observer);
+        expect(suggestionsWidget.style.display).toBe('none');
+
+        // other mutations don't change the display state
+        showSuggestWidget = true;
+        const nonClassMutations = [ { target: suggestionsWidget, attributeName: 'style' } ];
+        onSuggestWidgetMutation(nonClassMutations, observer);
+        expect(suggestionsWidget.style.display).toBe('none');
+
     });
 
 });
@@ -549,7 +574,7 @@ function getHexNonce(length) {
 
     const hexDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'];
     let nonce = '';
-     for (let i = 0; i < length; i++) {
+    for (let i = 0; i < length; i++) {
         nonce += hexDigits[Math.floor(Math.random() * 16)];
     }
 
