@@ -140,7 +140,7 @@ function onDocumentMutation(mutations) {
         }
     }
     if (mainModule != null) {
-        // observe the main module; the callback function will insert the rail items into the target region
+        // observe the main module; onMainModuleMutation will insert the rail items into the target region
         var mainModuleObserver = new MutationObserver(onMainModuleMutation);
         mainModuleObserver.observe(mainModule, { childList: true, subtree: true, attributes: false, characterData: false });
     }
@@ -150,7 +150,7 @@ function onDocumentMutation(mutations) {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Respond to mutation of the main module, inserting the app rail into the
-// header.
+// the desired region.
 //
 // Input:
 //   mutations - the mutations
@@ -158,7 +158,7 @@ function onDocumentMutation(mutations) {
 ///////////////////////////////////////////////////////////////////////////////
 function onMainModuleMutation(mutations, observer) {
 
-    // disconnect the observer; a new one will attach when Outlook updates the main module
+    // disconnect the main module observer; a new one will attach when Outlook updates the main module
     if (observer != null) {
         observer.disconnect();
     }
@@ -236,7 +236,7 @@ function fetchBottomRail() {
         if (leftPanel != null) {
             leftPanel.appendChild(bottomRail);
         } else {
-            console.log("Couldn't find a location for the bottom rail.");
+            console.warn("Couldn't find a location for the bottom rail.");
         }
     }
 
@@ -329,7 +329,7 @@ function setAppRailPosition(position) {
             break;
 
         default:
-            console.log("Invalid setting for appRailPosition: " + position);
+            console.warn("Ignoring invalid setting for appRailPosition: " + position);
     }
 
 }

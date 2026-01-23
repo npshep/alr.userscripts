@@ -95,10 +95,10 @@ describe('moveapprail.js functions', () => {
     });
 
     
-    it('fetchBottomRail appends the bottom rail to the mail screen', () => {
+    it('fetchBottomRail (mail screen)', () => {
 
-        // set up the mail screen
-        simulateMailScreen(workingSpace);
+        // mock up the mail screen
+        mockMailScreen(workingSpace);
  
         // check that the bottom rail is created with all the correct properties
         const bottomRail = fetchBottomRail();
@@ -113,10 +113,10 @@ describe('moveapprail.js functions', () => {
     });
     
     
-    it('fetchBottomRail appends the bottom rail to the calendar screen', () => {
+    it('fetchBottomRail (calendar screen)', () => {
 
         // set up the calendar screen
-        simulateCalendarScreen(workingSpace);
+        mockCalendarScreen(workingSpace);
  
         // check that the bottom rail is created with all the correct properties
         const bottomRail = fetchBottomRail();
@@ -131,34 +131,34 @@ describe('moveapprail.js functions', () => {
     });
 
 
-    it('findAppLauncher returns the element with id O365_MainLink_NavMenu', () => {
+    it('findAppLauncher', () => {
         const appLauncher = findAppLauncher();
         expect(appLauncher.id).toBe('O365_MainLink_NavMenu');
     });
 
 
-    it('findHeaderButtonsRegion returns the headerButtonsRegionId element', () => {
+    it('findHeaderButtonsRegion', () => {
         const headerButtonsRegion = findHeaderButtonsRegion();
         expect(headerButtonsRegion.id).toBe('headerButtonsRegionId');
     });
 
 
-    it('findLeftPanel returns folderPaneDroppableContainer for the mail screen', () => {
-        simulateMailScreen(workingSpace);
+    it('findLeftPanel (mail screen)', () => {
+        mockMailScreen(workingSpace);
         const leftPanel = findLeftPanel()
         expect(leftPanel.id).toBe('folderPaneDroppableContainer');
     });
 
 
-    it('findLeftPanel returns .SFJ5T > .AMOva for the calendar screen', () => {
-        simulateCalendarScreen(workingSpace);
+    it('findLeftPanel (calendar screen)', () => {
+        mockCalendarScreen(workingSpace);
         const leftPanel = findLeftPanel();
         expect(leftPanel.className).toBe('SFJ5T');
         expect(leftPanel.firstElementChild.className).toBe('AMOVa');
     });
 
 
-    it('getAppRailPosoition/setAppRailPosition get/set the app rail position value', () => {
+    it('getAppRailPosition/setAppRailPosition', () => {
 
         // check the default position
         expect(getAppRailPosition()).toBe(appRailConf);
@@ -178,13 +178,13 @@ describe('moveapprail.js functions', () => {
     });
 
 
-    it('getAppRailRegion honours app rail position setting', () => {
+    it('getAppRailRegion', () => {
         // header: return headerButtonsRegion
         setAppRailPosition('header');
         expect(getAppRailRegion().id).toBe('headerButtonsRegionId');
 
         // footer: creates bottomRail via fetchBottomRail; ensure left panel exists
-        simulateMailScreen(workingSpace);
+        mockMailScreen(workingSpace);
         setAppRailPosition('footer');
         expect(getAppRailRegion().id).toBe('bottomRail');
 
@@ -195,9 +195,9 @@ describe('moveapprail.js functions', () => {
         // default: returns element with id LeftRail
         setAppRailPosition('default');
         expect(getAppRailRegion().id).toBe('LeftRail');
-  });
+    });
 
-    it('makeDragDropRail attaches handlers and dragstart sets draggingAppRail', () => {
+    it('makeDragDropRail', () => {
 
         // draggingAppRail starts false
         expect(draggingAppRail).toBe(false);
@@ -221,11 +221,11 @@ describe('moveapprail.js functions', () => {
     });
 
 
-    it('onDropRail sets appRailPosition correctly for header/leftPanel/appLauncher', () => {
-        // set up the mail screen
-        simulateMailScreen(workingSpace);
+    it('onDropRail', () => {
+        // mock up the mail screen
+        mockMailScreen(workingSpace);
 
-        // dropping into header
+        // dropping into the header
         draggingAppRail = true;
         const headerButtonsRegion = findHeaderButtonsRegion();
         const headerChild = document.createElement('div');
@@ -235,7 +235,7 @@ describe('moveapprail.js functions', () => {
         expect(getAppRailPosition()).toBe('header');
         expect(draggingAppRail).toBe(false);
 
-        // dropping into leftPanel
+        // dropping into the left panel
         draggingAppRail = true;
         const leftPanel = findLeftPanel();
         const leftPanelChild = document.createElement('div');
@@ -245,7 +245,7 @@ describe('moveapprail.js functions', () => {
         expect(getAppRailPosition()).toBe('footer');
         expect(draggingAppRail).toBe(false);
 
-        // dropping into app launcher toggles 'default' <-> 'none'
+        // dragging the app rail into the app launcher removes the rail
         draggingAppRail = true;
         setAppRailPosition('default');
         const appLauncher = findAppLauncher();
@@ -255,15 +255,16 @@ describe('moveapprail.js functions', () => {
         onDropRail(launcherEvent);
         expect(getAppRailPosition()).toBe('none');
 
+        // dragging the app launcher out restores the rail
         draggingAppRail = true;
         setAppRailPosition('none');
-        onDropRail(launcherEvent);
-        expect(getAppRailPosition()).toBe('default');
+        onDropRail(leftPanelEvent);
+        expect(getAppRailPosition()).toBe('footer');
 
     });
 
 
-    it('removeHeaderButtons moves unwanted header buttons and removes app rail buttons', () => {
+    it('removeHeaderButtons/restoreHeaderButtons', () => {
 
         const headerButtonsRegion = findHeaderButtonsRegion();
 
@@ -298,8 +299,8 @@ describe('moveapprail.js functions', () => {
 });
 
 
-// simulate the calendar screen
-function simulateCalendarScreen(root) {
+// mock up the calendar screen
+function mockCalendarScreen(root) {
 
     // create divs with classes SFj5T and AMOVa to simulate the calendar area
     const div1 = document.createElement('div');
@@ -312,8 +313,8 @@ function simulateCalendarScreen(root) {
 }
 
 
-// simulate the mail screen
-function simulateMailScreen(root) {
+// mock up the mail screen
+function mockMailScreen(root) {
 
     const folderPane = document.createElement('div');
     folderPane.id = 'folderPaneDroppableContainer';
@@ -338,13 +339,14 @@ describe('texteditorstatusbar.js', () => {
         workingSpace = document.createElement('div');
         document.body.appendChild(workingSpace);
 
-        // mock title bar (individual tests may update with simulateSimpleTitleBar() and simulateComplexTitleBar())
+        // mock up the title bar
+        // (individual tests may update with mockSimpleTitleBar() and mockComplexTitleBar())
         const titleBarContainer = document.createElement('div');
         titleBarContainer.id = 'TitleBar';
         workingSpace.appendChild(titleBarContainer);
-        simulateSimpleTitleBar();
+        mockSimpleTitleBar();
 
-        // mock margin with view lines
+        // mock up some margin with view lines
         const margin = document.createElement('div');
         margin.className = 'margin';
         workingSpace.appendChild(margin);
@@ -372,13 +374,13 @@ describe('texteditorstatusbar.js', () => {
             marginViewOverlays.appendChild(marginViewLine);
         }
 
-        // mock viewing area
+        // mock up the viewing area
         const viewLines = document.createElement('div');
         viewLines.className = 'view-lines';
         viewLines.style.fontSize = '14px';
         workingSpace.appendChild(viewLines);
 
-        // mock cursor ".cursors-layer > .cursor"
+        // mock up the cursor
         const cursorsLayer = document.createElement('div');
         cursorsLayer.className = 'cursors-layer';
         workingSpace.appendChild(cursorsLayer);
@@ -411,13 +413,13 @@ describe('texteditorstatusbar.js', () => {
 
     });
 
-    it('getCursorPositionLabel returns correct label', () => {
+    it('getCursorPositionLabel', () => {
         expect(getCursorPositionLabel(1, 1)).toBe('Line: 1 Column: 1');
         expect(getCursorPositionLabel(5, 10)).toBe('Line: 5 Column: 10');
     });
 
 
-    it('getSuggestionsButtonLabel returns correct label', () => {
+    it('getSuggestionsButtonLabel', () => {
         expect(getSuggestionsButtonLabel(true)).toBe('Suggestions: On');
         expect(getSuggestionsButtonLabel(false)).toBe('Suggestions: Off');
     });
@@ -448,25 +450,25 @@ describe('texteditorstatusbar.js', () => {
     it('getStatusBarClassName', () => {
 
         // in the simplest case, the status bar has class od-OneUpTextFile-status
-        simulateSimpleTitleBar();
+        mockSimpleTitleBar();
         expect(getStatusBarClassName()).toBe('od-OneUpTextFile-status');
 
         // in the complex case, the status bar has class OneUpTextFileStatus_xxxxxxxx
         const nonce = getHexNonce(8);
-        simulateComplexTitleBar(nonce);
+        mockComplexTitleBar(nonce);
         expect(getStatusBarClassName()).toBe('OneUpTextFileStatus_' + nonce);
     });
 
     it('getTitleBar', () => {
 
         // in the simplest case, the title bar has class od-OneUpTextFile-title
-        simulateSimpleTitleBar();
+        mockSimpleTitleBar();
         let titleBar = getTitleBar();
         expect(titleBar.className).toBe('od-OneUpTextFile-title');
 
         // in the complex case, the title bar has class OneUpTextFileTitle_xxxxxxxx
         const nonce = getHexNonce(8);
-        simulateComplexTitleBar(nonce);
+        mockComplexTitleBar(nonce);
         titleBar = getTitleBar();
         expect(titleBar.className).toBe('OneUpTextFileTitle_' + nonce);
 
@@ -498,7 +500,7 @@ describe('texteditorstatusbar.js', () => {
             getColumnNumberForHorizontalOffset(30)
         ));
 
-        // simulate scrolling the cursor outside the display area (line number should be unchanged)
+        // simulate scrolling the cursor outside the display area (the line number should be unchanged)
         cursor.style.top = '100px';
         cursor.style.left = '0px';
         onCursorsLayerMutation([], cursorIndex);
@@ -515,6 +517,7 @@ describe('texteditorstatusbar.js', () => {
 
     it('onStatusBarSuggestClick', () => {
 
+        // construct the status bar
         const statusBar = fetchStatusBar();
         const suggestButtonIndex = 2;
         const suggestButton = statusBar[suggestButtonIndex].querySelector('button');
@@ -523,7 +526,7 @@ describe('texteditorstatusbar.js', () => {
         showSuggestWidget = true;
         expect(suggestButton.textContent).toBe(getSuggestionsButtonLabel(true));
 
-        // clicking the suggesions button changes the value to false
+        // clicking the suggestions button changes the value to false
         onStatusBarSuggestClick(suggestButtonIndex);
         expect(showSuggestWidget).toBeFalse();
         expect(GM_getValue('showSuggestWidget', null)).toBeFalse();
@@ -539,7 +542,7 @@ describe('texteditorstatusbar.js', () => {
 
     it('onSuggestWidgetMutation', () => {
 
-        // mock mutation observer that does nothing
+        // mock up a mutation observer that does nothing
         const observer = new MockMutationObserver(() => {});
 
         // mock suggestions widget
@@ -547,7 +550,7 @@ describe('texteditorstatusbar.js', () => {
         suggestionsWidget.className = 'suggest-widget';
         workingSpace.appendChild(suggestionsWidget);
 
-        // with showSuggestWidget true, mutation of the class attribute displays the suggestions widget
+        // with showSuggestWidget true, mutation of the class attribute causes the suggestions widget to display
         showSuggestWidget = true;
         const classMutations = [ { target: suggestionsWidget, attributeName: 'class' } ];
         onSuggestWidgetMutation(classMutations, observer);
@@ -582,8 +585,8 @@ function getHexNonce(length) {
 }
 
 
-// mock the simple version of the title bar
-function simulateSimpleTitleBar() {
+// mock up the simple version of the title bar
+function mockSimpleTitleBar() {
 
     // clear the cached status bar class name
     statusBarClassName = null;
@@ -600,8 +603,8 @@ function simulateSimpleTitleBar() {
 }
 
 
-// mock the complex version of the title bar
-function simulateComplexTitleBar(titleBarNonce) {
+// mock up the complex version of the title bar
+function mockComplexTitleBar(titleBarNonce) {
 
     // clear the cached status bar class name
     statusBarClassName = null;

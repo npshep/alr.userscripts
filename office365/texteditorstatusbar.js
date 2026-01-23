@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-01-22
+// @version          2026-01-23
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -108,9 +108,9 @@ function getTitleBar() {
 }
 
 
-// Get a class name for the status bar. We choose class name for the status
-// bar that follows the convention used in whatever version of the text editor
-// that we're working with.
+// Get a class name for the status bar. We choose class name that follows the
+// convention used in whatever version of the text editor that we're working
+// with.
 let statusBarClassName = null;
 function getStatusBarClassName() {
 
@@ -133,12 +133,13 @@ function getStatusBarClassName() {
     return statusBarClassName;
 }
 
-// Get a handle to the status bar, building the status bar if necessary.
+
+// Get the elements of the status bar, building the status bar if necessary.
 //
 // The status bar divides the title bar in the original text editor into a series
-// of span elements whose class name is returned by the function.
+// of span elements.
 //
-// Returns: an array containg the span elements in the status bar
+// Returns: an array containing the span elements in the status bar
 function fetchStatusBar() {
 
     // check for an existing status bar
@@ -361,33 +362,38 @@ let lastCursorPosition = {
 function onCursorsLayerMutation(mutations, statusBarIndex) {
 
     // find the div containing the cursor
+    let cursorMoved = false;
     let cursor = document.querySelector(".cursors-layer > .cursor");
     if (cursor != null) {
+
+        // get the new cursor position
+        const newTop = parseInt(cursor.style.top);
+        const newLeft = parseInt(cursor.style.left);
+        if (!isNaN(newTop) && newTop != lastCursorPosition.top) {
+            // update the cursor top position and line number
+            lastCursorPosition.top = newTop;
+            const newLine = getLineNumberForVerticalOffset(newTop);
+            if (!isNaN(newLine)) {
+                // only update the line number if the cursor is within the display area
+                lastCursorPosition.line = newLine;
+            }
+            cursorMoved = true;
+        }
+        if (!isNaN(newLeft) && newLeft != lastCursorPosition.left) {
+            // update the cursor left position and line
+            lastCursorPosition.left = newLeft;
+            lastCursorPosition.column = getColumnNumberForHorizontalOffset(
+                newLeft
+            );
+            cursorMoved = true;
+        }
+
+    }
+
+    if (cursorMoved) {
+        // update the status bar
         const statusBar = fetchStatusBar();
         if (statusBarIndex < statusBar.length) {
-
-            // get the new cursor position
-            const newTop = parseInt(cursor.style.top);
-            const newLeft = parseInt(cursor.style.left);
-
-            if (!isNaN(newTop) && newTop != lastCursorPosition.top) {
-                // update the cursor top position and line number
-                lastCursorPosition.top = newTop;
-                const newLine = getLineNumberForVerticalOffset(newTop);
-                if (!isNaN(newLine)) {
-                    // only update the line number if the cursor is within the display area
-                    lastCursorPosition.line = newLine;
-                }
-            }
-            if (!isNaN(newLeft) && newLeft != lastCursorPosition.left) {
-                // update the cursor left position and line
-                lastCursorPosition.left = newLeft;
-                lastCursorPosition.column = getColumnNumberForHorizontalOffset(
-                    newLeft
-                );
-            }
-
-            // update the status bar
             statusBar[statusBarIndex].innerHTML = getCursorPositionLabel(
                 lastCursorPosition.line,
                 lastCursorPosition.column
