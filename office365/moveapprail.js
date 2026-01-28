@@ -166,7 +166,7 @@ function onMainModuleMutation(mutations, observer) {
     // disconnect the document observer to prevent infinite recursion
     disconnectDocumentObserver();
 
-    // hide the header buttons we don't want
+    // hide the header buttons and rails we don't want
     if (getAppRailPosition() === 'header') {
         removeHeaderButtons();
     } else {
@@ -184,10 +184,7 @@ function onMainModuleMutation(mutations, observer) {
     // insert the app rail buttons into the target region and make it visible
     const targetRegion = getAppRailRegion();
     if (targetRegion != null) {
-        const apps = fetchAppRailCollection();
-        for (var i = apps.length - 1; i >= 0 ; i--) {
-            targetRegion.insertAdjacentElement("afterbegin", apps[i]);
-        }
+        insertAppRail(targetRegion);
         targetRegion.style.display = "flex";
     }
 
@@ -199,8 +196,9 @@ function onMainModuleMutation(mutations, observer) {
     if (headerButtonsRegion != null) {
 		makeDragDropRail(headerButtonsRegion, getAppRailPosition() === 'header');
     }
-	if (bottomRail != null) {
-        makeDragDropRail(bottomRail, getAppRailPosition() === 'footer');
+    const bottomRailExisting = fetchBottomRail(false);
+	if (bottomRailExisting != null) {
+        makeDragDropRail(bottomRailExisting, getAppRailPosition() === 'footer');
     }
 	const leftPanel = findLeftPanel();
 	if (leftPanel != null) {
@@ -218,14 +216,19 @@ function onMainModuleMutation(mutations, observer) {
 }
 
 
-// Find the bottom rail, creating it if it doesn't exist.
+// Find the bottom rail, optionally creating it if it doesn't exist.
 //
 // The rail is placed at the bottom of the left panel, as determined by
 // findLeftPanel().
-function fetchBottomRail() {
+//
+// Input:
+//   create (boolean) - if true, create the rail if it doesn't exist
+//
+// Returns: the root element of the bottom rail, or null if it doesn't exist and wasn't created
+function fetchBottomRail(create) {
 
     var bottomRail = document.getElementById("bottomRail");
-    if (bottomRail == null) {
+    if (create && bottomRail == null) {
         // create an element for the bottom rail
         bottomRail = document.createElement("DIV");
         bottomRail.id = "bottomRail";
@@ -305,7 +308,7 @@ function getAppRailRegion() {
            return findHeaderButtonsRegion();
 
        case 'footer':
-           return fetchBottomRail();
+           return fetchBottomRail(true);
 
        case 'none':
            return null;
@@ -410,8 +413,8 @@ function onDropRail(e) {
 // App buttons appear on the app rail at various times during building of the
 // page. The fetchRailButtons() function checks for new buttons that have
 // appeared since the last invocation and moves them into the
-// appRailCollection array, from where they'll later be inserted into the
-// target region.
+// appRailCollection array. The insertAppRail() function then inserts them into
+// a target region.
 //
 // The original app rail is a div with id LeftRail. This div is further divided
 // into two div more elements, one with class ___1w2h5wn that contains the
@@ -454,6 +457,43 @@ function fetchAppRailCollection() {
 
 }
 
+
+// Insert the app rail into an existing region.
+function insertAppRail(target) {
+
+    // get the apps from the default left rail
+    const apps = fetchAppRailCollection();
+
+    // ensure the two sections with the mysterious class names exist
+    let appRail1 = target.querySelector(".___1w2h5wn");
+    let appRail2 = target.querySelector(".___1fkhojs");
+    if (appRail1 == null) {
+        appRail1 = document.createElement("div");
+        appRail1.className = "___1w2h5wn";
+        if (appRail2 == null) {
+            // append at the end of the target area
+            target.appendChild(appRail1);
+        } else {
+            // append before the part of the rail that already exists (this probably shouldn't happen)
+            appRail2.insertAdjacentElement("beforebegin", appRail1);
+        }
+    }
+    if (appRail2 == null) {
+        appRail2 = document.createElement("div");
+        appRail2.className = "___1fkhojs";
+        appRail1.insertAdjacentElement("afterend", appRail2);
+    }
+
+    // insert apps
+    for (var i = apps.length - 1; i >= 0 ; i--) {
+        if (i < appRailSeparator) {
+            appRail1.insertAdjacentElement("afterbegin", apps[i]);
+        } else {
+            appRail2.insertAdjacentElement("afterbegin", apps[i]);
+        }
+    }
+
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Manage the collection of header buttons.

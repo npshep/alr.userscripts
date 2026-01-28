@@ -21,6 +21,10 @@ describe('moveapprail.js functions', () => {
         // clear persistent values
         GM_clearValues();
 
+        // clear the app rail collection
+        appRailCollection = [ ];
+        appRailSeparator = 0;
+
         // create working space that will be reset at the end of each test
         workingSpace = document.createElement('div');
         document.body.appendChild(workingSpace);
@@ -30,21 +34,27 @@ describe('moveapprail.js functions', () => {
         appLauncher.id = 'O365_MainLink_NavMenu';
         workingSpace.appendChild(appLauncher);
 
-        // header buttons region
+        // header buttons
         const headerButtonsRegion = document.createElement('div');
         headerButtonsRegion.id = 'headerButtonsRegionId';
+        headerButtonsRegion.style.display = 'flex';
         workingSpace.appendChild(headerButtonsRegion);
+        const button1 = document.createElement('div');
+        const button2 = document.createElement('div');
+        button1.className = 'mockHeaderButton';
+        button2.className = 'mockHeaderButton';
+        headerButtonsRegion.appendChild(button1);
+        headerButtonsRegion.appendChild(button2);
 
         // left rail
         const leftRail = document.createElement('div');
         leftRail.id = 'LeftRail';
         workingSpace.appendChild(leftRail);
+
+        // the first section of the left rail contains the apps
         const leftRailSection1 = document.createElement('div');
         leftRailSection1.className = '___1w2h5wn';
         leftRail.appendChild(leftRailSection1);
-        const leftRailSection2 = document.createElement('div');
-        leftRailSection2.className = '___1fkhojs';
-        leftRail.appendChild(leftRailSection2);
         const app1 = document.createElement('div');
         app1.className = '___77lcry0';
         app1.id = 'a1';
@@ -52,7 +62,16 @@ describe('moveapprail.js functions', () => {
         app2.className = '___77lcry0';
         app2.id = 'a2';
         leftRailSection1.appendChild(app1);
-        leftRailSection2.appendChild(app2);
+        leftRailSection1.appendChild(app2);
+
+        // the second section of the left rail contains the More Apps widget
+        const leftRailSection2 = document.createElement('div');
+        leftRailSection2.className = '___1fkhojs';
+        leftRail.appendChild(leftRailSection2);
+        const moreApps = document.createElement('div');
+        moreApps.className = '___77lcry0';
+        moreApps.id = 'moreApps';
+        leftRailSection2.appendChild(moreApps);
 
         // main module
         const mainModule = document.createElement('div');
@@ -94,21 +113,94 @@ describe('moveapprail.js functions', () => {
 
     });
 
+    it('onMainModuleMutation', () => {
+
+        // mock up the mail screen
+        mockMailScreen(workingSpace);
+
+        // check each position of the app rail
+        for (const pos of [ 'default', 'header', 'footer', 'none' ]) {
+            // move the app rail to the new position
+            setAppRailPosition(pos);
+            onMainModuleMutation(null, null);
+
+            if (pos !== 'none') {
+                // check that the app rail is displayed and draggable
+                const appRailRegion = getAppRailRegion();
+                expect(appRailRegion.style.display).toBe('flex');
+                expect(appRailRegion.draggable).toBeTrue(); // but is false when pos === footer
+
+                // check that the app rail contains the two sections set up in beforeEach()
+                let numberRailApp1 = 0;
+                let numberRailApp2 = 0;
+                let numberHeaderButtons = 0;
+                let railChild = appRailRegion.firstElementChild;
+                while (railChild != null) {
+                    if (railChild.className === '___1w2h5wn') {
+                        numberRailApp1++;
+                    } else if (railChild.className === '___1fkhojs') {
+                        numberRailApp2++;
+                    } else if (railChild.className === 'mockHeaderButton') {
+                        numberHeaderButtons++;
+                    } else {
+                        fail('Unexpected app rail element with class \'' + railChild.className + '\'');
+                    }
+                    railChild = railChild.nextElementSibling;
+                }
+                expect(numberRailApp1).toBe(1);
+                expect(numberRailApp2).toBe(1);
+                expect(numberHeaderButtons).toBe(pos === 'header' ? 2 : 0)
+            }
+
+            // check that unused regions aren't displayed
+            const headerButtonsRegion = document.getElementById('headerButtonsRegionId');
+            const leftRail = document.getElementById('LeftRail');
+            const bottomRail = document.getElementById('bottomRail');
+            if (pos !== 'default') {
+                expect(leftRail.style.display).toBe('none');
+            }
+            if (bottomRail != null && pos !== 'footer') {
+                expect(bottomRail.style.display).toBe('none');
+            }
+            // the header is always displayed
+            expect(headerButtonsRegion.style.display).toBe('flex');
+
+            // check header buttons
+            if (pos !== 'header') {
+                let numberButtons = 0;
+                let headerButton = headerButtonsRegion.firstElementChild;
+                while (headerButton != null) {
+                    if (headerButton.className !== '___1w2h5wn' && headerButton.className !== '___1fkhojs') {
+                        expect(headerButton.className).toBe('mockHeaderButton');
+                        numberButtons++;
+                    }
+                    headerButton = headerButton.nextElementSibling;
+                }
+                expect(numberButtons).toBe(2);
+            }
+
+        }
+    });
+
     
     it('fetchBottomRail (mail screen)', () => {
 
         // mock up the mail screen
         mockMailScreen(workingSpace);
+
+        // check that fetchBottomRail(false) returns no bottom rail
+        expect(fetchBottomRail(false)).toBeNull();
  
         // check that the bottom rail is created with all the correct properties
-        const bottomRail = fetchBottomRail();
+        const bottomRail = fetchBottomRail(true);
         expect(bottomRail).toBeTruthy();
         expect(bottomRail.id).toBe('bottomRail');
         expect(bottomRail.style.display).toBe('flex');
         expect(document.body.querySelector('#bottomRail')).toBe(bottomRail);
 
         // check that a second call to fetchBottomRail returns the bottom rail created earlier
-        expect(fetchBottomRail()).toBe(bottomRail);
+        expect(fetchBottomRail(false)).toBe(bottomRail);
+        expect(fetchBottomRail(true)).toBe(bottomRail);
 
     });
     
@@ -119,14 +211,15 @@ describe('moveapprail.js functions', () => {
         mockCalendarScreen(workingSpace);
  
         // check that the bottom rail is created with all the correct properties
-        const bottomRail = fetchBottomRail();
+        const bottomRail = fetchBottomRail(true);
         expect(bottomRail).toBeTruthy();
         expect(bottomRail.id).toBe('bottomRail');
         expect(bottomRail.style.display).toBe('flex');
         expect(document.body.querySelector('#bottomRail')).toBe(bottomRail);
 
         // check that a second call to fetchBottomRail returns the bottom rail created earlier
-        expect(fetchBottomRail()).toBe(bottomRail);
+        expect(fetchBottomRail(false)).toBe(bottomRail);
+        expect(fetchBottomRail(true)).toBe(bottomRail);
 
     });
 
@@ -260,6 +353,54 @@ describe('moveapprail.js functions', () => {
         setAppRailPosition('none');
         onDropRail(leftPanelEvent);
         expect(getAppRailPosition()).toBe('footer');
+
+    });
+
+
+    it('fetchAppRailCollection', () => {
+
+        // as set up in beforeEach(), the app rail should have two apps in the first section and one in the second
+        const appRailCollection = fetchAppRailCollection();
+        expect(appRailCollection.length).toBe(3);
+        expect(appRailSeparator).toBe(2);
+
+    });
+
+
+    it('insertAppRail', () => {
+
+        function expectAppRailComponents(section1, section2) {
+            // check the structure that has been set up in beforeEach()
+            expect(section1.className).toBe('___1w2h5wn');
+            expect(section2.className).toBe('___1fkhojs');
+            expect(section1.children.length).toBe(2);
+            expect(section2.children.length).toBe(1);
+            expect(section1.children.item(0).id).toBe('a1');
+            expect(section1.children.item(1).id).toBe('a2');
+            expect(section2.children.item(0).id).toBe('moreApps');
+        }
+
+        // insert the app rail into an empty region
+        const emptyTarget = document.createElement('div');
+        workingSpace.appendChild(emptyTarget);
+        insertAppRail(emptyTarget);
+
+        // check that the app rail contains the two sections set up in beforeEach()
+        expect(emptyTarget.children.length).toBe(2);
+        expectAppRailComponents(emptyTarget.children.item(0), emptyTarget.children.item(1));
+
+        // insert the app rail into a region with an existing button
+        const occupiedTarget = document.createElement('div');
+        workingSpace.appendChild(occupiedTarget);
+        const existingButton = document.createElement('div');
+        existingButton.className = 'existingButton';
+        occupiedTarget.appendChild(existingButton);
+        insertAppRail(occupiedTarget);
+
+        // check that the app rail contains the existing button plus two sections set up in beforeEach()
+        expect(occupiedTarget.children.length).toBe(3);
+        expect(occupiedTarget.children.item(0).className).toBe('existingButton');
+        expectAppRailComponents(occupiedTarget.children.item(1), occupiedTarget.children.item(2));
 
     });
 
