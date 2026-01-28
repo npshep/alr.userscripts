@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-01-20
+// @version          2026-01-29
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -470,6 +470,7 @@ function insertAppRail(target) {
     if (appRail1 == null) {
         appRail1 = document.createElement("div");
         appRail1.className = "___1w2h5wn";
+        appRail1.style.display = "flex";
         if (appRail2 == null) {
             // append at the end of the target area
             target.appendChild(appRail1);
@@ -481,6 +482,7 @@ function insertAppRail(target) {
     if (appRail2 == null) {
         appRail2 = document.createElement("div");
         appRail2.className = "___1fkhojs";
+        appRail2.style.display = "flex";
         appRail1.insertAdjacentElement("afterend", appRail2);
     }
 
@@ -494,6 +496,7 @@ function insertAppRail(target) {
     }
 
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Manage the collection of header buttons.
