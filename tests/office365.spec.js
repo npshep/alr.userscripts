@@ -399,8 +399,8 @@ describe('moveapprail.js functions', () => {
 
         // check that the app rail contains the existing button plus two sections set up in beforeEach()
         expect(occupiedTarget.children.length).toBe(3);
-        expect(occupiedTarget.children.item(0).className).toBe('existingButton');
-        expectAppRailComponents(occupiedTarget.children.item(1), occupiedTarget.children.item(2));
+        expectAppRailComponents(occupiedTarget.children.item(0), occupiedTarget.children.item(1));
+        expect(occupiedTarget.children.item(2).className).toBe('existingButton');
 
     });
 

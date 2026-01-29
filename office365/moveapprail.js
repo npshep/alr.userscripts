@@ -472,8 +472,12 @@ function insertAppRail(target) {
         appRail1.className = "___1w2h5wn";
         appRail1.style.display = "flex";
         if (appRail2 == null) {
-            // append at the end of the target area
-            target.appendChild(appRail1);
+            // insert at the beginning of the target area
+            if (target.firstElementChild != null) {
+                target.firstElementChild.insertAdjacentElement("beforebegin", appRail1);
+            } else {
+                target.appendChild(appRail1);
+            }
         } else {
             // append before the part of the rail that already exists (this probably shouldn't happen)
             appRail2.insertAdjacentElement("beforebegin", appRail1);
