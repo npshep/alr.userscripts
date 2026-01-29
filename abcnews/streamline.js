@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2025-09-22
+// @version          2026-01-29
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
 // @contributionURL  https://ko-fi.com/npsheppard
+// @match            https://www.abc.net.au
 // @match            https://www.abc.net.au/news
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant        none
