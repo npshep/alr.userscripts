@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-01-29
+// @version          2026-01-30
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -123,7 +123,7 @@ const siteConf = {
                 break;
 
             default:
-                console.log("Invalid value '" + siteConf[key] + "' for configuration key " + key);
+                console.warn("Invalid value '" + siteConf[key] + "' for configuration key " + key);
                 break;
         }
     }
@@ -139,7 +139,7 @@ const siteConf = {
 //   render - a function taking a single DOMElement object as input
 function applyRenderer(key, render) {
 
-    if (key.charAt(0) === "#") {
+    if (key.charAt(0) === "#" && key.length > 1) {
 
         // component identified by id
         const element = document.getElementById(key.substring(1, key.length));
@@ -147,7 +147,7 @@ function applyRenderer(key, render) {
             render(element);
         }
 
-    } else if (key.charAt(0) === ".") {
+    } else if (key.charAt(0) === "." && key.length > 1) {
 
         // component identified by class name
         const elements = document.getElementsByClassName(key.substring(1, key.length));
@@ -185,7 +185,7 @@ function findRailRoot(element) {
 
     // first, search downwards for a rail component contained within the element
     let railRootElement = element;
-    while (railRootElement != null && (!railRootElement.className == null || !railRootElement.className.startsWith("Rail_root__"))) {
+    while (railRootElement != null && (!railRootElement.hasAttribute('class') || !railRootElement.className.startsWith("Rail_root__"))) {
         railRootElement = railRootElement.firstElementChild;
     }
     if (railRootElement != null) {
@@ -194,7 +194,7 @@ function findRailRoot(element) {
 
     // now search upwards for a rail component containing the element
     railRootElement = element;
-    while (railRootElement != null && (!railRootElement.className == null || !railRootElement.className.startsWith("Rail_root__"))) {
+    while (railRootElement != null && (!railRootElement.hasAttribute('class') || !railRootElement.className.startsWith("Rail_root__"))) {
         railRootElement = railRootElement.parentElement;
     }
 
@@ -240,7 +240,7 @@ function renderExpandable(element, startCompressed = false) {
     let railRootElement = findRailRoot(element);
     if (railRootElement == null) {
         // couldn't find the rail root; bail out
-        console.log("Couldn't find the rail root for " + element);
+        console.warn("Couldn't find the rail root for " + element.toString());
         return;
     }
 
@@ -266,7 +266,8 @@ function renderExpandable(element, startCompressed = false) {
     if (railContentElement != null) {
         railContentElement.style.display = startCompressed ? "none" : "";
         if (railHeaderElement != null) {
-            railHeaderElement.style.cursor = "zoom-in";
+            const originalHeaderBackground = railHeaderElement.style.backgroundColor;
+            railHeaderElement.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
             railHeaderElement.style.borderRadius = "8px";
             railHeaderElement.onclick = function () {
                 if (railContentElement.style.display === "none") {
@@ -278,10 +279,10 @@ function renderExpandable(element, startCompressed = false) {
                 }
             };
             railHeaderElement.onmouseover = function() {
-              railHeaderElement.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
+                railHeaderElement.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
             };
             railHeaderElement.onmouseout = function() {
-              railHeaderElement.style.backgroundColor = 'white';
+                railHeaderElement.style.backgroundColor = originalHeaderBackground;
             };
         }
     }
