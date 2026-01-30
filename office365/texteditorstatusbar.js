@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             OneDrive Text Editor Status Bar
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-01-08
+// @version          2026-01-23
 // @description      Add a status bar to OneDrive's text editor.
 // @author           Nick Sheppard
 // @license          MIT
@@ -42,8 +42,8 @@ let showSuggestWidget = GM_getValue("showSuggestWidget", true);
             for (const node of m.addedNodes) {
                 if (node.classList !== undefined && node.classList.contains("monaco-editor")) {
 
-                    // Get a handle to the status bar, creating the bar if it doesn't exist
-                    const statusBarClassName = fetchStatusBar();
+                    // make sure the status bar exists
+                    const statusBar = fetchStatusBar();
 
                     // Watch for changes in the cursor position.
                     //
@@ -56,7 +56,7 @@ let showSuggestWidget = GM_getValue("showSuggestWidget", true);
                     // for changes to the cursor DIV, then updates the status bar accordingly.
                     const cursorsLayer = document.getElementsByClassName("cursors-layer");
                     if (cursorsLayer.length > 0) {
-                        var cursorObserver = new MutationObserver((mutations) => { onCursorsLayerMutation(mutations, statusBarClassName, 1) });
+                        var cursorObserver = new MutationObserver((mutations) => { onCursorsLayerMutation(mutations, 1) });
                         cursorObserver.observe(cursorsLayer[0], { childList: false, subtree: true, attributes: true, characterData: false });
                     }
                 }
@@ -72,67 +72,98 @@ let showSuggestWidget = GM_getValue("showSuggestWidget", true);
             }
         }
     });
-    editorObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    if (document.body) {
+        editorObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    }
 
 })();
 
 
-// Get a handle to the status bar, building the status bar if necessary.
+// Get the title bar.
 //
-// The status bar divides the title bar in the original text editor into a series
-// of span elements whose class name is returned by the function.
-//
-// Returns: the class name of the span elements in the bar
-function fetchStatusBar() {
+// In some versions, the title bar is a DIV with class od-OneUpTextFile-title;
+// in others, it is like OneUpTextFileTitle_xxxxxxxx, where xxxxxxxx is a
+// hexadecimal number that changes from time to time.
+function getTitleBar() {
 
-    // Get the title bar.
-    //
-    // In some versions, the title bar is a DIV with class od-OneUpTextFile-title;
-    // in others, it is like OneUpTextFileTitle_xxxxxxxx, where xxxxxxxx is a
-    // hexadecimal number that changes from time to time.
-    //
-    // We choose a class name for the status bar that follows the convention used
-    // in whatever version of the text editor that we're working with
-    let titleBar = null;
-    let titleBarList = document.getElementsByClassName("od-OneUpTextFile-title");
-    let statusBarClassName = "od-OneUpTextFile-status";
-    if (titleBarList.length == 0) {
+    let titleBar = document.querySelector(".od-OneUpTextFile-title");
+    if (titleBar == null) {
         // search upwards from oneUpTextEditor to find the OneUpTextFileContent_xxxxxxxx container
-        let textEditor = document.getElementsByClassName("oneUpTextEditor");
-        let textFileContent = (textEditor.length > 0) ? textEditor[0] : null;
+        let textFileContent = document.querySelector(".oneUpTextEditor");
         while (textFileContent != null && (textFileContent.className == null ||
             !textFileContent.className.startsWith("OneUpTextFileContent"))) {
             textFileContent = textFileContent.parentElement;
         }
 
         // now search for the OneUpTextFileTitle_xxxxxxxx child
-        let textFileTitle = (textFileContent != null)? textFileContent.firstElementChild : null;
-        while (textFileTitle != null && (textFileTitle.className == null ||
-            !textFileTitle.className.startsWith("OneUpTextFileTitle"))) {
-            textFileTitle = textFileTitle.nextElementSibling;
+        titleBar = (textFileContent != null)? textFileContent.firstElementChild : null;
+        while (titleBar != null && (titleBar.className == null ||
+            !titleBar.className.startsWith("OneUpTextFileTitle"))) {
+            titleBar = titleBar.nextElementSibling;
         }
-
-        // finally, set the status bar class name
-        statusBarClassName = "OneUpTextFileStatus";
-        if (textFileTitle != null) {
-            titleBar = textFileTitle;
-            statusBarClassName = statusBarClassName +
-                textFileTitle.classList.item(0).slice(18, textFileTitle.classList.item(0).length);
-        }
-    } else {
-        titleBar = titleBarList.item(0);
     }
 
-    if (titleBar != null) {
-        if (titleBar.childElementCount == 0) {
+    return titleBar;
+
+}
+
+
+// Get a class name for the status bar. We choose class name that follows the
+// convention used in whatever version of the text editor that we're working
+// with.
+let statusBarClassName = null;
+function getStatusBarClassName() {
+
+    if (statusBarClassName == null) {
+        // default to the naming style of a title bar with class od-OneUpTextFile-title
+        statusBarClassName = "od-OneUpTextFile-status";
+
+        // check for a title bar with class OneUpTextFileTitle_xxxxxxxx
+        let titleBar = getTitleBar();
+        if (titleBar != null) {
+            for (let className of titleBar.classList) {
+                if (className.startsWith("OneUpTextFileTitle")) {
+                    statusBarClassName = "OneUpTextFileStatus" + className.slice(18, className.length);
+                    break;
+                }
+            }
+        }
+    }
+
+    return statusBarClassName;
+}
+
+
+// Get the elements of the status bar, building the status bar if necessary.
+//
+// The status bar divides the title bar in the original text editor into a series
+// of span elements.
+//
+// Returns: an array containing the span elements in the status bar
+function fetchStatusBar() {
+
+    // check for an existing status bar
+    const statusBarClassName = getStatusBarClassName();
+    let statusBar = [];
+    for (let elem of document.getElementsByClassName(statusBarClassName)) {
+        statusBar.push(elem);
+    }
+
+    // if the status bar doesn't exist, create it
+    if (statusBar.length == 0) {
+        let titleBar = getTitleBar();
+        if (titleBar != null) {
+
             // filename section
             const filenameSpan = document.createElement("span");
             filenameSpan.className = statusBarClassName;
             filenameSpan.innerHTML = titleBar.innerHTML;
+            statusBar.push(filenameSpan);
 
             // cursor position section
             const cursorSpan = document.createElement("span");
             cursorSpan.className = statusBarClassName;
+            statusBar.push(cursorSpan);
 
             // text suggestions section
             const suggestionsSpan = document.createElement("span");
@@ -140,15 +171,16 @@ function fetchStatusBar() {
             const suggestionsButton = document.createElement("button");
             suggestionsSpan.appendChild(suggestionsButton);
             suggestionsButton.className = "ms-Button ms-Button--commandBar ms-CommandBarItem-link";
-            suggestionsButton.onclick = function() { onStatusBarSuggestClick(statusBarClassName, 2) };
+            suggestionsButton.onclick = function() { onStatusBarSuggestClick(2) };
             suggestionsButton.innerHTML = "<span class=\"ms-Button-label\">" +
                 getSuggestionsButtonLabel(showSuggestWidget) + "</span>";
+            statusBar.push(suggestionsSpan);
 
             // replace the original title bar with the status bar
             titleBar.innerHTML = "";
-            titleBar.appendChild(filenameSpan);
-            titleBar.appendChild(cursorSpan);
-            titleBar.appendChild(suggestionsSpan);
+            for (let span of statusBar) {
+                titleBar.appendChild(span);
+            }
 
             // add some styling
             const statusStyle = document.createElement("style");
@@ -161,7 +193,7 @@ function fetchStatusBar() {
         }
     }
 
-    return statusBarClassName;
+    return statusBar;
 }
 
 
@@ -202,7 +234,7 @@ function getColumnNumberForHorizontalOffset(offset) {
     // being a specific font (Consolas or Droid Sans Mono) and the other two
     // being "monospace" with and without quotes. It seems to be impossible to
     // know for sure which one the browser chooses, but I've found that using
-    // "monospace" calcuate the correct width in all the browers I use.
+    // "monospace" calculates the correct width in all the browers I use.
     const viewLines = document.querySelector(".view-lines");
     graphicsContext.font = viewLines.style.fontSize + " monospace";
 
@@ -320,7 +352,6 @@ function getSuggestionsButtonLabel(showWidget) {
 //
 // Input:
 //   mutations - the list of mutations
-//   statusBarClassName - the class name of the status bar elements
 //   statusBarIndex - the index of the cursor position in the status bar
 let lastCursorPosition = {
     'top': 0,
@@ -328,36 +359,41 @@ let lastCursorPosition = {
     'line': 1,
     'column': 1
 };
-function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
+function onCursorsLayerMutation(mutations, statusBarIndex) {
 
     // find the div containing the cursor
+    let cursorMoved = false;
     let cursor = document.querySelector(".cursors-layer > .cursor");
     if (cursor != null) {
-        const statusBar = document.getElementsByClassName(statusBarClassName);
+
+        // get the new cursor position
+        const newTop = parseInt(cursor.style.top);
+        const newLeft = parseInt(cursor.style.left);
+        if (!isNaN(newTop) && newTop != lastCursorPosition.top) {
+            // update the cursor top position and line number
+            lastCursorPosition.top = newTop;
+            const newLine = getLineNumberForVerticalOffset(newTop);
+            if (!isNaN(newLine)) {
+                // only update the line number if the cursor is within the display area
+                lastCursorPosition.line = newLine;
+            }
+            cursorMoved = true;
+        }
+        if (!isNaN(newLeft) && newLeft != lastCursorPosition.left) {
+            // update the cursor left position and line
+            lastCursorPosition.left = newLeft;
+            lastCursorPosition.column = getColumnNumberForHorizontalOffset(
+                newLeft
+            );
+            cursorMoved = true;
+        }
+
+    }
+
+    if (cursorMoved) {
+        // update the status bar
+        const statusBar = fetchStatusBar();
         if (statusBarIndex < statusBar.length) {
-
-            // get the new cursor position
-            const newTop = parseInt(cursor.style.top);
-            const newLeft = parseInt(cursor.style.left);
-
-            if (!isNaN(newTop) && newTop != lastCursorPosition.top) {
-                // update the cursor top position and line number
-                lastCursorPosition.top = newTop;
-                const newLine = getLineNumberForVerticalOffset(newTop);
-                if (!isNaN(newLine)) {
-                    // only update the line number if the cursor is within the display area
-                    lastCursorPosition.line = newLine;
-                }
-            }
-            if (!isNaN(newLeft) && newLeft != lastCursorPosition.left) {
-                // update the cursor left position and line
-                lastCursorPosition.left = newLeft;
-                lastCursorPosition.column = getColumnNumberForHorizontalOffset(
-                    newLeft
-                );
-            }
-
-            // update the status bar
             statusBar[statusBarIndex].innerHTML = getCursorPositionLabel(
                 lastCursorPosition.line,
                 lastCursorPosition.column
@@ -371,16 +407,15 @@ function onCursorsLayerMutation(mutations, statusBarClassName, statusBarIndex) {
 // Respond to a click on text suggestions control in the status bar.
 //
 // Input:
-//   statusBarClassName - the class name of the status bar elements
-//   statusBarIndex - the index of the cursor position in the status bar
-function onStatusBarSuggestClick(statusBarClassName, statusBarIndex) {
+//   statusBarIndex - the index of the suggestions button in the status bar
+function onStatusBarSuggestClick(statusBarIndex) {
 
     // update the suggest widget flag
     showSuggestWidget = !showSuggestWidget;
     GM_setValue("showSuggestWidget", showSuggestWidget);
 
     // update the status bar display
-    const statusBar = document.getElementsByClassName(statusBarClassName);
+    const statusBar = fetchStatusBar();
     if (statusBarIndex < statusBar.length) {
         statusBar[statusBarIndex].firstChild.firstChild.innerText = getSuggestionsButtonLabel(showSuggestWidget);
     }
