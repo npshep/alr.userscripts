@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-01-16
+// @version          2026-01-29
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -23,8 +23,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Configuration.
 //
-// appRailPosition stores the current position of the app rail, which can be
-// one of:
+// appRailConf sets the default position of the app rail, which can be one of:
 //
 // 'default' - in the left rail, where it is in "new" Outlook
 // 'footer'  - at the bottom of the left-hand panel, where it is in "old" Outlook
@@ -33,11 +32,15 @@
 // 'none'    - no app rail at all; drag the App Launcher into the header or
 //             footer to bring it back
 //
+// Dragging the app rail moves it to one of the other positions above. The
+// current position persists through the 'appRailPosition' value stored by
+// GM_setValue().
+//
 // headerButtonsConf sets which buttons remain in the header buttons region
 // when the app rail is in the header. The setting button is the only one that
 // I use, but feel free to re-enable any other buttons you find useful here.
 ///////////////////////////////////////////////////////////////////////////////
-var appRailPosition = GM_getValue('appRailPosition', 'default');
+const appRailConf = 'default';
 const headerButtonsConf = {
     'owaMeetNowButton_container': false,
     'teams_container': false,
@@ -86,38 +89,7 @@ var documentObserver = null;
 // Create the document observer
 function createDocumentObserver() {
 
-    documentObserver = new MutationObserver((mutations) => {
-        var leftRail = null;
-        var mainModule = null;
-        for (const m of mutations) {
-            for (const node of m.addedNodes) {
-                var ancestor = node;
-                while (ancestor != null) {
-                    if (ancestor.id === "LeftRail") {
-                        // found the left rail
-                        leftRail = ancestor;
-                        break;
-                    } else if (ancestor.id === "MainModule") {
-                        // found the main module
-                        mainModule = ancestor;
-                        break;
-                    }
-                    ancestor = ancestor.parentNode;
-                }
-            }
-        }
-		if (leftRail != null) {
-            leftRail.draggable = true;
-			if (appRailPosition !== 'default') {
-                leftRail.style.display = "none";
-            }
-        }
-        if (mainModule != null) {
-            // observe the main module; the callback function will insert the rail items into the target region
-            var mainModuleObserver = new MutationObserver(onMainModuleMutation);
-            mainModuleObserver.observe(mainModule, { childList: true, subtree: true, attributes: false, characterData: false });
-        }
-    });
+    documentObserver = new MutationObserver(onDocumentMutation);
 
 }
 
@@ -125,7 +97,9 @@ function createDocumentObserver() {
 // Start the document observer
 function connectDocumentObserver() {
 
-    documentObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    if (document.body != null) {
+        documentObserver.observe(document.body, { childList: true, subtree: true, attributes: false, characterData: false });
+    }
 
 }
 
@@ -137,10 +111,46 @@ function disconnectDocumentObserver() {
 
 }
 
+// Respond to a page rebuild.
+function onDocumentMutation(mutations) {
+
+    var leftRail = null;
+    var mainModule = null;
+    for (const m of mutations) {
+        for (const node of m.addedNodes) {
+            var ancestor = node;
+            while (ancestor != null) {
+                if (ancestor.id === "LeftRail") {
+                    // found the left rail
+                    leftRail = ancestor;
+                    break;
+                } else if (ancestor.id === "MainModule") {
+                    // found the main module
+                    mainModule = ancestor;
+                    break;
+                }
+                ancestor = ancestor.parentNode;
+            }
+        }
+    }
+    if (leftRail != null) {
+        leftRail.draggable = true;
+        if (getAppRailPosition() !== 'default') {
+            leftRail.style.display = "none";
+        }
+    }
+    if (mainModule != null) {
+        // observe the main module; onMainModuleMutation will insert the rail items into the target region
+        var mainModuleObserver = new MutationObserver(onMainModuleMutation);
+        mainModuleObserver.observe(mainModule, { childList: true, subtree: true, attributes: false, characterData: false });
+    }
+
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Respond to mutation of the main module, inserting the app rail into the
-// header.
+// the desired region.
 //
 // Input:
 //   mutations - the mutations
@@ -148,7 +158,7 @@ function disconnectDocumentObserver() {
 ///////////////////////////////////////////////////////////////////////////////
 function onMainModuleMutation(mutations, observer) {
 
-    // disconnect the observer; a new one will attach when Outlook updates the main module
+    // disconnect the main module observer; a new one will attach when Outlook updates the main module
     if (observer != null) {
         observer.disconnect();
     }
@@ -156,41 +166,39 @@ function onMainModuleMutation(mutations, observer) {
     // disconnect the document observer to prevent infinite recursion
     disconnectDocumentObserver();
 
-    // hide the rails we don't want
-    if (appRailPosition === 'header') {
+    // hide the header buttons and rails we don't want
+    if (getAppRailPosition() === 'header') {
         removeHeaderButtons();
     } else {
         restoreHeaderButtons();
     }
 	const leftRail = document.getElementById("LeftRail");
-    if (leftRail != null && appRailPosition !== 'default') {
+    if (leftRail != null && getAppRailPosition() !== 'default') {
         leftRail.style.display = "none";
     }
 	const bottomRail = document.getElementById("bottomRail");
-	if (bottomRail != null && appRailPosition !== 'footer') {
+	if (bottomRail != null && getAppRailPosition() !== 'footer') {
         bottomRail.style.display = "none";
     }
 
     // insert the app rail buttons into the target region and make it visible
     const targetRegion = getAppRailRegion();
     if (targetRegion != null) {
-        const apps = fetchAppRailCollection();
-        for (var i = apps.length - 1; i >= 0 ; i--) {
-            targetRegion.insertAdjacentElement("afterbegin", apps[i]);
-        }
+        insertAppRail(targetRegion);
         targetRegion.style.display = "flex";
     }
 
     // set up drag-and-drop targets
     if (leftRail != null) {
-        makeDragDropRail(leftRail, appRailPosition === 'default');
+        makeDragDropRail(leftRail, getAppRailPosition() === 'default');
     }
     const headerButtonsRegion = findHeaderButtonsRegion();
     if (headerButtonsRegion != null) {
-		makeDragDropRail(headerButtonsRegion, appRailPosition === 'header');
+		makeDragDropRail(headerButtonsRegion, getAppRailPosition() === 'header');
     }
-	if (bottomRail != null) {
-        makeDragDropRail(bottomRail, appRailPosition === 'footer');
+    const bottomRailExisting = fetchBottomRail(false);
+	if (bottomRailExisting != null) {
+        makeDragDropRail(bottomRailExisting, getAppRailPosition() === 'footer');
     }
 	const leftPanel = findLeftPanel();
 	if (leftPanel != null) {
@@ -199,7 +207,7 @@ function onMainModuleMutation(mutations, observer) {
     const appLauncher = findAppLauncher();
     if (appLauncher != null) {
         // when the app rail is invisible, dragging the app launcher brings it back
-        makeDragDropRail(appLauncher, appRailPosition === 'none');
+        makeDragDropRail(appLauncher, getAppRailPosition() === 'none');
     }
 
     // reconnect the document observer
@@ -208,14 +216,19 @@ function onMainModuleMutation(mutations, observer) {
 }
 
 
-// Find the bottom rail, creating it if it doesn't exist.
+// Find the bottom rail, optionally creating it if it doesn't exist.
 //
 // The rail is placed at the bottom of the left panel, as determined by
 // findLeftPanel().
-function fetchBottomRail() {
+//
+// Input:
+//   create (boolean) - if true, create the rail if it doesn't exist
+//
+// Returns: the root element of the bottom rail, or null if it doesn't exist and wasn't created
+function fetchBottomRail(create) {
 
     var bottomRail = document.getElementById("bottomRail");
-    if (bottomRail == null) {
+    if (create && bottomRail == null) {
         // create an element for the bottom rail
         bottomRail = document.createElement("DIV");
         bottomRail.id = "bottomRail";
@@ -226,7 +239,7 @@ function fetchBottomRail() {
         if (leftPanel != null) {
             leftPanel.appendChild(bottomRail);
         } else {
-            console.log("Couldn't find a location for the bottom rail.");
+            console.warn("Couldn't find a location for the bottom rail.");
         }
     }
 
@@ -279,21 +292,47 @@ function findLeftPanel() {
     return null;
 }
 
+
+// Get the app rail position ('default', 'header', 'footer', or 'none')
+function getAppRailPosition() {
+
+    return GM_getValue('appRailPosition', appRailConf);
+
+}
+
 // Get the region (DIV element) into which the app rail will be inserted.
 function getAppRailRegion() {
 
-    switch (appRailPosition) {
+    switch (getAppRailPosition()) {
        case 'header':
            return findHeaderButtonsRegion();
 
        case 'footer':
-           return fetchBottomRail();
+           return fetchBottomRail(true);
 
        case 'none':
            return null;
 
         default:
             return document.getElementById("LeftRail");
+    }
+
+}
+
+
+// Set the app rail position
+function setAppRailPosition(position) {
+
+    switch (position) {
+        case 'default':
+        case 'header':
+        case 'footer':
+        case 'none':
+            GM_setValue('appRailPosition', position);
+            break;
+
+        default:
+            console.warn("Ignoring invalid setting for appRailPosition: " + position);
     }
 
 }
@@ -310,7 +349,6 @@ var draggingAppRail = false;
 // Add drag-and-drop event handlers to an element.
 function makeDragDropRail(e, draggable) {
 
-    // TODO: check that this doesn't result in multiple event handlers being added
     e.draggable = draggable;
     e.addEventListener('dragover', onDragOverAllowDropRail);
 	e.addEventListener('drop', onDropRail);
@@ -349,18 +387,17 @@ function onDropRail(e) {
         const leftPanel = findLeftPanel();
         const headerButtonsRegion = findHeaderButtonsRegion();
         if (appLauncher != null && appLauncher.contains(e.target)) {
-            if (appRailPosition === 'default') {
+            if (getAppRailPosition() === 'default') {
                 // dropping the default app rail into the app launcher means "remove the app rail"
-                appRailPosition = 'none';
+                setAppRailPosition('none');
             } else {
-                appRailPosition = 'default';
+                setAppRailPosition('default');
             }
         } else if (leftPanel != null && leftPanel.contains(e.target)) {
-            appRailPosition = 'footer';
+            setAppRailPosition('footer');
         } else if (headerButtonsRegion != null && headerButtonsRegion.contains(e.target)) {
-            appRailPosition = 'header';
+            setAppRailPosition('header');
         }
-        GM_setValue('appRailPosition', appRailPosition);
 
         // invoke onMainModuleMutation to re-draw the app rail and reset the observer
         onMainModuleMutation(null, null);
@@ -376,8 +413,8 @@ function onDropRail(e) {
 // App buttons appear on the app rail at various times during building of the
 // page. The fetchRailButtons() function checks for new buttons that have
 // appeared since the last invocation and moves them into the
-// appRailCollection array, from where they'll later be inserted into the
-// target region.
+// appRailCollection array. The insertAppRail() function then inserts them into
+// a target region.
 //
 // The original app rail is a div with id LeftRail. This div is further divided
 // into two div more elements, one with class ___1w2h5wn that contains the
@@ -417,6 +454,50 @@ function fetchAppRailCollection() {
 
     // return the collection for use by the callback
     return appRailCollection;
+
+}
+
+
+// Insert the app rail into an existing region.
+function insertAppRail(target) {
+
+    // get the apps from the default left rail
+    const apps = fetchAppRailCollection();
+
+    // ensure the two sections with the mysterious class names exist
+    let appRail1 = target.querySelector(".___1w2h5wn");
+    let appRail2 = target.querySelector(".___1fkhojs");
+    if (appRail1 == null) {
+        appRail1 = document.createElement("div");
+        appRail1.className = "___1w2h5wn";
+        appRail1.style.display = "flex";
+        if (appRail2 == null) {
+            // insert at the beginning of the target area
+            if (target.firstElementChild != null) {
+                target.firstElementChild.insertAdjacentElement("beforebegin", appRail1);
+            } else {
+                target.appendChild(appRail1);
+            }
+        } else {
+            // append before the part of the rail that already exists (this probably shouldn't happen)
+            appRail2.insertAdjacentElement("beforebegin", appRail1);
+        }
+    }
+    if (appRail2 == null) {
+        appRail2 = document.createElement("div");
+        appRail2.className = "___1fkhojs";
+        appRail2.style.display = "flex";
+        appRail1.insertAdjacentElement("afterend", appRail2);
+    }
+
+    // insert apps
+    for (var i = apps.length - 1; i >= 0 ; i--) {
+        if (i < appRailSeparator) {
+            appRail1.insertAdjacentElement("afterbegin", apps[i]);
+        } else {
+            appRail2.insertAdjacentElement("afterbegin", apps[i]);
+        }
+    }
 
 }
 
