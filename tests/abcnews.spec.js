@@ -55,8 +55,52 @@ describe('streamline.js', () => {
     });
 
 
-    it('applyRenderer', function() {
-    
+    it('applyConfiguration', () => {
+
+        // get references tothe test elements
+        const elementById = workingSpace.querySelector('#testElement');
+        const elementByClass = workingSpace.querySelector('.testClass');
+        const elementByHeading = workingSpace.querySelector('#testHeadingContainer .Rail_root__abc123');
+
+        // spy on rendering functions
+        const applyRendererSpy = spyOn(this, 'applyRenderer').and.callThrough();
+        const renderExpandableSpy = spyOn(this, 'renderExpandable');
+        const renderHiddenSpy = spyOn(this, 'renderHidden');
+
+        // mock configuration without saving
+        const mockConfNoSave = {
+            '#testElement': 'default',
+            '.testClass': 'expanded',
+            'Test Heading': 'compressed'
+        };
+        applyConfiguration(mockConfNoSave);
+        expect(applyRendererSpy).toHaveBeenCalledTimes(2);
+        expect(applyRendererSpy).not.toHaveBeenCalledWith('#testElement', jasmine.any(Function));
+        expect(applyRendererSpy).toHaveBeenCalledWith('.testClass', jasmine.any(Function));
+        expect(applyRendererSpy).toHaveBeenCalledWith('Test Heading', jasmine.any(Function));
+        expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, false, null);
+        expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, true, null);
+
+        // mock configuration with saving
+        applyRendererSpy.calls.reset();
+        renderExpandableSpy.calls.reset();
+        renderHiddenSpy.calls.reset();
+        GM_setValue('.testClass', 'compressed');
+        const mockConfWithSave = {
+            '#testElement': 'hidden',
+            '.testClass': 'saved',
+            'Test Heading': 'saved'
+        };
+        applyConfiguration(mockConfWithSave);
+        expect(applyRendererSpy).toHaveBeenCalledTimes(3);
+        expect(renderHiddenSpy).toHaveBeenCalledWith(elementById);
+        expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, '.testClass');
+        expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, 'Test Heading');
+
+    });
+
+    it('applyRenderer', () => {
+
         // mock rendering function
         function mockRender(target) {
             if (target != null) {

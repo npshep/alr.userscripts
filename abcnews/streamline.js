@@ -107,10 +107,22 @@ const siteConf = {
 (function() {
     'use strict';
 
-    // apply the configured renderer for every component in siteConf
-    for (const key of Object.keys(siteConf)) {
+    // apply site configuration
+    applyConfiguration(siteConf);
 
-        let componentConf = siteConf[key];
+})();
+
+
+// Configure the ABC News web site. See the comment above siteConf for the
+// format of component identifiers and display states
+//
+// Input:
+//   conf (Object) - an array of component identifiers mapped to display states
+function applyConfiguration(conf) {
+
+    for (const key of Object.keys(conf)) {
+
+        let componentConf = conf[key];
         let componentSaveKey = null;
         if (componentConf === 'saved') {
             // restore saved value, defaulting to 'expanded'
@@ -141,8 +153,7 @@ const siteConf = {
         }
     }
 
-})();
-
+}
 
 // Apply a renderer to all of the elements matching a given key from the
 // siteConf structure.
