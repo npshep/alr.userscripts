@@ -104,6 +104,38 @@ describe('streamline.js', () => {
 
     });
 
+    it('onClickExpandable', () => {
+
+        // get references to the test elements
+        const root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
+        const header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
+        const content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
+
+        // clicking on the default header hides content and makes the cursor zoom-in, without saving
+        onClickExpandable(header, content, null);
+        expect(content.style.display).toBe('none');
+        expect(header.style.cursor).toBe('zoom-in');
+        expect(GM_getValue('testExpandable', null)).toBeNull();
+
+        // clicking on a compressed header makes content visible and cursor zoom-out
+        onClickExpandable(header, content, null);
+        expect(content.style.display).toBe('block');
+        expect(header.style.cursor).toBe('zoom-out');
+        expect(GM_getValue('testExpandable', null)).toBeNull();
+
+        // clicking again hides the content; this time save the result
+        onClickExpandable(header, content, 'testExpandable');
+        expect(content.style.display).toBe('none');
+        expect(header.style.cursor).toBe('zoom-in');
+        expect(GM_getValue('testExpandable', null)).toBe('compressed');
+
+        // clicking again make the content visible; this time saving the result
+        onClickExpandable(header, content, 'testExpandable');
+        expect(content.style.display).toBe('block');
+        expect(header.style.cursor).toBe('zoom-out');
+        expect(GM_getValue('testExpandable', null)).toBe('expanded');
+
+    });
 
     it('findRailRoot', () => {
 
@@ -151,15 +183,16 @@ describe('streamline.js', () => {
         expect(content.style.display).toBe('none');
         expect(header.style.cursor).toBe('zoom-in');
 
-        // clicking on a compressed header makes content visible and cursor zoom-out
+        // clicking invokes onClickExpandable with correct arguments
+        const clickSpy = spyOn(this, 'onClickExpandable');
+        renderExpandable(root, true);
         header.click();
-        expect(content.style.display).toBe('block');
-        expect(header.style.cursor).toBe('zoom-out');
-
-        // clicking on expanded header hides content and makes the cursor zoom-in
+        expect(clickSpy).toHaveBeenCalledTimes(1);
+        expect(clickSpy).toHaveBeenCalledWith(header, content, null);
+        renderExpandable(root, true, 'testExpandable');
         header.click();
-        expect(content.style.display).toBe('none');
-        expect(header.style.cursor).toBe('zoom-in');
+        expect(clickSpy).toHaveBeenCalledTimes(2);
+        expect(clickSpy).toHaveBeenCalledWith(header, content, 'testExpandable');
 
         // mouseover sets header background to 'var(--nw-colour-theme-surface-tint)'; mouseout resets it
         const originalBackgroundColor = header.style.backgroundColor;

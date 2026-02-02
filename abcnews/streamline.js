@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-01-30
+// @version          2026-02-02
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -9,11 +9,12 @@
 // @match            https://www.abc.net.au
 // @match            https://www.abc.net.au/news
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
-// @grant        none
+// @grant            GM_getValue
+// @grant            GM_setValue
 // ==/UserScript==
 
 ///////////////////////////////////////////////////////////////////////////////
-// Copyright (c) 2025 Nicholas Paul Sheppard. See README.md for details
+// Copyright (c) 2025-6 Nicholas Paul Sheppard. See README.md for details
 //
 // Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
 ///////////////////////////////////////////////////////////////////////////////
@@ -32,9 +33,12 @@
 // 'hidden': do not display
 // 'compressed': show only the header, which can be expanded by clicking
 // 'expanded': the same as 'expandable', but starting in the expanded state
+// 'saved': state saved by GM_setValue
 //
-// Note that the compressed/expanded state isn't saved between visits;
-// re-loading the site resets the component to the state given here.
+// Components configured with 'saved' begin as 'expanded' elements on the first
+// load, but the 'expanded' or 'compressed' state is thereafter saved between
+// sessions using GM_setValue. Unsaved components reset to the state set here
+// upon every reload.
 //
 // This script ships with the settings that I prefer, but feel free to change
 // them to your liking.
@@ -72,25 +76,25 @@ const siteConf = {
     '#theBigPicture': 'compressed',
 
     // Around Australia
-    '#aroundAustralia': 'expanded',
+    '#aroundAustralia': 'saved',
 
     // Politics
-    '#politics': 'expanded',
+    '#politics': 'saved',
 
     // World
-    '#world': 'expanded',
+    '#world': 'saved',
 
     // Business
-    '#business': 'expanded',
+    '#business': 'saved',
 
     // Sport
-    '#sport': 'expanded',
+    '#sport': 'saved',
 
     // Lifestyle
-    '#lifestyle': 'expanded',
+    '#lifestyle': 'saved',
 
     // Entertainment
-    '#entertainment': 'expanded',
+    '#entertainment': 'saved',
 
     // the floating copy of Just In box that sticks to the right when scrolling done
     '.Home_justin__mrrHu Home_justinSticky__EkueF': 'hidden',
@@ -105,25 +109,34 @@ const siteConf = {
 
     // apply the configured renderer for every component in siteConf
     for (const key of Object.keys(siteConf)) {
-        switch (siteConf[key]) {
+
+        let componentConf = siteConf[key];
+        let componentSaveKey = null;
+        if (componentConf === 'saved') {
+            // restore saved value, defaulting to 'expanded'
+            componentConf = GM_getValue(key, 'expanded');
+            componentSaveKey = key;
+        }
+
+        switch (componentConf) {
         	case 'hidden':
         		applyRenderer(key, (element) => { renderHidden(element); });
         		break;
 
         	case 'compressed':
-        		applyRenderer(key, (element) => { renderExpandable(element, true); });
-        		break;
+                applyRenderer(key, (element) => { renderExpandable(element, true, componentSaveKey); });
+                break;
 
         	case 'expanded':
-        		applyRenderer(key, (element) => { renderExpandable(element, false); });
-        		break;
+                applyRenderer(key, (element) => { renderExpandable(element, false, componentSaveKey); });
+                break;
 
             case 'default':
                 // do nothing
                 break;
 
             default:
-                console.warn("Invalid value '" + siteConf[key] + "' for configuration key " + key);
+                console.warn("Invalid value '" + componentConf + "' for configuration key " + key);
                 break;
         }
     }
@@ -173,12 +186,38 @@ function applyRenderer(key, render) {
 }
 
 
+// Respond to a click on an expandable rail component.
+//
+// Input:
+//   headerElement (DOMElement) - the rail header element
+//   contentElement (DOMElement) - the rail content element
+//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
+function onClickExpandable(headerElement, contentElement, saveKey = null) {
+
+    if (contentElement.style.display === "none") {
+        // expand a compressed element
+        contentElement.style.display = "block";
+        headerElement.style.cursor = "zoom-out";
+        if (saveKey != null) {
+            GM_setValue(saveKey, 'expanded');
+        }
+    } else {
+        contentElement.style.display = "none";
+        headerElement.style.cursor = "zoom-in";
+        if (saveKey != null) {
+            GM_setValue(saveKey, 'compressed');
+        }
+    }
+
+}
+
+
 // Find the root element of a rail component associated with a given
 // element. The rail component may either enclose the element, or be
 // contained within the element.
 //
 // Input:
-//  element (DOMElement) - an element with the rail component
+//   element (DOMElement) - an element with the rail component
 //
 // Returns: the root element of the rail component, or null if no element is found
 function findRailRoot(element) {
@@ -234,7 +273,8 @@ function findRailRoot(element) {
 // Input:
 //   element (DOMElement) - the root element of the rail component to be suppressed
 //   startCompressed (boolean) - true to start in the compressed state; false to start in the expanded state
-function renderExpandable(element, startCompressed = false) {
+//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
+function renderExpandable(element, startCompressed = false, saveKey = null) {
 
     // find the rail root
     let railRootElement = findRailRoot(element);
@@ -270,13 +310,7 @@ function renderExpandable(element, startCompressed = false) {
             railHeaderElement.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
             railHeaderElement.style.borderRadius = "8px";
             railHeaderElement.onclick = function () {
-                if (railContentElement.style.display === "none") {
-                    railContentElement.style.display = "block";
-                    railHeaderElement.style.cursor = "zoom-out";
-                } else {
-                    railContentElement.style.display = "none";
-                    railHeaderElement.style.cursor = "zoom-in";
-                }
+                onClickExpandable(railHeaderElement, railContentElement, saveKey);
             };
             railHeaderElement.onmouseover = function() {
                 railHeaderElement.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
