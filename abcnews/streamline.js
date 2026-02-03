@@ -197,32 +197,6 @@ function applyRenderer(key, render) {
 }
 
 
-// Respond to a click on an expandable rail component.
-//
-// Input:
-//   headerElement (DOMElement) - the rail header element
-//   contentElement (DOMElement) - the rail content element
-//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
-function onClickExpandable(headerElement, contentElement, saveKey = null) {
-
-    if (contentElement.style.display === "none") {
-        // expand a compressed element
-        contentElement.style.display = "block";
-        headerElement.style.cursor = "zoom-out";
-        if (saveKey != null) {
-            GM_setValue(saveKey, 'expanded');
-        }
-    } else {
-        contentElement.style.display = "none";
-        headerElement.style.cursor = "zoom-in";
-        if (saveKey != null) {
-            GM_setValue(saveKey, 'compressed');
-        }
-    }
-
-}
-
-
 // Find the root element of a rail component associated with a given
 // element. The rail component may either enclose the element, or be
 // contained within the element.
@@ -249,6 +223,32 @@ function findRailRoot(element) {
     }
 
     return railRootElement;
+
+}
+
+
+// Respond to a click on an expandable rail component.
+//
+// Input:
+//   headerElement (DOMElement) - the rail header element
+//   contentElement (DOMElement) - the rail content element
+//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
+function onClickExpandable(headerElement, contentElement, saveKey = null) {
+
+    if (contentElement.style.display === "none") {
+        // expand a compressed element
+        contentElement.style.display = "block";
+        headerElement.style.cursor = "zoom-out";
+        if (saveKey != null) {
+            GM_setValue(saveKey, 'expanded');
+        }
+    } else {
+        contentElement.style.display = "none";
+        headerElement.style.cursor = "zoom-in";
+        if (saveKey != null) {
+            GM_setValue(saveKey, 'compressed');
+        }
+    }
 
 }
 
