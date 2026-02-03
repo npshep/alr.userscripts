@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-02-02
+// @version          2026-02-04
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -9,7 +9,9 @@
 // @match            https://www.abc.net.au
 // @match            https://www.abc.net.au/news
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
+// @grant            GM_deleteValue
 // @grant            GM_getValue
+// @grant            GM_listValues
 // @grant            GM_setValue
 // ==/UserScript==
 
@@ -107,6 +109,9 @@ const siteConf = {
 (function() {
     'use strict';
 
+    // check for unused configuration values
+    cleanStoredValues(siteConf);
+
     // apply site configuration
     applyConfiguration(siteConf);
 
@@ -191,6 +196,23 @@ function applyRenderer(key, render) {
                     render(findRailRoot(headings[i]));
                 }
             }
+        }
+    }
+
+}
+
+
+// Clean up unused values stored by GM_setValue(). This removes data associated
+// with components that no longer exist on the ABC News site, or whose
+// configuration was previously 'saved' but is now fixed in siteConf.
+//
+// Input:
+//   conf (Object) - an array of component identifiers mapped to display states
+function cleanStoredValues(conf) {
+
+    for (const key of GM_listValues()) {
+        if (!(key in conf) || conf[key] !== 'saved') {
+            GM_deleteValue(key);
         }
     }
 

@@ -148,6 +148,61 @@ describe('streamline.js', () => {
 
     });
 
+    it('cleanStoredValues', () => {
+
+        // mock some stored values
+        GM_setValue('savedExpanded', 'expanded');
+        GM_setValue('savedCompressed', 'compressed');
+        GM_setValue('unsavedExpanded', 'expanded');
+        GM_setValue('unsavedCompressed', 'compressed');
+        GM_setValue('deprecatedComponent', 'compressed');
+
+        // mock configuration
+        const mockConf = {
+            'savedExpanded': 'saved',
+            'savedCompressed': 'saved',
+            'unsavedExpanded': 'expanded',
+            'unsavedCompressed': 'compressed'
+        };
+        cleanStoredValues(mockConf);
+
+        // configuration for saved components should be unaffected
+        expect(GM_getValue('savedExpanded', null)).toBe('expanded');
+        expect(GM_getValue('savedCompressed', null)).toBe('compressed');
+
+        // configuration for no-longer-saved components should be removed
+        expect(GM_getValue('unsavedExpanded', null)).toBeNull();
+        expect(GM_getValue('unsavedCompressed', null)).toBeNull();
+
+        // configuration for deprecated components should be removed
+        expect(GM_getValue('deprecatedComponent', null)).toBeNull();
+
+    });
+
+    it('findRailRoot', () => {
+
+        // check finding the root without any search
+        const railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
+        const trivialRailRoot = findRailRoot(railRoot);
+        expect(trivialRailRoot).toBe(railRoot);
+
+        // check searching downwards
+        const railContainer = document.getElementById('railContainer');
+        const downwardsRailRoot = findRailRoot(railContainer);
+        expect(downwardsRailRoot).toBe(railRoot);
+
+        // check searching upwards
+        const railChild = railRoot.firstElementChild;
+        const upwardsRailRoot = findRailRoot(railChild);
+        expect(upwardsRailRoot).toBe(railRoot);
+
+        // return null when no rail root exists in the tree
+        const testElement = document.getElementById('testElement');
+        const nullRailRoot = findRailRoot(testElement);
+        expect(nullRailRoot).toBeNull();
+
+    });
+
     it('onClickExpandable', () => {
 
         // get references to the test elements
@@ -178,30 +233,6 @@ describe('streamline.js', () => {
         expect(content.style.display).toBe('block');
         expect(header.style.cursor).toBe('zoom-out');
         expect(GM_getValue('testExpandable', null)).toBe('expanded');
-
-    });
-
-    it('findRailRoot', () => {
-
-        // check finding the root without any search
-        const railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-        const trivialRailRoot = findRailRoot(railRoot);
-        expect(trivialRailRoot).toBe(railRoot);
-
-        // check searching downwards
-        const railContainer = document.getElementById('railContainer');
-        const downwardsRailRoot = findRailRoot(railContainer);
-        expect(downwardsRailRoot).toBe(railRoot);
-
-        // check searching upwards
-        const railChild = railRoot.firstElementChild;
-        const upwardsRailRoot = findRailRoot(railChild);
-        expect(upwardsRailRoot).toBe(railRoot);
-
-        // return null when no rail root exists in the tree
-        const testElement = document.getElementById('testElement');
-        const nullRailRoot = findRailRoot(testElement);
-        expect(nullRailRoot).toBeNull();
 
     });
 

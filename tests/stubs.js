@@ -19,6 +19,12 @@ function GM_clearValues() {
         delete GM_values[key];
     }
 }
+function GM_deleteValue(key) {
+    delete GM_values[key];
+}
+function GM_listValues() {
+    return Object.keys(GM_values);
+}
 function GM_setValue(key, value) {
     GM_values[key] = value;
 }
