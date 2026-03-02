@@ -15,6 +15,7 @@ Each script may be used by itself or in combination with others, though not
 all combinations make sense.
 - `abcnews`: The Australian Broadcasting Corporation's news web site,
    https://www.abc.net.au/news
+- `bom`: The Australian Bureau of Meteorology's site, https://www.bom.gov.au
 - `office365`: Microsoft Office 365, https://www.office365.com
 
 See the README file in each sub-folder for a detailed description of the
