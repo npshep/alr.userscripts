@@ -48,7 +48,7 @@ const siteConf = {
 
     // display order (top to bottom)
     order: {
-        home: [ 'favouriteLocations', 'sevenDayForecast', 'weatherMap' ],
+        home: [ 'favouriteLocations', 'sevenDayForecast', 'weatherMap', 'weatherMetadata' ],
         location: [ 'hourlyForecast', 'weatherMap' ]
     },
 
@@ -64,8 +64,11 @@ const siteConf = {
     // Featured news
     featuredNews: 'hidden',
 
-    // Exploring our web site
-    exploring: 'hidden'
+    // Exploring our website
+    bomLinks: 'hidden',
+
+    // Last Updated
+    weatherMetadata: 'default'
 };
 
 
@@ -175,18 +178,32 @@ function reorderLocationPage(conf) {
 
 // Find the siteConf code for a given component.
 //
+// Most components can be identified by the data-component attribute of the
+// div element that contains the data, but the location of this div element is
+// slightly different from component to component.
+//
 // Input:
 //   e (DOMElement) - an element (presumed to be a div with class module-spacing)
 //
 // Returns: the siteConf code matching e; null if the element isn't recognised
 function findCodeForComponent(e) {
 
-    // favourite locations: e > .l-padding > .bom-more-favourite-location
-    if (e.querySelector('.l-padding > .bom-more-favourite-location') != null) {
-        return 'favouriteLocations';
+    // for some reason, both the favourite locations and weather metadata have
+    // class bom-more-favourite-location
+    const moreFavouriteLocation = e.querySelector('.l-padding > .bom-more-favourite-location');
+    if (moreFavouriteLocation != null && moreFavouriteLocation.firstElementChild != null) {
+        switch (moreFavouriteLocation.firstElementChild.getAttribute('data-component')) {
+
+            // weather metadata ("last updated")
+            case 'C07_WeatherMetadata': return 'weatherMetadata';
+
+            // favourite locations
+            case 'C42_MyWeather': return 'favouriteLocations';
+
+        }
     }
 
-    // elements idenitifed by the contained data-component attribute
+    // the elements are idenitifed by the data-component attribute of the first child
     if (e.firstElementChild != null) {
         switch (e.firstElementChild.getAttribute('data-component')) {
 
@@ -194,7 +211,8 @@ function findCodeForComponent(e) {
             case 'bom-spatial-map': return 'weatherMap';
 
             // seven-day forecast
-            case 'C10_ForecastForHomePage': return 'sevenDayForecast';
+            case 'C10_ForecastForHomepage': return 'sevenDayForecast';
+
             // featured news
             case 'bom-feature-news': return 'featuredNews';
 
