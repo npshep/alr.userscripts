@@ -149,7 +149,7 @@ function buildComponentMapHome() {
         // add each child that we recognise to the map
         let child = map.root.firstElementChild;
         while (child != null) {
-            const code = findCodeForComponent(child);
+            const code = getCodeForComponent(child);
             if (code != null) {
                 map[code] = child;
             }
@@ -178,17 +178,14 @@ function buildComponentMapLocation() {
 }
 
 
-// Find the siteConf code for a given component.
-//
-// Most components can be identified by the data-component attribute of the
-// div element that contains the data, but the location of this div element is
-// slightly different from component to component.
+// Get the siteConf code for a given component. See the in-function comments for
+// the structure of each recognised component.
 //
 // Input:
 //   e (DOMElement) - a child element of the id-blockmainpage element
 //
 // Returns: the siteConf code matching e; null if the element isn't recognised
-function findCodeForComponent(e) {
+function getCodeForComponent(e) {
 
     // when no favourite location is set, the page body starts with two div's,
     // one with class bom-homepage-header ("Discover Your Weather") and with
