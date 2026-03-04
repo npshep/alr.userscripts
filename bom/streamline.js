@@ -62,6 +62,9 @@ const siteConf = {
     // display styles (the key is the script's internal code for the item)
     style: {
 
+        // weather summary for a location
+        weatherMood: 'default',
+
         // Weather map / rain radar
         weatherMap: 'compressed',
 
@@ -78,7 +81,7 @@ const siteConf = {
         featuredNews: 'default',
 
         // Exploring your web site
-        bomLinks: 'default'
+        bomLinks: 'hidden'
 
     }
 };
@@ -95,15 +98,15 @@ const siteConf = {
             const map = buildComponentMapHome();
             if ('homepageHeader' in map) {
                 // home page with no favourites set
-                reorderPage(map, siteConf.order.homepage);
+                reorderComponents(map, siteConf.order.homepage);
             } else {
                 // home page with favourites set
-                reorderPage(map, siteConf.order.favourites);
+                reorderComponents(map, siteConf.order.favourites);
             }
-            stylePage(map, siteConf.style);
+            styleComponents(map, siteConf.style);
 
         } catch (error) {
-            console.error(error.message);
+            console.warn(error.message);
         }
 
     } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
@@ -112,11 +115,11 @@ const siteConf = {
         try {
 
             const map = buildComponentMapLocation();
-            reorderPage(map, siteConf.order.location);
-            stylePage(map, siteConf.style);
+            reorderComponents(map, siteConf.order.location);
+            styleComponents(map, siteConf.style);
 
         } catch (error) {
-           console.error(error.message);
+           console.warn(error.message);
         }
     }
 
@@ -200,7 +203,7 @@ function getCodeForComponent(e) {
     // when a favourite location is set, the page body begins with a data
     // component C04-WeatherGlanceHomePage, which contains the summary data
     // for the favourite location (called the "weather mood")
-    if (e.getAttribute('data-component') === 'C04-WeatherGlanceHomePage') {
+    if (e.getAttribute('data-component') === 'C04_WeatherGlanceHomepage') {
         return 'weatherMood';
     }
 
@@ -235,8 +238,8 @@ function getCodeForComponent(e) {
         }
     }
 
-    // the links are contained in a div whose child has class bom-cta-link
-    if (e.firstElementChild != null && e.firstElementChild.classList.contains('bom-cta-link')) {
+    // the links are contained in a div whose child has class bom-cta-links
+    if (e.firstElementChild != null && e.firstElementChild.classList.contains('bom-cta-links')) {
         return 'bomLinks';
     }
 
@@ -252,11 +255,11 @@ function getCodeForComponent(e) {
 //   order (Array) - one of the 'order' arrays from siteConf
 //
 // Throws:
-//   ReferenceError - the input array contains an unrecognised component code
-function reorderPage(map, order) {
+//   ReferenceError - the order array contains an unrecognised component code
+function reorderComponents(map, order) {
 
     // remove the mapped elements from the page (ignoring the root)
-    for (const key in Object.keys(map)) {
+    for (const key of Object.keys(map)) {
         if (key !== 'root') {
             map[key].remove();
         }
@@ -267,7 +270,7 @@ function reorderPage(map, order) {
         if (order[i] in map) {
             map.root.insertAdjacentElement("afterbegin", map[order[i]]);
         } else {
-            throw new ReferenceError("Unknown component code '" + order[i] + "' in page order.");
+            throw new ReferenceError("A page order contains an unrecognised component code '" + order[i] + "'.");
         }
     }
 
@@ -275,11 +278,61 @@ function reorderPage(map, order) {
 
 
 ///////////////////////////////////////////////////////////////////////////////
-// Style the elements on a page.
+// Style the components on a page.
 //
+// Input:
+//   map (Object) - the map of codes to components from buildComponentMap*()
+//   styleConf (Object) - the siteConf.style object
 ///////////////////////////////////////////////////////////////////////////////
-function stylePage(conf) {
+function styleComponents(map, styleConf) {
+
+    for (const key of Object.keys(map)) {
+        if (key in styleConf) {
+            switch (styleConf[key]) {
+                case 'default':
+                    // nothing to do
+                    break;
+
+                case 'hidden':
+                    styleComponentHidden(map[key]);
+                    break;
+
+                case 'compressed':
+                    styleComponentExpandable(map[key], true);
+                    break;
+
+                case 'expanded':
+                    styleComponentExpandable(map[key], false);
+                    break;
+
+                default:
+                    console.warn("Component '" + key + "' has an unrecognised style '" + styleConf[key] + "'.");
+                    break;
+            }
+        }
+    }
+
+}
+
+
+// Make a component expandable.
+//
+// Input:
+//   e (DOMElement) - the root element of the component
+//   startCompressed (boolean) - true to start in the compressed state
+function styleComponentExpandable(e, startCompressed = false) {
 
     // TODO
+
+}
+
+
+// Make a component hidden.
+//
+// Input:
+//   e (DOMElement) - the root element of the component
+function styleComponentHidden(e) {
+
+    e.style.display = "none";
 
 }
