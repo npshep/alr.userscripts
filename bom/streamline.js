@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-02
+// @version          2026-03-04
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -21,16 +21,16 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Configure the site. The Bureau of Meterology site doesn't identify
 // components in any consistent way, so this script refers to each one using
-// an internal code, which is a key of siteConf structure below.
+// an internal code, which is a key of siteConf.style structure below.
 //
-// The 'order' array defines the order (top to bottom) in which components will
-// be displayed.
+// The 'order' arrays define the order (top to bottom) in which components will
+// be displayed. Omitting a component removes it from the display (but adding
+// a component not present on that page has no effect).
 //
-// The value for each component key controls how that component will be
+// The 'style' value for each component key controls how that component will be
 // rendered. Options are as follows:
 //
 // 'default': display as usual
-// 'hidden': do not display
 // 'compressed': show only the header, which can be expanded by clicking
 // 'expanded': the same as 'expandable', but starting in the expanded state
 // 'saved': state saved by GM_setValue
@@ -48,27 +48,39 @@ const siteConf = {
 
     // display order (top to bottom)
     order: {
-        home: [ 'favouriteLocations', 'sevenDayForecast', 'weatherMap', 'weatherMetadata' ],
-        location: [ 'hourlyForecast', 'weatherMap' ]
+
+        // home page when no favourite is set
+        homepage: [ 'homepageHeader', 'capitalForecast', 'weatherMetadata', 'featuredNews', 'bomLinks' ],
+
+        // home page when favourites are set
+        favourites: [ 'weatherMood', 'favouriteLocations', 'sevenDayForecast', 'weatherMap', 'weatherMetadata' ],
+
+        // location page
+        location: [ 'weatherMood', 'hourlyForecast', 'weatherMap' ]
     },
 
-    // Weather map / rain radar
-    weatherMap: 'compressed',
+    // display styles (the key is the script's internal code for the item)
+    style: {
 
-    // 7-day forecast
-    sevenDayForecast: 'default',
+        // Weather map / rain radar
+        weatherMap: 'compressed',
 
-    // Favourite locations
-    favouriteLocations: 'compressed',
+        // 7-day forecast
+        sevenDayForecast: 'default',
 
-    // Featured news
-    featuredNews: 'hidden',
+        // Favourite locations
+        favouriteLocations: 'compressed',
 
-    // Exploring our website
-    bomLinks: 'hidden',
+        // Last Updated
+        weatherMetadata: 'default',
 
-    // Last Updated
-    weatherMetadata: 'default'
+        // Featured news
+        featuredNews: 'default',
+
+        // Exploring your web site
+        bomLinks: 'default'
+
+    }
 };
 
 
@@ -76,31 +88,42 @@ const siteConf = {
     'use strict';
 
     if (window.location.href === 'https://www.bom.gov.au/') {
+
         // BoM home page
-        reorderHomePage(siteConf.order.home);
-        styleHomePage(siteConf);
+        try {
+
+            const map = buildComponentMapHome();
+            if ('homepageHeader' in map) {
+                // home page with no favourites set
+                reorderPage(map, siteConf.order.homepage);
+            } else {
+                // home page with favourites set
+                reorderPage(map, siteConf.order.favourites);
+            }
+            stylePage(map, siteConf.style);
+
+        } catch (error) {
+            console.error(error.message);
+        }
+
     } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
+
         // location page
-        reorderLocationPage(siteConf.order.location);
-        styleLocationPage(siteConf);
+        try {
+
+            const map = buildComponentMapLocation();
+            reorderPage(map, siteConf.order.location);
+            stylePage(map, siteConf.style);
+
+        } catch (error) {
+           console.error(error.message);
+        }
     }
 
 })();
 
 
-///////////////////////////////////////////////////////////////////////////////
-// Style the elements on the home page.
-//
-///////////////////////////////////////////////////////////////////////////////
-function styleHomePage(conf) {
-
-    // TODO
-
-}
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Re-order the home page.
+// Build a map of component codes to DOM elements on the home page.
 //
 // The main content is inside a div with id block-mainpagecontent. The first
 // child or two contain a header depending on whether or not any favourite
@@ -110,68 +133,47 @@ function styleHomePage(conf) {
 // class module-spacing. The internal structure of these blocks don't follow
 // any pattern, so we need to recognise each one with some custom code.
 //
-// Input:
-//   order (Array) - the siteConf.home.order array
+// Returns: an object mapping siteConf component codes to DOM elements
 //
 // Throws:
-//   ReferenceError - the input array contains an unrecognised component code
-function reorderHomePage(order) {
+//    ReferenceError - could not find the block-mainpagecontent element
+function buildComponentMapHome() {
+
+    // start with an empty map
+    let map = { };
 
     // get a reference to the main content
-    const mainPageContent = document.getElementById('block-mainpagecontent');
-    if (mainPageContent != null) {
+    map.root = document.getElementById('block-mainpagecontent');
+    if (map.root != null) {
 
-        // the initial insertion point is the last non-module-spacing child
-        let insertionPoint = null;
-        let child = mainPageContent.firstElementChild;
-        while (child != null && (!child.hasAttribute('class') || !child.classList.contains('module-spacing'))) {
-            insertionPoint = child;
-            child = child.nextElementSibling;
-        }
-
-        // continue through the children, tagging each module-spacing child with its code
-        let mapCodeToChild = { };
+        // add each child that we recognise to the map
+        let child = map.root.firstElementChild;
         while (child != null) {
             const code = findCodeForComponent(child);
             if (code != null) {
-                mapCodeToChild[code] = child;
+                map[code] = child;
             }
             child = child.nextElementSibling;
         }
 
-        // finally, put the components into the chosen order at the insertion point
-        for (const code of order) {
-            if (code in mapCodeToChild) {
-                mainPageContent.removeChild(mapCodeToChild[code]);
-                insertionPoint.insertAdjacentElement("afterend", mapCodeToChild[code]);
-                insertionPoint = mapCodeToChild[code];
-            }
-        }
+    } else {
+
+        throw new ReferenceError("Could not identify the main page content.");
 
     }
 
+    return map;
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
-// Style the elements on the location page.
+// Build a map of component codes to DOM elements on the location page.
 //
-///////////////////////////////////////////////////////////////////////////////
-function styleLocationPage(conf) {
+// .. documentation to do...
+//
+// Returns: an object mapping siteConf component codes to DOM elements
+function buildComponentMapLocation() {
 
     // TODO
-
-}
-
-
-
-///////////////////////////////////////////////////////////////////////////////
-// Re-order the home page.
-//
-///////////////////////////////////////////////////////////////////////////////
-function reorderLocationPage(conf) {
-
-    // TODO
+    return { };
 
 }
 
@@ -183,10 +185,27 @@ function reorderLocationPage(conf) {
 // slightly different from component to component.
 //
 // Input:
-//   e (DOMElement) - an element (presumed to be a div with class module-spacing)
+//   e (DOMElement) - a child element of the id-blockmainpage element
 //
 // Returns: the siteConf code matching e; null if the element isn't recognised
 function findCodeForComponent(e) {
+
+    // when no favourite location is set, the page body starts with two div's,
+    // one with class bom-homepage-header ("Discover Your Weather") and with
+    // class bom-homepage-content-top-wrapper (the capital cite forecasts)
+    if (e.classList.contains('bom-homepage-header')) {
+        return 'homepageHeader';
+    }
+    if (e.classList.contains('bom-homepage-content-top-wrapper')) {
+        return 'capitalForecast';
+    }
+
+    // when a favourite location is set, the page body begins with a data
+    // component C04-WeatherGlanceHomePage, which contains the summary data
+    // for the favourite location (called the "weather mood")
+    if (e.getAttribute('data-component') === 'C04-WeatherGlanceHomePage') {
+        return 'weatherMood';
+    }
 
     // for some reason, both the favourite locations and weather metadata have
     // class bom-more-favourite-location
@@ -203,8 +222,8 @@ function findCodeForComponent(e) {
         }
     }
 
-    // the elements are idenitifed by the data-component attribute of the first child
-    if (e.firstElementChild != null) {
+    // these elements are identified by the data-component attribute of the first child
+    if (e.firstElementChild != null && e.firstElementChild.hasAttribute('data-component')) {
         switch (e.firstElementChild.getAttribute('data-component')) {
 
             // weather map / rain radar
@@ -219,6 +238,51 @@ function findCodeForComponent(e) {
         }
     }
 
+    // the links are contained in a div whose child has class bom-cta-link
+    if (e.firstElementChild != null && e.firstElementChild.classList.contains('bom-cta-link')) {
+        return 'bomLinks';
+    }
+
     // if we got here, we didn't recognise the input element
     return null;
+}
+
+
+// Re-order the components on a page.
+//
+// Input:
+//   map (Object) - the map output by buildComponentMap*()
+//   order (Array) - one of the 'order' arrays from siteConf
+//
+// Throws:
+//   ReferenceError - the input array contains an unrecognised component code
+function reorderPage(map, order) {
+
+    // remove the mapped elements from the page (ignoring the root)
+    for (const key in Object.keys(map)) {
+        if (key !== 'root') {
+            map[key].remove();
+        }
+    }
+
+    // insert the ordered elements at the top of the root component
+    for (let i = order.length - 1; i >= 0; i--) {
+        if (order[i] in map) {
+            map.root.insertAdjacentElement("afterbegin", map[order[i]]);
+        } else {
+            throw new ReferenceError("Unknown component code '" + order[i] + "' in page order.");
+        }
+    }
+
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Style the elements on a page.
+//
+///////////////////////////////////////////////////////////////////////////////
+function stylePage(conf) {
+
+    // TODO
+
 }
