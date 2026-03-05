@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-05
+// @version          2026-03-06
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -21,16 +21,17 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Configure the site. The Bureau of Meterology site doesn't identify
 // components in any consistent way, so this script refers to each one using
-// an internal code, which is a key of siteConf.style structure below.
+// an internal code, which is a key of siteConf.display structure below.
 //
 // The 'order' arrays define the order (top to bottom) in which components will
 // be displayed. Omitting a component removes it from the display (but adding
 // a component not present on that page has no effect).
 //
-// The 'style' value for each component key controls how that component will be
+// The 'display' value for each component key controls how that component will be
 // rendered. Options are as follows:
 //
 // 'default': display as usual
+// 'hidden': hide from display
 // 'compressed': show only the header, which can be expanded by clicking
 // 'expanded': the same as 'expandable', but starting in the expanded state
 // 'saved': state saved by GM_setValue
@@ -63,7 +64,7 @@ const siteConf = {
     },
 
     // display styles (the key is the script's internal code for the item)
-    style: {
+    display: {
 
         // weather summary for a location
         weatherMood: 'default',
@@ -101,40 +102,200 @@ const siteConf = {
 (function() {
     'use strict';
 
-    if (window.location.href === 'https://www.bom.gov.au/') {
+    try {
 
-        // BoM home page
-        try {
+        if (window.location.href === 'https://www.bom.gov.au/') {
 
+            // BoM home page
             const map = buildComponentMapHome();
             if ('homepageHeader' in map) {
                 // home page with no favourites set
-                reorderComponents(map, siteConf.order.homepage);
+                applyComponentOrder(map, siteConf.order.homepage);
             } else {
                 // home page with favourites set
-                reorderComponents(map, siteConf.order.favourites);
+                applyComponentOrder(map, siteConf.order.favourites);
             }
-            styleComponents(map, siteConf.style);
+            applyDisplayStyles(map, siteConf.display);
 
-        } catch (error) {
-            console.warn(error.message);
-        }
+        } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
 
-    } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
-
-        // location page
-        try {
-
+            // location page
             const map = buildComponentMapLocation();
-            reorderComponents(map, siteConf.order.location);
-            styleComponents(map, siteConf.style);
+            applyComponentOrder(map, siteConf.order.location);
+            applyDisplayStyles(map, siteConf.display);
 
-        } catch (error) {
-           console.warn(error.message);
         }
+
+    } catch (error) {
+
+        // the page isn't one that we recognise
+        console.warn(error.message);
+
     }
 
 })();
+
+
+// Re-order the components on a page.
+//
+// Input:
+//   map (Object) - the map output by buildComponentMap*()
+//   order (Array) - one of the 'order' arrays from siteConf
+function applyComponentOrder(map, order) {
+
+    // remove the mapped elements from the page (ignoring the root)
+    for (const key of Object.keys(map)) {
+        if (key !== 'root') {
+            map[key].remove();
+        }
+    }
+
+    // insert the ordered elements at the top of the root component
+    for (let i = order.length - 1; i >= 0; i--) {
+        if (order[i] in map) {
+            map.root.insertAdjacentElement("afterbegin", map[order[i]]);
+        } else {
+            console.warn("A page order contains an unrecognised component key '" + order[i] + "'.");
+        }
+    }
+
+}
+
+
+// Set the display style of the components on a page.
+//
+// Input:
+//   map (Object) - the map of keys to components from buildComponentMap*()
+//   displayConf (Object) - the siteConf.display object
+function applyDisplayStyles(map, displayConf) {
+
+    for (const key of Object.keys(map)) {
+        if (key in displayConf) {
+            switch (displayConf[key]) {
+                case 'default':
+                    // nothing to do
+                    break;
+
+                case 'hidden':
+                    applyDisplayStyleHidden(map[key]);
+                    break;
+
+                case 'compressed':
+                    applyDisplayStyleExpandable(map[key], key, true);
+                    break;
+
+                case 'expanded':
+                    applyDisplayStyleExpandable(map[key], key, false);
+                    break;
+
+                default:
+                    console.warn("Component '" + key + "' has an unrecognised dipslay style '" + displayConf[key] + "'.");
+                    break;
+            }
+        }
+    }
+
+}
+
+
+// Apply the 'compressed' display style..
+//
+// We hide the contents of compressed components by suppressing display of the
+// siblings of the title area. When re-expanding the component, we return them
+// to the default display style.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   titleArea (DOMElement) - the title area
+//   compressed (boolean) - true to compress, false to expand
+function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
+
+    // apply the desired display style to the siblings of the title area
+    let e = titleArea.nextElementSibling;
+    while (e != null) {
+        e.style.display = compressed ? "none" : "";
+        e = e.nextElementSibling;
+    }
+
+}
+
+
+// Make a component expandable (entry point).
+//
+// In most cases, the title area doesn't appear during the initial page load,
+// so we set a MutationObserver to watch for it, which invokes
+// applyDisplayStyleExpandableReal() to do the real work.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   key (String) - the component key from siteConf.display
+//   startCompressed (boolean) - true to start in the compressed state
+//
+// Returns: a MutationObserver connected to the component; null if the component was changeg immediately
+function applyDisplayStyleExpandable(root, key, startCompressed = false) {
+
+    const titleArea = getComponentTitleArea(root, key);
+    if (titleArea == null) {
+
+        // the title area doesn't exist yet; set an observer to watch it
+        const observer = new MutationObserver(
+            function (mutations, observer) {
+                onExpandableComponentPopulated(mutations, observer, root, startCompressed);
+            }
+        );
+        observer.observe(root, { childList: true, subtree: true, attributes: false, characterData: false });
+        return observer;
+
+    } else {
+
+        // the title area already exists; make the component expandable right away
+        applyDisplayStyleExpandableReal(root, titleArea, startCompressed);
+        return null;
+    }
+
+}
+
+
+// Make a component expandable (really).
+//
+// This function should only be called once the title area has appeared on the
+// page. If the page has just loaded, use applyDisplayStyleExpandable() above to
+// set up a MutationObserver that will invoke this function.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   titleArea (DOMElement) - the title area
+//   startCompressed (boolean) - true to start in the compressed state
+function applyDisplayStyleExpandableReal(root, titleArea, startCompressed = false) {
+
+    // clicking the title area toggles the compressed/expanded state
+    const originalTitleBackground = titleArea.style.backgroundColor;
+    titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
+    titleArea.style.borderRadius = "8px";
+    titleArea.onclick = function () {
+        onClickExpandableComponent(root, titleArea);
+    };
+    titleArea.onmouseover = function() {
+        titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
+    };
+    titleArea.onmouseout = function() {
+        titleArea.style.backgroundColor = originalTitleBackground;
+    };
+
+    // render initial compressed/expanded state
+    applyDisplayStyleCompressed(root, titleArea, startCompressed);
+
+}
+
+// Apply the 'hidden' display style..
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+function applyDisplayStyleHidden(root) {
+
+    root.style.display = "none";
+
+}
 
 
 // Build a map of component keys to DOM elements on the home page.
@@ -178,6 +339,7 @@ function buildComponentMapHome() {
 
     return map;
 }
+
 
 // Build a map of component keys to DOM elements on the location page.
 //
@@ -267,12 +429,9 @@ function getComponentKey(e) {
 //
 // Input:
 //   root (DOMElement) - the root element of the component
-//   key (string) - the component key from siteConf.style
+//   key (string) - the component key from siteConf.display
 //
 // Returns: the root element of the title area, or null if the component does not have a title
-//
-// Throws:
-//   ReferenceError - key is not recognised
 function getComponentTitleArea(root, key) {
 
     switch (key) {
@@ -289,7 +448,7 @@ function getComponentTitleArea(root, key) {
             return root.querySelector("#weatherMap");
 
         default:
-            throw new ReferenceError("Unrecognised component key '" + key + "' in getComponentTitleArea.");
+            console.warn("Unrecognised component key '" + key + "' in getComponentTitleArea.");
     }
     return null;
 
@@ -301,30 +460,30 @@ function getComponentTitleArea(root, key) {
 // Input:
 //   root (DOMElement) - the root element of the component
 //   titleArea (DOMElement) - the root element of the title area
-function onClickExpandable(root, titleArea) {
+function onClickExpandableComponent(root, titleArea) {
 
     let display;
     if (titleArea.style.cursor === "zoom-out") {
         // compress an expanded element
         titleArea.style.cursor = "zoom-in";
-        styleComponentCompressed(root, titleArea, true);
+        applyDisplayStyleCompressed(root, titleArea, true);
     } else {
         // expand a compressed element
         titleArea.style.cursor = "zoom-out";
-        styleComponentCompressed(root, titleArea, false);
+        applyDisplayStyleCompressed(root, titleArea, false);
     }
 
 }
 
 
-// Handler for a mutation to an expandable component.
+// Handler for populating an expandable component.
 //
 // Input:
 //    mutations (Array) - the mutations
 //    observer (MutationObserver) - the observer
 //    root (DOMElement) - the root element of the component
 //    startCompressed (boolean) - start in the compressed state
-function onExpandableComponentMutation(mutations, observer, root, startCompressed = false) {
+function onExpandableComponentPopulated(mutations, observer, root, startCompressed = false) {
 
     // try again to the get the title area
     const key = getComponentKey(root);
@@ -333,171 +492,7 @@ function onExpandableComponentMutation(mutations, observer, root, startCompresse
         if (titleArea !== null) {
             // got it! disconnect the observer and make the component expandable
             observer.disconnect();
-            styleComponentExpandableReal(root, titleArea, startCompressed);
+            applyDisplayStyleExpandableReal(root, titleArea, startCompressed);
         }
     }
-}
-
-
-// Re-order the components on a page.
-//
-// Input:
-//   map (Object) - the map output by buildComponentMap*()
-//   order (Array) - one of the 'order' arrays from siteConf
-//
-// Throws:
-//   ReferenceError - the order array contains an unrecognised component key
-function reorderComponents(map, order) {
-
-    // remove the mapped elements from the page (ignoring the root)
-    for (const key of Object.keys(map)) {
-        if (key !== 'root') {
-            map[key].remove();
-        }
-    }
-
-    // insert the ordered elements at the top of the root component
-    for (let i = order.length - 1; i >= 0; i--) {
-        if (order[i] in map) {
-            map.root.insertAdjacentElement("afterbegin", map[order[i]]);
-        } else {
-            throw new ReferenceError("A page order contains an unrecognised component key '" + order[i] + "'.");
-        }
-    }
-
-}
-
-
-// Style the components on a page.
-//
-// Input:
-//   map (Object) - the map of keys to components from buildComponentMap*()
-//   styleConf (Object) - the siteConf.style object
-function styleComponents(map, styleConf) {
-
-    for (const key of Object.keys(map)) {
-        if (key in styleConf) {
-            switch (styleConf[key]) {
-                case 'default':
-                    // nothing to do
-                    break;
-
-                case 'hidden':
-                    styleComponentHidden(map[key]);
-                    break;
-
-                case 'compressed':
-                    styleComponentExpandable(map[key], key, true);
-                    break;
-
-                case 'expanded':
-                    styleComponentExpandable(map[key], key, false);
-                    break;
-
-                default:
-                    console.warn("Component '" + key + "' has an unrecognised style '" + styleConf[key] + "'.");
-                    break;
-            }
-        }
-    }
-
-}
-
-
-// Render a compressed component.
-//
-// We hide the contents of compressed components by suppressing display of the
-// siblings of the title area. When re-expanding the component, we return them
-// to the default display style.
-//
-// Input:
-//   root (DOMElement) - the root element of the component
-//   titleArea (DOMElement) - the title area
-//   compressed (boolean) - true to compress, false to expand
-function styleComponentCompressed(root, titleArea, compressed = true) {
-
-    // apply the desired display style to the siblings of the title area
-    let e = titleArea.nextElementSibling;
-    while (e != null) {
-        e.style.display = compressed ? "none" : "";
-        e = e.nextElementSibling;
-    }
-
-}
-
-
-// Make a component expandable (entry point).
-//
-// In most cases, the title area doesn't appear during the initial page load,
-// so we set a MutationObserver to watch for it.
-//
-// Input:
-//   root (DOMElement) - the root element of the component
-//   key (String) - the component key from siteConf.style
-//   startCompressed (boolean) - true to start in the compressed state
-//
-// Returns: a MutationObserver connected to the component; null if the component was changeg immediately
-function styleComponentExpandable(root, key, startCompressed = false) {
-
-    const titleArea = getComponentTitleArea(root, key);
-    if (titleArea == null) {
-
-        // the title area doesn't exist yet; set an observer to watch it
-        const observer = new MutationObserver(
-            function (mutations, observer) {
-                onExpandableComponentMutation(mutations, observer, root, startCompressed);
-            }
-        );
-        observer.observe(root, { childList: true, subtree: true, attributes: false, characterData: false });
-        return observer;
-
-    } else {
-
-        // the title area already exists; make the component expandable right away
-        styleComponentExpandableReal(root, titleArea, startCompressed);
-        return null;
-    }
-
-}
-
-
-// Make a component expandable (really).
-//
-// This function should only be called once the title area has appeared on the
-// page. If the page has just loaded, use styleComponentExpandable() above to
-// set up a MutationObserver that will invoke this function.
-//
-// Input:
-//   root (DOMElement) - the root element of the component
-//   titleArea (DOMElement) - the title area
-//   startCompressed (boolean) - true to start in the compressed state
-function styleComponentExpandableReal(root, titleArea, startCompressed = false) {
-
-    // clicking the title area toggles the compressed/expanded state
-    const originalTitleBackground = titleArea.style.backgroundColor;
-    titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
-    titleArea.style.borderRadius = "8px";
-    titleArea.onclick = function () {
-        onClickExpandable(root, titleArea);
-    };
-    titleArea.onmouseover = function() {
-        titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
-    };
-    titleArea.onmouseout = function() {
-        titleArea.style.backgroundColor = originalTitleBackground;
-    };
-
-    // render initial compressed/expanded state
-    styleComponentCompressed(root, titleArea, startCompressed);
-
-}
-
-// Make a component hidden.
-//
-// Input:
-//   root (DOMElement) - the root element of the component
-function styleComponentHidden(root) {
-
-    root.style.display = "none";
-
 }
