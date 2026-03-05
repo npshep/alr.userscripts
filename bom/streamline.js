@@ -40,6 +40,9 @@
 // sessions using GM_setValue. Unsaved components reset to the state set here
 // upon every reload.
 //
+// The 'theme' properties set a few colours, fonts, etc. used by added
+// compoments.
+//
 // This script ships with the settings that I prefer, but feel free to change
 // them to your liking.
 //
@@ -69,7 +72,7 @@ const siteConf = {
         weatherMap: 'compressed',
 
         // 7-day forecast
-        sevenDayForecast: 'default',
+        sevenDayForecast: 'expanded',
 
         // Favourite locations
         favouriteLocations: 'compressed',
@@ -82,6 +85,14 @@ const siteConf = {
 
         // Exploring your web site
         bomLinks: 'hidden'
+
+    },
+
+    // colours, fonts, etc.
+    theme: {
+
+        // background colour for expandable title areas
+        expandableBackground: 'skyblue'
 
     }
 };
@@ -269,9 +280,13 @@ function getComponentTitleArea(root, key) {
             // favourite locations; the title bar has class my-weather__title
             return root.querySelector(".my-weather__title");
 
+        case 'sevenDayForecast':
+            // 7-day forecast; the title bar has class forecast-summary-table__title
+            return root.querySelector(".forecast-summary-table__title");
+
         case 'weatherMap':
             // weather map; the title has id weatherMap
-            return root.querySelector("h2 #weatherMap");
+            return root.querySelector("#weatherMap");
 
         default:
             throw new ReferenceError("Unrecognised component key '" + key + "' in getComponentTitleArea.");
@@ -288,12 +303,17 @@ function getComponentTitleArea(root, key) {
 //   titleArea (DOMElement) - the root element of the title area
 function onClickExpandable(root, titleArea) {
 
-    if (titleArea.style.cursor === "zoom-in") {
+    let display;
+    if (titleArea.style.cursor === "zoom-out") {
+        // compress an expanded element
+        titleArea.style.cursor = "zoom-in";
+        styleComponentCompressed(root, titleArea, true);
+    } else {
         // expand a compressed element
         titleArea.style.cursor = "zoom-out";
-    } else {
-        titleArea.style.cursor = "zoom-in";
+        styleComponentCompressed(root, titleArea, false);
     }
+
 }
 
 
@@ -384,6 +404,28 @@ function styleComponents(map, styleConf) {
 }
 
 
+// Render a compressed component.
+//
+// We hide the contents of compressed components by suppressing display of the
+// siblings of the title area. When re-expanding the component, we return them
+// to the default display style.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   titleArea (DOMElement) - the title area
+//   compressed (boolean) - true to compress, false to expand
+function styleComponentCompressed(root, titleArea, compressed = true) {
+
+    // apply the desired display style to the siblings of the title area
+    let e = titleArea.nextElementSibling;
+    while (e != null) {
+        e.style.display = compressed ? "none" : "";
+        e = e.nextElementSibling;
+    }
+
+}
+
+
 // Make a component expandable (entry point).
 //
 // In most cases, the title area doesn't appear during the initial page load,
@@ -431,6 +473,7 @@ function styleComponentExpandable(root, key, startCompressed = false) {
 //   startCompressed (boolean) - true to start in the compressed state
 function styleComponentExpandableReal(root, titleArea, startCompressed = false) {
 
+    // clicking the title area toggles the compressed/expanded state
     const originalTitleBackground = titleArea.style.backgroundColor;
     titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
     titleArea.style.borderRadius = "8px";
@@ -438,11 +481,14 @@ function styleComponentExpandableReal(root, titleArea, startCompressed = false) 
         onClickExpandable(root, titleArea);
     };
     titleArea.onmouseover = function() {
-        titleArea.style.backgroundColor = 'cyan';
+        titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
     };
     titleArea.onmouseout = function() {
         titleArea.style.backgroundColor = originalTitleBackground;
     };
+
+    // render initial compressed/expanded state
+    styleComponentCompressed(root, titleArea, startCompressed);
 
 }
 
