@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-04
+// @version          2026-03-05
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -126,7 +126,7 @@ const siteConf = {
 })();
 
 
-// Build a map of component codes to DOM elements on the home page.
+// Build a map of component keys to DOM elements on the home page.
 //
 // The main content is inside a div with id block-mainpagecontent. The first
 // child or two contain a header depending on whether or not any favourite
@@ -134,9 +134,9 @@ const siteConf = {
 //
 // Following the header, each block of information is contained by a div with
 // class module-spacing. The internal structure of these blocks don't follow
-// any pattern, so we need to recognise each one with some custom code.
+// any pattern, so we need to recognise each one with some custom key.
 //
-// Returns: an object mapping siteConf component codes to DOM elements
+// Returns: an object mapping siteConf component keys to DOM elements
 //
 // Throws:
 //    ReferenceError - could not find the block-mainpagecontent element
@@ -152,9 +152,9 @@ function buildComponentMapHome() {
         // add each child that we recognise to the map
         let child = map.root.firstElementChild;
         while (child != null) {
-            const code = getCodeForComponent(child);
-            if (code != null) {
-                map[code] = child;
+            const key = getComponentKey(child);
+            if (key != null) {
+                map[key] = child;
             }
             child = child.nextElementSibling;
         }
@@ -168,11 +168,11 @@ function buildComponentMapHome() {
     return map;
 }
 
-// Build a map of component codes to DOM elements on the location page.
+// Build a map of component keys to DOM elements on the location page.
 //
 // .. documentation to do...
 //
-// Returns: an object mapping siteConf component codes to DOM elements
+// Returns: an object mapping siteConf component keys to DOM elements
 function buildComponentMapLocation() {
 
     // TODO
@@ -181,14 +181,14 @@ function buildComponentMapLocation() {
 }
 
 
-// Get the siteConf code for a given component. See the in-function comments for
+// Get the siteConf key for a given component. See the in-function comments for
 // the structure of each recognised component.
 //
 // Input:
 //   e (DOMElement) - a child element of the id-blockmainpage element
 //
-// Returns: the siteConf code matching e; null if the element isn't recognised
-function getCodeForComponent(e) {
+// Returns: the siteConf key matching e; null if the element isn't recognised
+function getComponentKey(e) {
 
     // when no favourite location is set, the page body starts with two div's,
     // one with class bom-homepage-header ("Discover Your Weather") and with
@@ -248,6 +248,77 @@ function getCodeForComponent(e) {
 }
 
 
+// Get the title area for a component.
+//
+// Since every component has a unique internal structure, we need custom logic
+// to identify the title area, which is encoded in this function. See the
+// in-function comments for the structure of each component.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   key (string) - the component key from siteConf.style
+//
+// Returns: the root element of the title area, or null if the component does not have a title
+//
+// Throws:
+//   ReferenceError - key is not recognised
+function getComponentTitleArea(root, key) {
+
+    switch (key) {
+        case 'favouriteLocations':
+            // favourite locations; the title bar has class my-weather__title
+            return root.querySelector(".my-weather__title");
+
+        case 'weatherMap':
+            // weather map; the title has id weatherMap
+            return root.querySelector("h2 #weatherMap");
+
+        default:
+            throw new ReferenceError("Unrecognised component key '" + key + "' in getComponentTitleArea.");
+    }
+    return null;
+
+}
+
+
+// Handler for clicking on an expandable title area.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   titleArea (DOMElement) - the root element of the title area
+function onClickExpandable(root, titleArea) {
+
+    if (titleArea.style.cursor === "zoom-in") {
+        // expand a compressed element
+        titleArea.style.cursor = "zoom-out";
+    } else {
+        titleArea.style.cursor = "zoom-in";
+    }
+}
+
+
+// Handler for a mutation to an expandable component.
+//
+// Input:
+//    mutations (Array) - the mutations
+//    observer (MutationObserver) - the observer
+//    root (DOMElement) - the root element of the component
+//    startCompressed (boolean) - start in the compressed state
+function onExpandableComponentMutation(mutations, observer, root, startCompressed = false) {
+
+    // try again to the get the title area
+    const key = getComponentKey(root);
+    if (key !== null) {
+        const titleArea = getComponentTitleArea(root, key);
+        if (titleArea !== null) {
+            // got it! disconnect the observer and make the component expandable
+            observer.disconnect();
+            styleComponentExpandableReal(root, titleArea, startCompressed);
+        }
+    }
+}
+
+
 // Re-order the components on a page.
 //
 // Input:
@@ -255,7 +326,7 @@ function getCodeForComponent(e) {
 //   order (Array) - one of the 'order' arrays from siteConf
 //
 // Throws:
-//   ReferenceError - the order array contains an unrecognised component code
+//   ReferenceError - the order array contains an unrecognised component key
 function reorderComponents(map, order) {
 
     // remove the mapped elements from the page (ignoring the root)
@@ -270,20 +341,18 @@ function reorderComponents(map, order) {
         if (order[i] in map) {
             map.root.insertAdjacentElement("afterbegin", map[order[i]]);
         } else {
-            throw new ReferenceError("A page order contains an unrecognised component code '" + order[i] + "'.");
+            throw new ReferenceError("A page order contains an unrecognised component key '" + order[i] + "'.");
         }
     }
 
 }
 
 
-///////////////////////////////////////////////////////////////////////////////
 // Style the components on a page.
 //
 // Input:
-//   map (Object) - the map of codes to components from buildComponentMap*()
+//   map (Object) - the map of keys to components from buildComponentMap*()
 //   styleConf (Object) - the siteConf.style object
-///////////////////////////////////////////////////////////////////////////////
 function styleComponents(map, styleConf) {
 
     for (const key of Object.keys(map)) {
@@ -298,11 +367,11 @@ function styleComponents(map, styleConf) {
                     break;
 
                 case 'compressed':
-                    styleComponentExpandable(map[key], true);
+                    styleComponentExpandable(map[key], key, true);
                     break;
 
                 case 'expanded':
-                    styleComponentExpandable(map[key], false);
+                    styleComponentExpandable(map[key], key, false);
                     break;
 
                 default:
@@ -315,24 +384,74 @@ function styleComponents(map, styleConf) {
 }
 
 
-// Make a component expandable.
+// Make a component expandable (entry point).
+//
+// In most cases, the title area doesn't appear during the initial page load,
+// so we set a MutationObserver to watch for it.
 //
 // Input:
-//   e (DOMElement) - the root element of the component
+//   root (DOMElement) - the root element of the component
+//   key (String) - the component key from siteConf.style
 //   startCompressed (boolean) - true to start in the compressed state
-function styleComponentExpandable(e, startCompressed = false) {
+//
+// Returns: a MutationObserver connected to the component; null if the component was changeg immediately
+function styleComponentExpandable(root, key, startCompressed = false) {
 
-    // TODO
+    const titleArea = getComponentTitleArea(root, key);
+    if (titleArea == null) {
+
+        // the title area doesn't exist yet; set an observer to watch it
+        const observer = new MutationObserver(
+            function (mutations, observer) {
+                onExpandableComponentMutation(mutations, observer, root, startCompressed);
+            }
+        );
+        observer.observe(root, { childList: true, subtree: true, attributes: false, characterData: false });
+        return observer;
+
+    } else {
+
+        // the title area already exists; make the component expandable right away
+        styleComponentExpandableReal(root, titleArea, startCompressed);
+        return null;
+    }
 
 }
 
 
+// Make a component expandable (really).
+//
+// This function should only be called once the title area has appeared on the
+// page. If the page has just loaded, use styleComponentExpandable() above to
+// set up a MutationObserver that will invoke this function.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   titleArea (DOMElement) - the title area
+//   startCompressed (boolean) - true to start in the compressed state
+function styleComponentExpandableReal(root, titleArea, startCompressed = false) {
+
+    const originalTitleBackground = titleArea.style.backgroundColor;
+    titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
+    titleArea.style.borderRadius = "8px";
+    titleArea.onclick = function () {
+        onClickExpandable(root, titleArea);
+    };
+    titleArea.onmouseover = function() {
+        titleArea.style.backgroundColor = 'cyan';
+    };
+    titleArea.onmouseout = function() {
+        titleArea.style.backgroundColor = originalTitleBackground;
+    };
+
+}
+
 // Make a component hidden.
 //
 // Input:
-//   e (DOMElement) - the root element of the component
-function styleComponentHidden(e) {
+//   root (DOMElement) - the root element of the component
+function styleComponentHidden(root) {
 
-    e.style.display = "none";
+    root.style.display = "none";
 
 }
