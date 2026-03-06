@@ -7,7 +7,7 @@
 // @license          MIT
 // @contributionURL  https://ko-fi.com/npsheppard
 // @match            https://www.bom.gov.au
-// @match            https://www.bom/gov/location/*
+// @match            https://www.bom.gov.au/location/*
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant            none
 // ==/UserScript==
@@ -63,7 +63,7 @@ const siteConf = {
         location: [ 'weatherMood', 'hourlyForecast', 'weatherMap' ]
     },
 
-    // display styles (the key is the script's internal code for the item)
+    // display styles (the key is the script's internal code for the component)
     display: {
 
         // the Discover Your Weather header at the top of the home page
@@ -72,7 +72,7 @@ const siteConf = {
         // the capital city forecasts that appear when no favourite is set
         capitalForecast: 'expanded',
 
-        // top-of-page  summary for a location
+        // top-of-page summary for a location
         weatherMood: 'expanded',
 
         // Weather map / rain radar
@@ -108,12 +108,11 @@ const siteConf = {
 (function() {
     'use strict';
 
-    try {
+    if (window.location.href === 'https://www.bom.gov.au/') {
 
-        if (window.location.href === 'https://www.bom.gov.au/') {
-
-            // BoM home page
-            const map = buildComponentMapHome();
+        // BoM home page
+        const map = buildComponentMapHome();
+        if (map != null) {
             if ('homepageHeader' in map) {
                 // home page with no favourites set
                 applyComponentOrder(map, siteConf.order.homepage);
@@ -122,20 +121,20 @@ const siteConf = {
                 applyComponentOrder(map, siteConf.order.favourites);
             }
             applyDisplayStyles(map, siteConf.display);
-
-        } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
-
-            // location page
-            const map = buildComponentMapLocation();
-            applyComponentOrder(map, siteConf.order.location);
-            applyDisplayStyles(map, siteConf.display);
-
+        } else {
+            console.warn("Could not identify the home page content.")
         }
 
-    } catch (error) {
+    } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
 
-        // the page isn't one that we recognise
-        console.warn(error.message);
+        // location page
+        const map = buildComponentMapLocation();
+        if (map != null) {
+            applyComponentOrder(map, siteConf.order.location);
+            applyDisplayStyles(map, siteConf.display);
+        } else {
+                console.warn("Could not identify the location page content.")
+        }
 
     }
 
@@ -293,6 +292,7 @@ function applyDisplayStyleExpandableReal(root, titleArea, startCompressed = fals
 
 }
 
+
 // Apply the 'hidden' display style..
 //
 // Input:
@@ -314,10 +314,7 @@ function applyDisplayStyleHidden(root) {
 // class module-spacing. The internal structure of these blocks don't follow
 // any pattern, so we need to recognise each one with some custom key.
 //
-// Returns: an object mapping siteConf component keys to DOM elements
-//
-// Throws:
-//    ReferenceError - could not find the block-mainpagecontent element
+// Returns: an object mapping siteConf component keys to DOM elements; null if the page isn't recognised
 function buildComponentMapHome() {
 
     // start with an empty map
@@ -328,48 +325,97 @@ function buildComponentMapHome() {
     if (map.root != null) {
 
         // add each child that we recognise to the map
-        let child = map.root.firstElementChild;
-        while (child != null) {
-            const key = getComponentKey(child);
+        let component = map.root.firstElementChild;
+        while (component != null) {
+            const key = getComponentKey(component);
             if (key != null) {
-                map[key] = child;
+                map[key] = component;
             }
-            child = child.nextElementSibling;
+            component = component.nextElementSibling;
         }
+
+        return map;
 
     } else {
 
-        throw new ReferenceError("Could not identify the main page content.");
+        // doesn't look the BoM home page
+        return null;
 
     }
-
-    return map;
 }
 
 
 // Build a map of component keys to DOM elements on the location page.
 //
-// .. documentation to do...
+// Like the home page, the body of the location page is contained in a div with
+// class block-mainpagecontent, but most of the visible content is in a child
+// div with class location-template.
 //
-// Returns: an object mapping siteConf component keys to DOM elements
+// The location-template div has two children, one with class weather-mood and
+// one with class location-page-module. The first contains the weather summary
+// at the top of the page ("weatherMood") and the second contains three tabs,
+// "bom-tab-panel-today", "bom-tab-panel-7-days" and "bom-tab-panel-past", with
+// the visibility of each tab controlled by its CSS display property.
+//
+// Each tab contains a series of <section> elements that contain one component
+// of the display. This function tags each of these components with one of the
+// keys in siteConf.display.
+//
+// Returns: an object mapping siteConf component keys to DOM elements; null if the page isn't recognised
 function buildComponentMapLocation() {
 
-    // TODO
-    return { };
+    // start with an empty map
+    let map = { };
+
+    // get a reference to the main content
+    map.root = document.getElementById('block-mainpagecontent');
+    if (map.root != null) {
+
+        // get the top-of-page summary ("weatherMood")
+        const weatherMood = map.root.querySelector(".weather-mood");
+        if (weatherMood != null) {
+            map.weatherMood = weatherMood;
+        }
+
+        // loop through each tab in the location-template div
+        const tabs = map.root.querySelector(".location-template");
+        if (tabs != null) {
+            let tab = tabs.firstElementChild;
+            while (tab != null) {
+                let section = tab.firstElementChild;
+                while (section != null) {
+                    const key = getComponentKey(section);
+                    if (key != null) {
+                        map[key] = section;
+                    }
+                    section = section.nextElementSibling;
+                }
+                tab = tab.nextElementSibling;
+            }
+        }
+
+        return map;
+
+    } else {
+
+        // doesn't look like the BoM location page
+        return null;
+
+    }
 
 }
 
 
-// Get the siteConf key for a given component. See the in-function comments for
-// the structure of each recognised component.
+// Get the siteConf key for a given component. See the in-function comments
+// for the structure of each recognised component.
 //
 // Input:
-//   e (DOMElement) - a child element of the id-blockmainpage element
+//   e (DOMElement) - a descendent of the id-blockmainpage element
 //
 // Returns: the siteConf key matching e; null if the element isn't recognised
 function getComponentKey(e) {
 
-    // when no favourite location is set, the page body starts with two div's,
+    // when no favourite location is set, the home page starts with two div's,
     // one with class bom-homepage-header ("Discover Your Weather") and with
     // class bom-homepage-content-top-wrapper (the capital cite forecasts)
     if (e.classList.contains('bom-homepage-header')) {
@@ -379,7 +425,7 @@ function getComponentKey(e) {
         return 'capitalForecast';
     }
 
-    // when a favourite location is set, the page body begins with a data
+    // when a favourite location is set, the home page begins with a data
     // component C04-WeatherGlanceHomePage, which contains the summary data
     // for the favourite location (called the "weather mood")
     if (e.getAttribute('data-component') === 'C04_WeatherGlanceHomepage') {
@@ -401,7 +447,7 @@ function getComponentKey(e) {
         }
     }
 
-    // these elements are identified by the data-component attribute of the first child
+    // other components on the home page are identified by the data-component attribute of the first child
     if (e.firstElementChild != null && e.firstElementChild.hasAttribute('data-component')) {
         switch (e.firstElementChild.getAttribute('data-component')) {
 
@@ -414,6 +460,59 @@ function getComponentKey(e) {
             // featured news
             case 'bom-feature-news': return 'featuredNews';
 
+        }
+    }
+
+    // components on the location page are <section> elements with verbose class names
+    if (e.tagName === 'SECTION') {
+        if (e.classList.contains('tc-today-C04_WeatherGlanceMoreAboutToday-1')) {
+            // more about today
+            return 'moreAboutToday';
+        } else if (e.classList.contains('tc-today-C05_HourlyForecastChart-2')) {
+            // hourly forecast
+            return 'hourlyForecast';
+        } else if (e.classList.contains('tc-today-bom-spatial-map-3')) {
+            // weather map
+            return 'weatherMap';
+        } else if (e.classList.contains('tc-today-C07_WeatherMetadata-4')) {
+            // last updated
+            return 'weatherMetadata';
+        } else if (e.classList.contains('tc-today-bom-component-container-5')) {
+            // be aware
+            return 'beAware';
+        } else if (e.classList.contains('tc-7-days-C10_ForecastWithAccordion-0')) {
+            // seven day forecast
+            return 'sevenDayForecast';
+        } else if (e.classList.contains('tc-7-days-C14_WeatherSituation-1')) {
+            // waters forecast
+            return 'watersForecast';
+        } else if (e.classList.contains('tc-7-days-C56_ForecastStateRegionCoastalWater-2')) {
+            // coastal forecast (TODO: what happens for regions not on the coast?)
+            return 'coastalForecast';
+        } else if (e.classList.contains('tc-7-days-C07_WeatherMetadata-3')) {
+            // last updated (TODO: weather metadata appears separately on each tab)
+            return 'weatherMetadata';
+        } else if (e.classList.contains('tc-7-days-bom-component-container-5')) {
+            // be aware (TODO: "be aware" appears separately on each tab
+            return 'beAware';
+        } else if (e.classList.contains('tc-past-C66a_ChangeWeatherStationModal-0')) {
+            // change weather station
+            return 'changeStation';
+        } else if (e.classList.contains('tc-past-C15_StateRegionRecord-1')) {
+            // latest highs and lows
+            return 'stateRegionRecord';
+        } else if (e.classList.contains('tc-past-C66_ObservationChart-2')) {
+            // past 72 hours
+            return 'observationChart';
+        } else if (e.classList.contains('tc-past-bom-component-container-3')) {
+            // about this weather station
+            return 'aboutStation';
+        } else if (e.classList.contains('tc-past-bom-component-container-4')) {
+            // data quality
+            return 'dataQuality';
+        } else if (e.classList.contains('tc-past-bom-component-container-5')) {
+            // related weather stations
+            return 'relatedStations';
         }
     }
 
