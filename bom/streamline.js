@@ -66,7 +66,13 @@ const siteConf = {
     // display styles (the key is the script's internal code for the item)
     display: {
 
-        // weather summary for a location
+        // the Discover Your Weather header at the top of the home page
+        homepageHeader: 'expanded',
+
+        // the capital city forecasts that appear when no favourite is set
+        capitalForecast: 'expanded',
+
+        // top-of-page  summary for a location
         weatherMood: 'expanded',
 
         // Weather map / rain radar
@@ -427,6 +433,11 @@ function getComponentKey(e) {
 // to identify the title area, which is encoded in this function. See the
 // in-function comments for the structure of each component.
 //
+// A few items don't really have title areas (e.g. the capital cities forecast
+// on the home page), in which case this function returns a reference to the
+// the whole object. The 'compressed' and 'expanded' display styles won't work
+// well (or at all) for such components.
+//
 // Input:
 //   root (DOMElement) - the root element of the component
 //   key (string) - the component key from siteConf.display
@@ -439,6 +450,10 @@ function getComponentTitleArea(root, key) {
             // Exploring our website; the title bar has cta-module__title
             return root.querySelector(".cta-module__title");
 
+        case 'capitalForecast':
+            // capital cities forecast; doesn't really have a title, so return the whole box
+            return root.querySelector(".bom-capital-forecast");
+
         case 'favouriteLocations':
             // favourite locations; the title bar has class my-weather__title
             return root.querySelector(".my-weather__title");
@@ -446,6 +461,10 @@ function getComponentTitleArea(root, key) {
         case 'featuredNews':
             // featured news; the title bar has class bom-grid
             return root.querySelector(".bom-grid");
+
+        case 'homepageHeader':
+            // Discover your weather; the title bar has class homepage-banner__title
+            return root.querySelector(".homepage-banner__title");
 
         case 'sevenDayForecast':
             // 7-day forecast; the title bar has class forecast-summary-table__title
