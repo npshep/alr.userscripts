@@ -31,3 +31,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
+
+Known Bugs
+==========
+
+- compressing the top-of-page summary and the "exploring our website" section
+  don't work
+
+- starting the weather map in a compressed state doesn't work

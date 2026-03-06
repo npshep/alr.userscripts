@@ -57,7 +57,7 @@ const siteConf = {
         homepage: [ 'homepageHeader', 'capitalForecast', 'weatherMetadata', 'featuredNews', 'bomLinks' ],
 
         // home page when favourites are set
-        favourites: [ 'weatherMood', 'favouriteLocations', 'sevenDayForecast', 'weatherMap', 'weatherMetadata' ],
+        favourites: [ 'weatherMood', 'favouriteLocations', 'sevenDayForecast', 'weatherMap', 'featuredNews', 'weatherMetadata', 'bomLinks' ],
 
         // location page
         location: [ 'weatherMood', 'hourlyForecast', 'weatherMap' ]
@@ -67,7 +67,7 @@ const siteConf = {
     display: {
 
         // weather summary for a location
-        weatherMood: 'default',
+        weatherMood: 'expanded',
 
         // Weather map / rain radar
         weatherMap: 'compressed',
@@ -79,13 +79,13 @@ const siteConf = {
         favouriteLocations: 'compressed',
 
         // Last Updated
-        weatherMetadata: 'default',
+        weatherMetadata: 'expanded',
 
         // Featured news
-        featuredNews: 'default',
+        featuredNews: 'expanded',
 
-        // Exploring your web site
-        bomLinks: 'hidden'
+        // Exploring our website
+        bomLinks: 'expanded'
 
     },
 
@@ -435,9 +435,17 @@ function getComponentKey(e) {
 function getComponentTitleArea(root, key) {
 
     switch (key) {
+        case 'bomLinks':
+            // Exploring our website; the title bar has cta-module__title
+            return root.querySelector(".cta-module__title");
+
         case 'favouriteLocations':
             // favourite locations; the title bar has class my-weather__title
             return root.querySelector(".my-weather__title");
+
+        case 'featuredNews':
+            // featured news; the title bar has class bom-grid
+            return root.querySelector(".bom-grid");
 
         case 'sevenDayForecast':
             // 7-day forecast; the title bar has class forecast-summary-table__title
@@ -446,6 +454,14 @@ function getComponentTitleArea(root, key) {
         case 'weatherMap':
             // weather map; the title has id weatherMap
             return root.querySelector("#weatherMap");
+
+        case 'weatherMetadata':
+            // last updated; the title has class metadata-title
+            return root.querySelector(".metadata-title");
+
+        case 'weatherMood':
+            // top-of-page summary; the title has class location-title__title
+            return root.querySelector(".location-title__title");
 
         default:
             console.warn("Unrecognised component key '" + key + "' in getComponentTitleArea.");
