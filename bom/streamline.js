@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-06
+// @version          2026-03-08
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -235,60 +235,28 @@ function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
 //   root (DOMElement) - the root element of the component
 //   key (String) - the component key from siteConf.display
 //   startCompressed (boolean) - true to start in the compressed state
-//
-// Returns: a MutationObserver connected to the component; null if the component was changeg immediately
 function applyDisplayStyleExpandable(root, key, startCompressed = false) {
 
-    const titleArea = getComponentTitleArea(root, key);
-    if (titleArea == null) {
+    // the title area doesn't appear right away, so we need to use an asynchronous function
+    getComponentTitleArea(root, key).then(function (titleArea) {
 
-        // the title area doesn't exist yet; set an observer to watch it
-        const observer = new MutationObserver(
-            function (mutations, observer) {
-                onExpandableComponentPopulated(mutations, observer, root, startCompressed);
-            }
-        );
-        observer.observe(root, { childList: true, subtree: true, attributes: false, characterData: false });
-        return observer;
+        // clicking the title area toggles the compressed/expanded state
+        const originalTitleBackground = titleArea.style.backgroundColor;
+        titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
+        titleArea.style.borderRadius = "8px";
+        titleArea.onclick = function () {
+            onClickExpandableComponent(root, titleArea);
+        };
+        titleArea.onmouseover = function() {
+            titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
+        };
+        titleArea.onmouseout = function() {
+            titleArea.style.backgroundColor = originalTitleBackground;
+        };
 
-    } else {
-
-        // the title area already exists; make the component expandable right away
-        applyDisplayStyleExpandableReal(root, titleArea, startCompressed);
-        return null;
-    }
-
-}
-
-
-// Make a component expandable (really).
-//
-// This function should only be called once the title area has appeared on the
-// page. If the page has just loaded, use applyDisplayStyleExpandable() above to
-// set up a MutationObserver that will invoke this function.
-//
-// Input:
-//   root (DOMElement) - the root element of the component
-//   titleArea (DOMElement) - the title area
-//   startCompressed (boolean) - true to start in the compressed state
-function applyDisplayStyleExpandableReal(root, titleArea, startCompressed = false) {
-
-    // clicking the title area toggles the compressed/expanded state
-    const originalTitleBackground = titleArea.style.backgroundColor;
-    titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
-    titleArea.style.borderRadius = "8px";
-    titleArea.onclick = function () {
-        onClickExpandableComponent(root, titleArea);
-    };
-    titleArea.onmouseover = function() {
-        titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
-    };
-    titleArea.onmouseout = function() {
-        titleArea.style.backgroundColor = originalTitleBackground;
-    };
-
-    // render initial compressed/expanded state
-    applyDisplayStyleCompressed(root, titleArea, startCompressed);
+        // render initial compressed/expanded state
+        applyDisplayStyleCompressed(root, titleArea, startCompressed);
+    });
 
 }
 
@@ -526,7 +494,48 @@ function getComponentKey(e) {
 }
 
 
-// Get the title area for a component.
+// Get the title area for a component (asynchronous).
+//
+// The title area for a component doesn't always appear immediately upon
+// loading, so we need to set a MutationObserver to watch for it. The
+// getTitleComponentAreaSync() function below does the real work of finding
+// the title area.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   key (string) - the component key from siteConf.display
+//
+// Returns: a Promise to return the root element of the title area
+async function getComponentTitleArea(root, key) {
+
+    return new Promise(function (resolve, reject) {
+        const titleArea = getComponentTitleAreaSync(root, key);
+        if (titleArea == null) {
+
+            // the title area doesn't exist yet; set an observer to wait for it
+            const observer = new MutationObserver(function () {
+                const titleArea = getComponentTitleArea(root, key);
+                if (titleArea !== null) {
+                    // got it! disconnect the observer and resolve the promise
+                    observer.disconnect();
+                    resolve(titleArea);
+                }
+            });
+            observer.observe(root, { childList: true, subtree: true, attributes: false, characterData: false });
+
+        } else {
+
+            // the title area already exists; resolve the promise right away
+            resolve(titleArea);
+
+        }
+    });
+}
+
+
+// Get the title area for a component (synchronous). Note that that the title
+// area doesn't always appear immediately upon loast; use the asynchrononous
+// version of this function above to wait until the title appears.
 //
 // Since every component has a unique internal structure, we need custom logic
 // to identify the title area, which is encoded in this function. See the
@@ -542,7 +551,7 @@ function getComponentKey(e) {
 //   key (string) - the component key from siteConf.display
 //
 // Returns: the root element of the title area, or null if the component does not have a title
-function getComponentTitleArea(root, key) {
+function getComponentTitleAreaSync(root, key) {
 
     switch (key) {
         case 'bomLinks':
@@ -584,6 +593,7 @@ function getComponentTitleArea(root, key) {
         default:
             console.warn("Unrecognised component key '" + key + "' in getComponentTitleArea.");
     }
+
     return null;
 
 }
@@ -607,26 +617,4 @@ function onClickExpandableComponent(root, titleArea) {
         applyDisplayStyleCompressed(root, titleArea, false);
     }
 
-}
-
-
-// Handler for populating an expandable component.
-//
-// Input:
-//    mutations (Array) - the mutations
-//    observer (MutationObserver) - the observer
-//    root (DOMElement) - the root element of the component
-//    startCompressed (boolean) - start in the compressed state
-function onExpandableComponentPopulated(mutations, observer, root, startCompressed = false) {
-
-    // try again to the get the title area
-    const key = getComponentKey(root);
-    if (key !== null) {
-        const titleArea = getComponentTitleArea(root, key);
-        if (titleArea !== null) {
-            // got it! disconnect the observer and make the component expandable
-            observer.disconnect();
-            applyDisplayStyleExpandableReal(root, titleArea, startCompressed);
-        }
-    }
 }
