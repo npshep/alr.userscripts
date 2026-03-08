@@ -37,5 +37,3 @@ Known Bugs
 
 - compressing the top-of-page summary and the "exploring our website" section
   don't work
-
-- starting the weather map in a compressed state doesn't work

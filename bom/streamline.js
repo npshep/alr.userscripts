@@ -182,19 +182,25 @@ function applyDisplayStyles(map, displayConf) {
                     break;
 
                 case 'hidden':
-                    applyDisplayStyleHidden(map[key]);
+                    applyDisplayStyleObserver(map[key], function (root) {
+                        applyDisplayStyleHidden(root);
+                    });
                     break;
 
                 case 'compressed':
-                    applyDisplayStyleExpandable(map[key], key, true);
+                    applyDisplayStyleObserver(map[key], function (root) {
+                        applyDisplayStyleExpandable(root, key, true);
+                    });
                     break;
 
                 case 'expanded':
-                    applyDisplayStyleExpandable(map[key], key, false);
+                    applyDisplayStyleObserver(map[key], function (root) {
+                        applyDisplayStyleExpandable(root, key, false);
+                    });
                     break;
 
                 default:
-                    console.warn("Component '" + key + "' has an unrecognised dipslay style '" + displayConf[key] + "'.");
+                    console.warn("Component '" + key + "' has an unrecognised display style '" + displayConf[key] + "'.");
                     break;
             }
         }
@@ -203,7 +209,7 @@ function applyDisplayStyles(map, displayConf) {
 }
 
 
-// Apply the 'compressed' display style..
+// Apply the 'compressed' display style.
 //
 // We hide the contents of compressed components by suppressing display of the
 // siblings of the title area. When re-expanding the component, we return them
@@ -268,6 +274,34 @@ function applyDisplayStyleExpandable(root, key, startCompressed = false) {
 function applyDisplayStyleHidden(root) {
 
     root.style.display = "none";
+
+}
+
+
+// Apply a display style, re-applying it as necessary following a change to
+// the component.
+//
+// Input:
+//  root (DOMElement) - the root element of the component
+//  render (function) - the function for rendering the display style
+function applyDisplayStyleObserver(root, render) {
+
+    // apply the display style right away
+    render(root);
+
+    // set an observer to re-apply the style following changes
+    const opts = { childList: true, subtree: true, attributes: false, characterData: false };
+    const observer = new MutationObserver(function () {
+        // disconnect the observer so we don't get an infinite loop
+        observer.disconnect();
+
+        // re-apply the style
+        render(root);
+
+        // continue observing
+        observer.observe(root, opts);
+    });
+    observer.observe(root, opts);
 
 }
 
