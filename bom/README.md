@@ -35,5 +35,5 @@ Buy me a Ko-Fi at https://ko-fi.com/npsheppard.
 Known Bugs
 ==========
 
-- compressing the top-of-page summary and the "exploring our website" section
-  don't work
+- expandable components should use the same styling as existing "accordion"
+  components, with down/up arrows beside the header

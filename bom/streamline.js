@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-08
+// @version          2026-03-09
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -211,9 +211,10 @@ function applyDisplayStyles(map, displayConf) {
 
 // Apply the 'compressed' display style.
 //
-// We hide the contents of compressed components by suppressing display of the
-// siblings of the title area. When re-expanding the component, we return them
-// to the default display style.
+// For most components, compression hides the siblings of the title area. In a
+// few special cases, we need to hide other elements, as per the in-function
+// comments. When re-expanding the component, we return all elements to the
+// default display style.
 //
 // Input:
 //   root (DOMElement) - the root element of the component
@@ -221,11 +222,37 @@ function applyDisplayStyles(map, displayConf) {
 //   compressed (boolean) - true to compress, false to expand
 function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
 
-    // apply the desired display style to the siblings of the title area
-    let e = titleArea.nextElementSibling;
-    while (e != null) {
-        e.style.display = compressed ? "none" : "";
-        e = e.nextElementSibling;
+    // build the list of elements affected by compression
+    let elementsToCompress = [ ];
+    if (titleArea.classList.contains('location-title__title')) {
+
+        // special case for the top-of-page weather summary --
+        // suppress the <section> element with class 'observations'
+        const weatherMoodObservations = root.querySelector('.weather-mood > section');
+        if (weatherMoodObservations != null) {
+            elementsToCompress.push(weatherMoodObservations);
+        }
+
+    } else {
+
+        // for all other elements, hide the siblings of the title area
+        let e = titleArea.nextElementSibling;
+        while (e != null) {
+            elementsToCompress.push(e);
+            e = e.nextElementSibling;
+        }
+
+        // special case for bomLinks: hide "You may also be interested in..." as well
+        const mayBeInterested = root.querySelector('.bom-grid-col-l--span-5');
+        if (mayBeInterested != null) {
+            elementsToCompress.push(mayBeInterested);
+        }
+
+    }
+
+    // apply compression
+    for (const e of elementsToCompress) {
+        e.style.display = compressed ? 'none' : '';
     }
 
 }
@@ -298,7 +325,7 @@ function applyDisplayStyleObserver(root, render) {
         // re-apply the style
         render(root);
 
-        // continue observing
+        // resume observing
         observer.observe(root, opts);
     });
     observer.observe(root, opts);
@@ -531,9 +558,9 @@ function getComponentKey(e) {
 // Get the title area for a component (asynchronous).
 //
 // The title area for a component doesn't always appear immediately upon
-// loading, so we need to set a MutationObserver to watch for it. The
-// getTitleComponentAreaSync() function below does the real work of finding
-// the title area.
+// loading, so this function sets a MutationObserver to watch for it and
+// returns a Promise to carry out the work. The getTitleComponentAreaSync()
+// function below does the real work of finding the title area.
 //
 // Input:
 //   root (DOMElement) - the root element of the component
@@ -567,9 +594,9 @@ async function getComponentTitleArea(root, key) {
 }
 
 
-// Get the title area for a component (synchronous). Note that that the title
-// area doesn't always appear immediately upon loast; use the asynchrononous
-// version of this function above to wait until the title appears.
+// Get the title area for a component (synchronous). Note that the title area
+// doesn't always appear immediately upon load; use the asynchrononous version
+// of this function above to wait until the title appears.
 //
 // Since every component has a unique internal structure, we need custom logic
 // to identify the title area, which is encoded in this function. See the
