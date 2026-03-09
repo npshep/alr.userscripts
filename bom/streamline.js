@@ -42,7 +42,7 @@
 // upon every reload.
 //
 // The 'theme' properties set a few colours, fonts, etc. used by added
-// compoments.
+// components.
 //
 // This script ships with the settings that I prefer, but feel free to change
 // them to your liking.
@@ -54,13 +54,43 @@ const siteConf = {
     order: {
 
         // home page when no favourite is set
-        homepage: [ 'homepageHeader', 'capitalForecast', 'weatherMetadata', 'featuredNews', 'bomLinks' ],
+        homepage: [
+            'homepageHeader',
+            'capitalForecast',
+            'weatherMetadata',
+            'featuredNews',
+            'bomLinks'
+        ],
 
         // home page when favourites are set
-        favourites: [ 'weatherMood', 'favouriteLocations', 'sevenDayForecast', 'weatherMap', 'featuredNews', 'weatherMetadata', 'bomLinks' ],
+        favourites: [
+            'weatherMood',
+            'favouriteLocations',
+            'sevenDayForecast',
+            'weatherMap',
+            'featuredNews',
+            'weatherMetadata',
+            'bomLinks'
+        ],
 
-        // location page
-        location: [ 'hourlyForecast', 'weatherMap' ]
+        // location page (components can only be re-ordered within a tab; moving across tabs is not yet supported)
+        location: [
+            // "today" tab
+            'hourlyForecast',
+            'weatherMap',
+
+            // "7 days" tab
+            'sevenDayForecast',
+            'watersForecast',
+            'coastalForecast',
+
+            // "past" tab
+            'changeStation',
+            'stateRegionRecord',
+            'observationChart',
+            'aboutStation',
+            'relatedStations'
+        ]
     },
 
     // display styles (the key is the script's internal code for the component)
@@ -73,7 +103,7 @@ const siteConf = {
         capitalForecast: 'default',
 
         // top-of-page summary when a favourite location is set
-        weatherMood: 'expanded',
+        weatherMood: 'default',
 
         // Weather map / rain radar
         weatherMap: 'compressed',
@@ -91,10 +121,31 @@ const siteConf = {
         weatherMetadata: 'expanded',
 
         // Featured news
-        featuredNews: 'expanded',
+        featuredNews: 'compressed',
 
         // Exploring our website
-        bomLinks: 'expanded'
+        bomLinks: 'compressed',
+
+        // waters forecast (TODO: what happens for regions not on the coast?)
+        watersForecast: 'default',
+
+        // coastal forecast  (TODO: what happens for regions not on the coast?)
+        coastalForecast: 'default',
+
+        // change weather station
+        changeStation: 'default',
+
+        // latest highs and lows
+        stateRegionRecord: 'default',
+
+        // past 72 hours
+        observationChart: 'default',
+
+        // about this station
+        aboutStation: 'default',
+
+        // related stations
+        relatedStations: 'default'
 
     },
 
@@ -144,22 +195,22 @@ const siteConf = {
 
 // Re-order the components on a page.
 //
+// Because all of the re-orderable components on any given page are children of
+// the same element (block-mainpagecontent for the home page; the section's
+// tab for location page), we can re-order the components by re-adding them to
+// their parent's child list in the order specified. Elements not mentioned in
+// the order array will be pushed to the bottom.
+//
+//
 // Input:
 //   map (Object) - the map output by buildComponentMap*()
 //   order (Array) - one of the 'order' arrays from siteConf
 function applyComponentOrder(map, order) {
 
-    // remove the mapped elements from the page (ignoring the root)
-    for (const key of Object.keys(map)) {
-        if (key !== 'root') {
-            map[key].remove();
-        }
-    }
-
-    // insert the ordered elements at the top of the root component
+    // insert the ordered elements at the top of their parent component
     for (let i = order.length - 1; i >= 0; i--) {
         if (order[i] in map) {
-            map.root.insertAdjacentElement("afterbegin", map[order[i]]);
+            map[order[i]].parentElement.insertAdjacentElement("afterbegin", map[order[i]]);
         } else {
             console.warn("A page order contains an unrecognised component key '" + order[i] + "'.");
         }
@@ -354,11 +405,11 @@ async function buildComponentMapHome() {
         let map = { };
 
         // get a reference to the main content
-        map.root = document.getElementById('block-mainpagecontent');
-        if (map.root != null) {
+        const mainPageContent = document.getElementById('block-mainpagecontent');
+        if (mainPageContent != null) {
 
             // add each child that we recognise to the map
-            let component = map.root.firstElementChild;
+            let component = mainPageContent.firstElementChild;
             while (component != null) {
                 const key = getComponentKey(component);
                 if (key != null) {
@@ -406,13 +457,13 @@ async function buildComponentMapLocation() {
         let map = { };
 
         // get a reference to the main content
-        map.root = document.getElementById('block-mainpagecontent');
-        if (map.root != null) {
+        const mainPageContent = document.getElementById('block-mainpagecontent');
+        if (mainPageContent != null) {
 
             // set an observer to wait for the location-template element
             const observer = new MutationObserver(function () {
 
-                const locationPageModule = map.root.querySelector(".location-page-module");
+                const locationPageModule = mainPageContent.querySelector(".location-page-module");
                 if (locationPageModule != null) {
                     // loop through each tab in the location-page-module div
                     let tab = locationPageModule.firstElementChild;
@@ -433,7 +484,7 @@ async function buildComponentMapLocation() {
                     resolve(map);
                 }
             });
-            observer.observe(map.root, { childList: true, subtree: true, attributes: false, characterData: false });
+            observer.observe(mainPageContent, { childList: true, subtree: true, attributes: false, characterData: false });
 
         } else {
 
