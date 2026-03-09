@@ -24,8 +24,8 @@
 // an internal code, which is a key of siteConf.display structure below.
 //
 // The 'order' arrays define the order (top to bottom) in which components will
-// be displayed. Omitting a component removes it from the display (but adding
-// a component not present on that page has no effect).
+// be displayed. Note that components can currently only be re-ordered within
+// their original page; adding their code to another page has no effect.
 //
 // The 'display' value for each component key controls how that component will be
 // rendered. Options are as follows:
@@ -34,12 +34,6 @@
 // 'hidden': hide from display
 // 'compressed': show only the header, which can be expanded by clicking
 // 'expanded': the same as 'expandable', but starting in the expanded state
-// 'saved': state saved by GM_setValue
-//
-// Components configured with 'saved' begin as 'expanded' elements on the first
-// load, but the 'expanded' or 'compressed' state is thereafter saved between
-// sessions using GM_setValue. Unsaved components reset to the state set here
-// upon every reload.
 //
 // The 'theme' properties set a few colours, fonts, etc. used by added
 // components.
