@@ -276,13 +276,31 @@ function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
 
     // build the list of elements affected by compression
     let elementsToCompress = [ ];
-    if (titleArea.classList.contains('location-title__title')) {
+    if (getComponentKey(root) === 'weatherMood') {
 
         // special case for the top-of-page weather summary --
         // suppress the <section> element with class 'observations'
         const weatherMoodObservations = root.querySelector('.weather-mood > section');
         if (weatherMoodObservations != null) {
             elementsToCompress.push(weatherMoodObservations);
+        }
+
+    } else if (getComponentKey(root) === 'hourlyForecast') {
+
+        // special case for the hourly forecast --
+        // suppress both the controls in the header and the widgets in the container
+        const hourlyForecastTabs = root.querySelector('.weather-tabs');
+        if (hourlyForecastTabs != null) {
+            elementsToCompress.push(hourlyForecastTabs);
+        }
+        const hourlyForecastContainer = root.querySelector('.forecast-chart__container');
+        if (hourlyForecastContainer != null && hourlyForecastContainer.firstElementChild != null) {
+            // the first child is the header; remove the rest
+            let hourlyForecastWidget = hourlyForecastContainer.firstElementChild.nextElementSibling;
+            while (hourlyForecastWidget != null) {
+                elementsToCompress.push(hourlyForecastWidget);
+                hourlyForecastWidget = hourlyForecastWidget.nextElementSibling;
+            }
         }
 
     } else {
@@ -295,9 +313,11 @@ function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
         }
 
         // special case for bomLinks: hide "You may also be interested in..." as well
-        const mayBeInterested = root.querySelector('.bom-grid-col-l--span-5');
-        if (mayBeInterested != null) {
-            elementsToCompress.push(mayBeInterested);
+        if (getComponentKey(root) === 'bomLinks') {
+            const mayBeInterested = root.querySelector('.bom-grid-col-l--span-5');
+            if (mayBeInterested != null) {
+                elementsToCompress.push(mayBeInterested);
+            }
         }
 
     }
