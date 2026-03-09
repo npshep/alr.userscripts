@@ -60,19 +60,19 @@ const siteConf = {
         favourites: [ 'weatherMood', 'favouriteLocations', 'sevenDayForecast', 'weatherMap', 'featuredNews', 'weatherMetadata', 'bomLinks' ],
 
         // location page
-        location: [ 'weatherMood', 'hourlyForecast', 'weatherMap' ]
+        location: [ 'hourlyForecast', 'weatherMap' ]
     },
 
     // display styles (the key is the script's internal code for the component)
     display: {
 
         // the Discover Your Weather header at the top of the home page
-        homepageHeader: 'expanded',
+        homepageHeader: 'default',
 
         // the capital city forecasts that appear when no favourite is set
-        capitalForecast: 'expanded',
+        capitalForecast: 'default',
 
-        // top-of-page summary for a location
+        // top-of-page summary when a favourite location is set
         weatherMood: 'expanded',
 
         // Weather map / rain radar
@@ -83,6 +83,9 @@ const siteConf = {
 
         // Favourite locations
         favouriteLocations: 'compressed',
+
+        // hourly forecast
+        hourlyForecast: 'expanded',
 
         // Last Updated
         weatherMetadata: 'expanded',
@@ -111,8 +114,7 @@ const siteConf = {
     if (window.location.href === 'https://www.bom.gov.au/') {
 
         // BoM home page
-        const map = buildComponentMapHome();
-        if (map != null) {
+        buildComponentMapHome().then(function (map) {
             if ('homepageHeader' in map) {
                 // home page with no favourites set
                 applyComponentOrder(map, siteConf.order.homepage);
@@ -121,20 +123,19 @@ const siteConf = {
                 applyComponentOrder(map, siteConf.order.favourites);
             }
             applyDisplayStyles(map, siteConf.display);
-        } else {
-            console.warn("Could not identify the home page content.")
-        }
+        }).catch(function (error) {
+            console.warn(error.message);
+        });
 
     } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
 
         // location page
-        const map = buildComponentMapLocation();
-        if (map != null) {
+        buildComponentMapLocation().then(function (map) {;
             applyComponentOrder(map, siteConf.order.location);
             applyDisplayStyles(map, siteConf.display);
-        } else {
-                console.warn("Could not identify the location page content.")
-        }
+        }).catch(function (error) {
+                console.warn(error.message);
+        });
 
     }
 
@@ -343,34 +344,38 @@ function applyDisplayStyleObserver(root, render) {
 // class module-spacing. The internal structure of these blocks don't follow
 // any pattern, so we need to recognise each one with some custom key.
 //
-// Returns: an object mapping siteConf component keys to DOM elements; null if the page isn't recognised
-function buildComponentMapHome() {
+// Returns: a Promise that resolve to a map of siteConf component keys to DOM elements;
+//   rejects if the page isn't recognised
+async function buildComponentMapHome() {
 
-    // start with an empty map
-    let map = { };
+    return new Promise(function (resolve, reject) {
 
-    // get a reference to the main content
-    map.root = document.getElementById('block-mainpagecontent');
-    if (map.root != null) {
+        // start with an empty map
+        let map = { };
 
-        // add each child that we recognise to the map
-        let component = map.root.firstElementChild;
-        while (component != null) {
-            const key = getComponentKey(component);
-            if (key != null) {
-                map[key] = component;
+        // get a reference to the main content
+        map.root = document.getElementById('block-mainpagecontent');
+        if (map.root != null) {
+
+            // add each child that we recognise to the map
+            let component = map.root.firstElementChild;
+            while (component != null) {
+                const key = getComponentKey(component);
+                if (key != null) {
+                    map[key] = component;
+                }
+                component = component.nextElementSibling;
             }
-            component = component.nextElementSibling;
+
+            resolve(map);
+
+        } else {
+
+            // doesn't look the BoM home page
+            reject(new ReferenceError("Could not identify the home page content."));
+
         }
-
-        return map;
-
-    } else {
-
-        // doesn't look the BoM home page
-        return null;
-
-    }
+    });
 }
 
 
@@ -378,7 +383,8 @@ function buildComponentMapHome() {
 //
 // Like the home page, the body of the location page is contained in a div with
 // class block-mainpagecontent, but most of the visible content is in a child
-// div with class location-template.
+// div with class location-template. This div doesn't appear immediately on
+// load, so we have to set up a MutationObserver to wait for it.
 //
 // The location-template div has two children, one with class weather-mood and
 // one with class location-page-module. The first contains the weather summary
@@ -390,47 +396,53 @@ function buildComponentMapHome() {
 // of the display. This function tags each of these components with one of the
 // keys in siteConf.display.
 //
-// Returns: an object mapping siteConf component keys to DOM elements; null if the page isn't recognised
-function buildComponentMapLocation() {
+// Returns: a Promise that resolve to a map of siteConf component keys to DOM elements;
+//   rejects if the page isn't recognised
+async function buildComponentMapLocation() {
 
-    // start with an empty map
-    let map = { };
+    return new Promise(function (resolve, reject) {
 
-    // get a reference to the main content
-    map.root = document.getElementById('block-mainpagecontent');
-    if (map.root != null) {
+        // start with an empty map
+        let map = { };
 
-        // get the top-of-page summary ("weatherMood")
-        const weatherMood = map.root.querySelector(".weather-mood");
-        if (weatherMood != null) {
-            map.weatherMood = weatherMood;
-        }
+        // get a reference to the main content
+        map.root = document.getElementById('block-mainpagecontent');
+        if (map.root != null) {
 
-        // loop through each tab in the location-template div
-        const tabs = map.root.querySelector(".location-template");
-        if (tabs != null) {
-            let tab = tabs.firstElementChild;
-            while (tab != null) {
-                let section = tab.firstElementChild;
-                while (section != null) {
-                    const key = getComponentKey(section);
-                    if (key != null) {
-                        map[key] = section;
+            // set an observer to wait for the location-template element
+            const observer = new MutationObserver(function () {
+
+                const locationPageModule = map.root.querySelector(".location-page-module");
+                if (locationPageModule != null) {
+                    // loop through each tab in the location-page-module div
+                    let tab = locationPageModule.firstElementChild;
+                    while (tab != null) {
+                        let section = tab.firstElementChild;
+                        while (section != null) {
+                            const key = getComponentKey(section);
+                            if (key != null) {
+                                map[key] = section;
+                            }
+                            section = section.nextElementSibling;
+                        }
+                        tab = tab.nextElementSibling;
                     }
-                    section = section.nextElementSibling;
+
+                    // stop observing and resolve the Promise
+                    observer.disconnect();
+                    resolve(map);
                 }
-                tab = tab.nextElementSibling;
-            }
+            });
+            observer.observe(map.root, { childList: true, subtree: true, attributes: false, characterData: false });
+
+        } else {
+
+            // doesn't look like the BoM location page
+            reject(new ReferenceError("Could not identify the location page content."));
+
         }
 
-        return map;
-
-    } else {
-
-        // doesn't look like the BoM location page
-        return null;
-
-    }
+    });
 
 }
 
@@ -575,7 +587,7 @@ async function getComponentTitleArea(root, key) {
 
             // the title area doesn't exist yet; set an observer to wait for it
             const observer = new MutationObserver(function () {
-                const titleArea = getComponentTitleArea(root, key);
+                const titleArea = getComponentTitleAreaSync(root, key);
                 if (titleArea !== null) {
                     // got it! disconnect the observer and resolve the promise
                     observer.disconnect();
@@ -634,6 +646,10 @@ function getComponentTitleAreaSync(root, key) {
         case 'homepageHeader':
             // Discover your weather; the title bar has class homepage-banner__title
             return root.querySelector(".homepage-banner__title");
+
+        case 'hourlyForecast':
+            // hourly forecast; the title bar has class forecast-chart-header
+            return root.querySelector(".forecast-chart-header");
 
         case 'sevenDayForecast':
             // 7-day forecast; the title bar has class forecast-summary-table__title
