@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-09
+// @version          2026-03-11
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -75,8 +75,8 @@ const siteConf = {
 
             // "7 days" tab
             'sevenDayForecast',
-            'watersForecast',
-            'coastalForecast',
+            'weatherSituation',
+            'stateDistrict',
 
             // "past" tab
             'changeStation',
@@ -120,11 +120,11 @@ const siteConf = {
         // Exploring our website
         bomLinks: 'compressed',
 
-        // waters forecast (TODO: what happens for regions not on the coast?)
-        watersForecast: 'default',
+        // weather situation (usually "Waters forecast" for coastal regions; empty otherwise)
+        weatherSituation: 'default',
 
-        // coastal forecast  (TODO: what happens for regions not on the coast?)
-        coastalForecast: 'default',
+        // state distrct  (usually "Coastal forecast" for coastal ergions; empty otherwise)
+        stateDistrict: 'default',
 
         // change weather station
         changeStation: 'default',
@@ -590,11 +590,11 @@ function getComponentKey(e) {
             // seven day forecast
             return 'sevenDayForecast';
         } else if (e.classList.contains('tc-7-days-C14_WeatherSituation-1')) {
-            // waters forecast
-            return 'watersForecast';
+            // weather situation (usually "Waters forecast" if non-empty)
+            return 'weatherSituation';
         } else if (e.classList.contains('tc-7-days-C56_ForecastStateRegionCoastalWater-2')) {
-            // coastal forecast (TODO: what happens for regions not on the coast?)
-            return 'coastalForecast';
+            // coastal forecast
+            return 'stateDistrict';
         } else if (e.classList.contains('tc-7-days-C07_WeatherMetadata-3')) {
             // last updated (TODO: weather metadata appears separately on each tab)
             return 'weatherMetadata';
@@ -692,13 +692,21 @@ async function getComponentTitleArea(root, key) {
 function getComponentTitleAreaSync(root, key) {
 
     switch (key) {
+        case 'aboutStation':
+            // about this weather station; the title is an h3 with class bom-typo
+            return root.querySelector("h3.bom-typo");
+
         case 'bomLinks':
-            // Exploring our website; the title bar has cta-module__title
+            // Exploring our website; the title bar has class cta-module__title
             return root.querySelector(".cta-module__title");
 
         case 'capitalForecast':
-            // capital cities forecast; doesn't really have a title, so return the whole box
-            return root.querySelector(".bom-capital-forecast");
+            // capital cities forecast; doesn't really have a title, so return null
+            return null;
+
+        case 'changeStation':
+            // change weather station; the title bar has class weather-station-title
+            return root.querySelector(".weather-station-title");
 
         case 'favouriteLocations':
             // favourite locations; the title bar has class my-weather__title
@@ -716,9 +724,25 @@ function getComponentTitleAreaSync(root, key) {
             // hourly forecast; the title bar has class forecast-chart-header
             return root.querySelector(".forecast-chart-header");
 
+        case 'observationChart':
+            // past 72 hours; the title has class observations-header
+            return root.querySelector(".observations-header");
+
+        case 'relatedStations':
+            // related weather stations; the title has class bom-related-weather-station_title
+            return root.querySelector(".bom-related-weather-station_title");
+
         case 'sevenDayForecast':
             // 7-day forecast; the title bar has class forecast-summary-table__title
             return root.querySelector(".forecast-summary-table__title");
+
+        case 'stateDistrict':
+            // state district; the title has class component__heading (only exists for coastal regions)
+            return root.querySelector(".component__heading");
+
+        case 'stateRegionRecord':
+            // latest highs and lows; the title bar has class state-region-record-title__container
+            return root.querySelector(".state-region-record-title__container");
 
         case 'weatherMap':
             // weather map; the title has id weatherMap
@@ -731,6 +755,10 @@ function getComponentTitleAreaSync(root, key) {
         case 'weatherMood':
             // top-of-page summary; the title has class location-title__title
             return root.querySelector(".location-title__title");
+
+        case 'weatherSituation':
+            // waters forecast; the title has class title--coastal (doesn't exist for non-coastal regions)
+            return root.querySelector(".title--coastal");
 
         default:
             console.warn("Unrecognised component key '" + key + "' in getComponentTitleArea.");
