@@ -135,7 +135,7 @@ const siteConf = {
         // past 72 hours
         observationChart: 'default',
 
-        // about this station
+        // about this station and more past weather
         aboutStation: 'default',
 
         // related stations
@@ -274,9 +274,31 @@ function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
 
     // special case for bomLinks: hide "You may also be interested in..." as well
     if (getComponentKey(root) === 'bomLinks') {
-        const mayBeInterested = root.querySelector('.bom-grid-col-l--span-5');
+        const mayBeInterested = root.querySelector(".bom-grid-col-l--span-5");
         if (mayBeInterested != null) {
             elementsToCompress.push(mayBeInterested);
+        }
+    }
+
+    // special case for aboutStation
+    if (getComponentKey(root) === 'aboutStation') {
+        // the default set marks "more past weather" for hiding, but we want to keep the title
+        for (let i = 0; i < elementsToCompress.length; i++) {
+            if (elementsToCompress[i].classList.contains("past-bom-component-container-3-1-C25_CTA")) {
+                // remove the past weather container from the set
+                elementsToCompress.splice(i, 1);
+                break;
+            }
+        }
+
+        // hide the body of the past weather container instead
+        const morePastWeatherParagraph = root.querySelector(".past-bom-component-container-3-1-C25_CTA .bom-body");
+        const morePastWeatherButtons = root.querySelector(".past-bom-component-container-3-1-C25_CTA .cta-module__button-container");
+        if (morePastWeatherParagraph != null) {
+            elementsToCompress.push(morePastWeatherParagraph);
+        }
+        if (morePastWeatherButtons != null) {
+            elementsToCompress.push(morePastWeatherButtons);
         }
     }
 
