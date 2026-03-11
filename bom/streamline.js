@@ -257,10 +257,11 @@ function applyDisplayStyles(map, displayConf) {
 
 // Apply the 'compressed' display style.
 //
-// For most components, compression hides the siblings of the title area. In a
-// few special cases, we need to hide other elements, as per the in-function
-// comments. When re-expanding the component, we return all elements to the
-// default display style.
+// For most components, compression hides all elements not on the path between
+// the component root and the title area, which are found by
+// applyDisplayStyleCompressedDefaultSet(). In a few special cases, we need to
+// hide other elements, as per the in-function comments. When re-expanding the
+// component, we return all elements to the default display style.
 //
 // Input:
 //   root (DOMElement) - the root element of the component
@@ -268,52 +269,15 @@ function applyDisplayStyles(map, displayConf) {
 //   compressed (boolean) - true to compress, false to expand
 function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
 
-    // build the list of elements affected by compression
-    let elementsToCompress = [ ];
-    if (getComponentKey(root) === 'weatherMood') {
+    // get the default set of elements to hide when compressed
+    let elementsToCompress = applyDisplayStyleCompressedDefaultSet(root, titleArea);
 
-        // special case for the top-of-page weather summary --
-        // suppress the <section> element with class 'observations'
-        const weatherMoodObservations = root.querySelector('.weather-mood > section');
-        if (weatherMoodObservations != null) {
-            elementsToCompress.push(weatherMoodObservations);
+    // special case for bomLinks: hide "You may also be interested in..." as well
+    if (getComponentKey(root) === 'bomLinks') {
+        const mayBeInterested = root.querySelector('.bom-grid-col-l--span-5');
+        if (mayBeInterested != null) {
+            elementsToCompress.push(mayBeInterested);
         }
-
-    } else if (getComponentKey(root) === 'hourlyForecast') {
-
-        // special case for the hourly forecast --
-        // suppress both the controls in the header and the widgets in the container
-        const hourlyForecastTabs = root.querySelector('.weather-tabs');
-        if (hourlyForecastTabs != null) {
-            elementsToCompress.push(hourlyForecastTabs);
-        }
-        const hourlyForecastContainer = root.querySelector('.forecast-chart__container');
-        if (hourlyForecastContainer != null && hourlyForecastContainer.firstElementChild != null) {
-            // the first child is the header; remove the rest
-            let hourlyForecastWidget = hourlyForecastContainer.firstElementChild.nextElementSibling;
-            while (hourlyForecastWidget != null) {
-                elementsToCompress.push(hourlyForecastWidget);
-                hourlyForecastWidget = hourlyForecastWidget.nextElementSibling;
-            }
-        }
-
-    } else {
-
-        // for all other elements, hide the siblings of the title area
-        let e = titleArea.nextElementSibling;
-        while (e != null) {
-            elementsToCompress.push(e);
-            e = e.nextElementSibling;
-        }
-
-        // special case for bomLinks: hide "You may also be interested in..." as well
-        if (getComponentKey(root) === 'bomLinks') {
-            const mayBeInterested = root.querySelector('.bom-grid-col-l--span-5');
-            if (mayBeInterested != null) {
-                elementsToCompress.push(mayBeInterested);
-            }
-        }
-
     }
 
     // apply compression
@@ -322,6 +286,58 @@ function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
     }
 
 }
+
+
+// Get the default set of elements to gide when compressing an element.
+//
+// This function finds elements *not* on the path between the root and the
+// title area by an in-order traversal of the tree. If the current element is
+// on the path, we descend one level and traverse the elements at that level.
+// If the curernt element is *not* on the path, we add it to output set and
+// move to the next element in the traversal.
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   titleArea (DOMElement) - the title area
+//
+// Returns: an array of elements not on the path between the root and the title area
+function applyDisplayStyleCompressedDefaultSet(root, titleArea) {
+
+    let elementsToCompress = [ ];
+    let e = root.firstElementChild;
+    while (e != null && e != root) {
+
+        // save the parent so that we an ascend the tree
+        let parent = e.parentElement;
+
+        // process the current element
+        if (e != titleArea) {
+            if (e.contains(titleArea)) {
+                // e is on the path between the root and the title; descend the tree
+                e = e.firstElementChild;
+            } else {
+                // e isn't on the path; add to the set and move to the next element
+                elementsToCompress.push(e);
+                e = e.nextElementSibling;
+            }
+        } else {
+            // e is the title area; move over it
+            e = e.nextElementSibling;
+        }
+
+        // if e.nextElementSibling is null, move back up the tree
+        while (e == null && e != root) {
+            e = parent;
+            parent = e.parentNode;
+            if (e != root) {
+                e = e.nextElementSibling;
+            }
+        }
+    }
+
+    return elementsToCompress;
+}
+
 
 
 // Make a component expandable (entry point).
