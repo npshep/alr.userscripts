@@ -272,14 +272,6 @@ function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
     // get the default set of elements to hide when compressed
     let elementsToCompress = applyDisplayStyleCompressedDefaultSet(root, titleArea);
 
-    // special case for bomLinks: hide "You may also be interested in..." as well
-    if (getComponentKey(root) === 'bomLinks') {
-        const mayBeInterested = root.querySelector(".bom-grid-col-l--span-5");
-        if (mayBeInterested != null) {
-            elementsToCompress.push(mayBeInterested);
-        }
-    }
-
     // special case for aboutStation
     if (getComponentKey(root) === 'aboutStation') {
         // the default set marks "more past weather" for hiding, but we want to keep the title
