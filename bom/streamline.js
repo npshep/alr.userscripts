@@ -274,24 +274,7 @@ function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
 
     // special case for aboutStation
     if (getComponentKey(root) === 'aboutStation') {
-        // the default set marks "more past weather" for hiding, but we want to keep the title
-        for (let i = 0; i < elementsToCompress.length; i++) {
-            if (elementsToCompress[i].classList.contains("past-bom-component-container-3-1-C25_CTA")) {
-                // remove the past weather container from the set
-                elementsToCompress.splice(i, 1);
-                break;
-            }
-        }
-
-        // hide the body of the past weather container instead
-        const morePastWeatherParagraph = root.querySelector(".past-bom-component-container-3-1-C25_CTA .bom-body");
-        const morePastWeatherButtons = root.querySelector(".past-bom-component-container-3-1-C25_CTA .cta-module__button-container");
-        if (morePastWeatherParagraph != null) {
-            elementsToCompress.push(morePastWeatherParagraph);
-        }
-        if (morePastWeatherButtons != null) {
-            elementsToCompress.push(morePastWeatherButtons);
-        }
+        applyDisplayStyleCompressedAboutStation(elementsToCompress);
     }
 
     // apply compression
@@ -299,6 +282,39 @@ function applyDisplayStyleCompressed(root, titleArea, compressed = true) {
         e.style.display = compressed ? 'none' : '';
     }
 
+}
+
+
+// Special case for compressing the "About this station" component. For this
+// component, we preserve the title of the "More past weather" box beside it,
+// while removing the body of that box.
+//
+// Input:
+//   elementsToCompress (Array) - the set returned by applyDisplayStyleCompressDefaultSet
+function applyDisplayStyleCompressedAboutStation(elementsToCompress) {
+
+    // find the "more past weather" container
+    let morePastWeather = null;
+    for (let i = 0; i < elementsToCompress.length; i++) {
+        if (elementsToCompress[i].classList.contains("past-bom-component-container-3-1-C25_CTA")) {
+            // remove the past weather container from the set
+            morePastWeather = elementsToCompress[i];
+            elementsToCompress.splice(i, 1);
+            break;
+        }
+    }
+
+    if (morePastWeather != null) {
+        // hide the body and the buttons instead
+        const morePastWeatherParagraph = morePastWeather.querySelector(".bom-body");
+        const morePastWeatherButtons = morePastWeather.querySelector(".cta-module__button-container");
+        if (morePastWeatherParagraph != null) {
+            elementsToCompress.push(morePastWeatherParagraph);
+        }
+        if (morePastWeatherButtons != null) {
+            elementsToCompress.push(morePastWeatherButtons);
+        }
+    }
 }
 
 
