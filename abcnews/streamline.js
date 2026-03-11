@@ -101,6 +101,11 @@ const siteConf = {
     // the floating copy of Just In that sticks to the right when scrolling done
     '.Home_justin__mnv4y Home_justinSticky__A9Hqa': 'hidden',
 
+    // marketing banners (usually promoting ABC iView)
+    '.Home_marketingBannerMain__zEIHT': 'hidden',
+    '.Home_marketingBannerMobile__u2kCT': 'hidden',
+    '.Home_marketingBannerSidebar__L7di0': 'hidden',
+
     // the category headings that appear above each story
     '.Tag_container__7_5W6': 'default'
 };
