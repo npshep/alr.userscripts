@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-11
+// @version          2026-03-13
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -90,7 +90,14 @@ const siteConf = {
     // display styles (the key is the script's internal code for the component)
     display: {
 
-        // the Discover Your Weather header at the top of the home page
+        //////////////////////////////////////////////////////////////////////
+        // Home page
+        //
+        // If no favourites are set, homepageHeader and capitalForecast appear;
+        // otherwise weatherMood, weatherMap, and sevenDayForecast appear. The
+        // metadata, news and links appear on all pages.
+
+        // the Discover Your Weather header that appears when no favourite is set
         homepageHeader: 'default',
 
         // the capital city forecasts that appear when no favourite is set
@@ -99,7 +106,7 @@ const siteConf = {
         // top-of-page summary when a favourite location is set
         weatherMood: 'default',
 
-        // Weather map / rain radar
+        // Weather map / rain radar (only appears if rain is forecast)
         weatherMap: 'compressed',
 
         // 7-day forecast
@@ -107,9 +114,6 @@ const siteConf = {
 
         // Favourite locations
         favouriteLocations: 'compressed',
-
-        // hourly forecast
-        hourlyForecast: 'expanded',
 
         // Last Updated
         weatherMetadata: 'expanded',
@@ -120,11 +124,29 @@ const siteConf = {
         // Exploring our website
         bomLinks: 'compressed',
 
+        //////////////////////////////////////////////////////////////////////
+        // Location page - Today tab
+        //
+        // The weather map and metadata use the same settings as the home page.
+
+        // hourly forecast
+        hourlyForecast: 'expanded',
+
+        //////////////////////////////////////////////////////////////////////
+        // Location page - 7 days tab
+        //
+        // The 7 day forecast and metadata use the same settings as the home page.
+
         // weather situation (usually "Waters forecast" for coastal regions; empty otherwise)
         weatherSituation: 'default',
 
         // state distrct  (usually "Coastal forecast" for coastal ergions; empty otherwise)
         stateDistrict: 'default',
+
+        //////////////////////////////////////////////////////////////////////
+        // Location page - Past tab
+        //
+        // The metadata uses the same settings as the home page.
 
         // change weather station
         changeStation: 'default',
