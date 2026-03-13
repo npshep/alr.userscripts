@@ -178,31 +178,37 @@ const siteConf = {
 (function() {
     'use strict';
 
-    if (window.location.href === 'https://www.bom.gov.au/') {
-
-        // BoM home page
-        buildComponentMapHome().then(function (map) {
-            if ('homepageHeader' in map) {
-                // home page with no favourites set
-                applyComponentOrder(map, siteConf.order.homepage);
-            } else {
-                // home page with favourites set
-                applyComponentOrder(map, siteConf.order.favourites);
-            }
-            applyDisplayStyles(map, siteConf.display);
-        }).catch(function (error) {
-            console.warn(error.message);
-        });
-
-    } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
-
-        // location page
-        buildComponentMapLocation().then(function (map) {;
-            applyComponentOrder(map, siteConf.order.location);
-            applyDisplayStyles(map, siteConf.display);
-        }).catch(function (error) {
+    switch (getPageKey()) {
+        case 'home':
+            // BoM home page
+            buildComponentMapHome().then(function (map) {
+                if ('homepageHeader' in map) {
+                    // home page with no favourites set
+                    applyComponentOrder(map, siteConf.order.homepage);
+                } else {
+                    // home page with favourites set
+                    applyComponentOrder(map, siteConf.order.favourites);
+                }
+                applyDisplayStyles(map, siteConf.display);
+            }).catch(function (error) {
                 console.warn(error.message);
-        });
+            });
+            break;
+
+        case 'location':
+            // location page
+            buildComponentMapLocation().then(function (map) {;
+                applyComponentOrder(map, siteConf.order.location);
+                applyDisplayStyles(map, siteConf.display);
+            }).catch(function (error) {
+                 console.warn(error.message);
+            });
+            break;
+
+        default:
+            // shouldn't happen
+            console.warn("A Little BoM executed on an unrecognised page.");
+            break;
 
     }
 
@@ -801,8 +807,12 @@ function getComponentTitleAreaSync(root, key) {
             return root.querySelector(".bom-related-weather-station_title");
 
         case 'sevenDayForecast':
-            // 7-day forecast; the title bar has class forecast-summary-table__title
-            return root.querySelector(".forecast-summary-table__title");
+            // 7-day forecast
+            // on the home page, the title bar has class forecast-summary-table__title
+            // on the location page, title bar has class forecast-table__title
+            return getPageKey() === 'home' ?
+                root.querySelector(".forecast-summary-table__title") :
+                root.querySelector(".forecast-table__title");
 
         case 'stateDistrict':
             // state district; the title has class component__heading (only exists for coastal regions)
@@ -833,6 +843,24 @@ function getComponentTitleAreaSync(root, key) {
     }
 
     return null;
+
+}
+
+
+// Identify the type of page on which we're executing.
+//
+// Returns:
+//   'home' for the homepage
+//   'location' for location page
+function getPageKey() {
+
+    if (window.location.href === 'https://www.bom.gov.au/') {
+        return 'home';
+    } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
+        return 'location';
+    } else {
+        return null;
+    }
 
 }
 
