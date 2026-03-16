@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-13
+// @version          2026-03-16
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -70,20 +70,26 @@ const siteConf = {
         // location page (components can only be re-ordered within a tab; moving across tabs is not yet supported)
         location: [
             // "today" tab
+            'moreAboutToday',
             'hourlyForecast',
             'weatherMap',
+            'weatherMetadataToday',
+            'dataStatementToday',
 
             // "7 days" tab
             'sevenDayForecast',
             'weatherSituation',
             'stateDistrict',
+            'weatherMetadataSevenDays',
+            'dataStatementSevenDays',
 
             // "past" tab
             'changeStation',
             'stateRegionRecord',
             'observationChart',
             'aboutStation',
-            'relatedStations'
+            'relatedStations',
+            'dataStatementPast'
         ]
     },
 
@@ -129,8 +135,14 @@ const siteConf = {
         //
         // The weather map and metadata use the same settings as the home page.
 
+        // "more about today"
+        moreAboutToday: 'default',
+
         // hourly forecast
         hourlyForecast: 'expanded',
+
+        // "be aware" (the paragraph about wind and wave forecasts being averages)
+        dataStatement: 'default',
 
         //////////////////////////////////////////////////////////////////////
         // Location page - 7 days tab
@@ -197,7 +209,7 @@ const siteConf = {
 
         case 'location':
             // location page
-            buildComponentMapLocation().then(function (map) {;
+            buildComponentMapLocation().then(function (map) {
                 applyComponentOrder(map, siteConf.order.location);
                 applyDisplayStyles(map, siteConf.display);
             }).catch(function (error) {
@@ -249,8 +261,17 @@ function applyComponentOrder(map, order) {
 function applyDisplayStyles(map, displayConf) {
 
     for (const key of Object.keys(map)) {
-        if (key in displayConf) {
-            switch (displayConf[key]) {
+
+        // re-label component keys that share display configuration
+        let confKey = key;
+        if (key === 'weatherMetadataToday' || key === 'weatherMetadataSevenDays') {
+            confKey = 'weatherMetadata';
+        } else if (key === 'dataStatementToday' || key === 'dataStatementSevenDays' || key === 'dataStatementPast') {
+            confKey = 'dataStatement';
+        }
+
+        if (confKey in displayConf) {
+            switch (displayConf[confKey]) {
                 case 'default':
                     // nothing to do
                     break;
@@ -274,9 +295,11 @@ function applyDisplayStyles(map, displayConf) {
                     break;
 
                 default:
-                    console.warn("Component '" + key + "' has an unrecognised display style '" + displayConf[key] + "'.");
+                    console.warn("Display configuration '" + confKey + "' has an unrecognised value '" + displayConf[confKey] + "'.");
                     break;
             }
+        } else {
+            console.warn("Unrecognised display configuration key '" + key + "' in applyDisplayStyle.");
         }
     }
 
@@ -656,10 +679,10 @@ function getComponentKey(e) {
             return 'weatherMap';
         } else if (e.classList.contains('tc-today-C07_WeatherMetadata-4')) {
             // last updated
-            return 'weatherMetadata';
+            return 'weatherMetadataToday';
         } else if (e.classList.contains('tc-today-bom-component-container-5')) {
-            // be aware
-            return 'beAware';
+            // data statement
+            return 'dataStatementToday';
         } else if (e.classList.contains('tc-7-days-C10_ForecastWithAccordion-0')) {
             // seven day forecast
             return 'sevenDayForecast';
@@ -670,11 +693,11 @@ function getComponentKey(e) {
             // coastal forecast
             return 'stateDistrict';
         } else if (e.classList.contains('tc-7-days-C07_WeatherMetadata-3')) {
-            // last updated (TODO: weather metadata appears separately on each tab)
-            return 'weatherMetadata';
-        } else if (e.classList.contains('tc-7-days-bom-component-container-5')) {
-            // be aware (TODO: "be aware" appears separately on each tab
-            return 'beAware';
+            // last updated
+            return 'weatherMetadataSevenDays';
+        } else if (e.classList.contains('tc-7-days-bom-component-container-4')) {
+            // data statement
+            return 'dataStatementSevenDays';
         } else if (e.classList.contains('tc-past-C66a_ChangeWeatherStationModal-0')) {
             // change weather station
             return 'changeStation';
@@ -689,7 +712,7 @@ function getComponentKey(e) {
             return 'aboutStation';
         } else if (e.classList.contains('tc-past-bom-component-container-4')) {
             // data quality
-            return 'dataQuality';
+            return 'dataStatementPast';
         } else if (e.classList.contains('tc-past-bom-component-container-5')) {
             // related weather stations
             return 'relatedStations';
@@ -782,6 +805,12 @@ function getComponentTitleAreaSync(root, key) {
             // change weather station; the title bar has class weather-station-title
             return root.querySelector(".weather-station-title");
 
+        case 'dataStatementToday':
+        case 'dataStatementSevenDays':
+        case 'dataStatementPast':
+            // "be aware"; the title bar has class data-be-aware-title
+            return root.querySelector(".data-be-aware-title");
+
         case 'favouriteLocations':
             // favourite locations; the title bar has class my-weather__title
             return root.querySelector(".my-weather__title");
@@ -797,6 +826,10 @@ function getComponentTitleAreaSync(root, key) {
         case 'hourlyForecast':
             // hourly forecast; the title bar has class forecast-chart-header
             return root.querySelector(".forecast-chart-header");
+
+        case 'moreAboutToday':
+            // more about today; no title bar
+            return null;
 
         case 'observationChart':
             // past 72 hours; the title has class observations-header
@@ -827,7 +860,9 @@ function getComponentTitleAreaSync(root, key) {
             return root.querySelector("#weatherMap");
 
         case 'weatherMetadata':
-            // last updated; the title has class metadata-title
+        case 'weatherMetadataToday':
+        case 'weatherMetadataSevenDays':
+            // "last updated"; the title has class metadata-title
             return root.querySelector(".metadata-title");
 
         case 'weatherMood':
