@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-16
+// @version          2026-03-18
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -47,50 +47,63 @@ const siteConf = {
     // display order (top to bottom)
     order: {
 
-        // home page when no favourite is set
-        homepage: [
-            'homepageHeader',
-            'capitalForecast',
-            'weatherMetadata',
-            'featuredNews',
-            'bomLinks'
-        ],
+        // the home page has two versions, with and without favourites set
+        homepage: {
 
-        // home page when favourites are set
-        favourites: [
-            'weatherMood',
-            'favouriteLocations',
-            'sevenDayForecast',
-            'weatherMap',
-            'featuredNews',
-            'weatherMetadata',
-            'bomLinks'
-        ],
+            // with no favourites
+            default: [
+                'homepageHeader',
+                'capitalForecast',
+                'weatherMetadata',
+                'featuredNews',
+                'bomLinks'
+            ],
+
+            // with favourites
+            favourites: [
+                'weatherMood',
+                'favouriteLocations',
+                'sevenDayForecast',
+                'weatherMap',
+                'featuredNews',
+                'weatherMetadata',
+                'bomLinks'
+            ]
+
+        },
 
         // location page (components can only be re-ordered within a tab; moving across tabs is not yet supported)
-        location: [
+        location: {
+
             // "today" tab
-            'moreAboutToday',
-            'hourlyForecast',
-            'weatherMap',
-            'weatherMetadataToday',
-            'dataStatementToday',
+            today: [
+                'moreAboutToday',
+                'hourlyForecast',
+                'weatherMap',
+                'weatherMetadata',
+                'dataStatement'
+            ],
 
             // "7 days" tab
-            'sevenDayForecast',
-            'weatherSituation',
-            'stateDistrict',
-            'weatherMetadataSevenDays',
-            'dataStatementSevenDays',
+            sevenDays: [
+                'sevenDayForecast',
+                'weatherSituation',
+                'stateDistrict',
+                'weatherMetadata',
+                'dataStatement'
+            ],
 
             // "past" tab
-            'changeStation',
-            'stateRegionRecord',
-            'observationChart',
-            'aboutStation',
-            'relatedStations',
-            'dataStatementPast'
-        ]
+            past: [
+                'changeStation',
+                'stateRegionRecord',
+                'observationChart',
+                'aboutStation',
+                'relatedStations',
+                'dataStatement'
+            ]
+
+        }
     },
 
     // display styles (the key is the script's internal code for the component)
@@ -147,7 +160,8 @@ const siteConf = {
         //////////////////////////////////////////////////////////////////////
         // Location page - 7 days tab
         //
-        // The 7 day forecast and metadata use the same settings as the home page.
+        // The 7 day forecast and weather metadata use the same settings as the home page.
+        // The data statement ("be aware") uses the same setting as the Today tab.
 
         // weather situation (usually "Waters forecast" for coastal regions; empty otherwise)
         weatherSituation: 'default',
@@ -159,6 +173,7 @@ const siteConf = {
         // Location page - Past tab
         //
         // The metadata uses the same settings as the home page.
+        // The data statement ("be aware") uses the same setting as the Today tab.
 
         // change weather station
         changeStation: 'default',
@@ -196,10 +211,10 @@ const siteConf = {
             buildComponentMapHome().then(function (map) {
                 if ('homepageHeader' in map) {
                     // home page with no favourites set
-                    applyComponentOrder(map, siteConf.order.homepage);
+                    applyComponentOrder(map, siteConf.order.homepage.default);
                 } else {
                     // home page with favourites set
-                    applyComponentOrder(map, siteConf.order.favourites);
+                    applyComponentOrder(map, siteConf.order.homepage.favourites);
                 }
                 applyDisplayStyles(map, siteConf.display);
             }).catch(function (error) {
@@ -210,7 +225,9 @@ const siteConf = {
         case 'location':
             // location page
             buildComponentMapLocation().then(function (map) {
-                applyComponentOrder(map, siteConf.order.location);
+                applyComponentOrder(map, siteConf.order.location.today);
+                applyComponentOrder(map, siteConf.order.location.sevenDays);
+                applyComponentOrder(map, siteConf.order.location.past);
                 applyDisplayStyles(map, siteConf.display);
             }).catch(function (error) {
                  console.warn(error.message);
@@ -261,17 +278,8 @@ function applyComponentOrder(map, order) {
 function applyDisplayStyles(map, displayConf) {
 
     for (const key of Object.keys(map)) {
-
-        // re-label component keys that share display configuration
-        let confKey = key;
-        if (key === 'weatherMetadataToday' || key === 'weatherMetadataSevenDays') {
-            confKey = 'weatherMetadata';
-        } else if (key === 'dataStatementToday' || key === 'dataStatementSevenDays' || key === 'dataStatementPast') {
-            confKey = 'dataStatement';
-        }
-
-        if (confKey in displayConf) {
-            switch (displayConf[confKey]) {
+        if (key in displayConf) {
+            switch (displayConf[key]) {
                 case 'default':
                     // nothing to do
                     break;
@@ -295,7 +303,7 @@ function applyDisplayStyles(map, displayConf) {
                     break;
 
                 default:
-                    console.warn("Display configuration '" + confKey + "' has an unrecognised value '" + displayConf[confKey] + "'.");
+                    console.warn("Display configuration '" + key + "' has an unrecognised value '" + displayConf[key] + "'.");
                     break;
             }
         } else {
@@ -679,10 +687,10 @@ function getComponentKey(e) {
             return 'weatherMap';
         } else if (e.classList.contains('tc-today-C07_WeatherMetadata-4')) {
             // last updated
-            return 'weatherMetadataToday';
+            return 'weatherMetadata';
         } else if (e.classList.contains('tc-today-bom-component-container-5')) {
             // data statement
-            return 'dataStatementToday';
+            return 'dataStatement';
         } else if (e.classList.contains('tc-7-days-C10_ForecastWithAccordion-0')) {
             // seven day forecast
             return 'sevenDayForecast';
@@ -694,10 +702,10 @@ function getComponentKey(e) {
             return 'stateDistrict';
         } else if (e.classList.contains('tc-7-days-C07_WeatherMetadata-3')) {
             // last updated
-            return 'weatherMetadataSevenDays';
+            return 'weatherMetadata';
         } else if (e.classList.contains('tc-7-days-bom-component-container-4')) {
             // data statement
-            return 'dataStatementSevenDays';
+            return 'dataStatement';
         } else if (e.classList.contains('tc-past-C66a_ChangeWeatherStationModal-0')) {
             // change weather station
             return 'changeStation';
@@ -712,7 +720,7 @@ function getComponentKey(e) {
             return 'aboutStation';
         } else if (e.classList.contains('tc-past-bom-component-container-4')) {
             // data quality
-            return 'dataStatementPast';
+            return 'dataStatement';
         } else if (e.classList.contains('tc-past-bom-component-container-5')) {
             // related weather stations
             return 'relatedStations';
@@ -798,16 +806,14 @@ function getComponentTitleAreaSync(root, key) {
             return root.querySelector(".cta-module__title");
 
         case 'capitalForecast':
-            // capital cities forecast; doesn't really have a title, so return null
+            // capital cities forecast; no title bar
             return null;
 
         case 'changeStation':
             // change weather station; the title bar has class weather-station-title
             return root.querySelector(".weather-station-title");
 
-        case 'dataStatementToday':
-        case 'dataStatementSevenDays':
-        case 'dataStatementPast':
+        case 'dataStatement':
             // "be aware"; the title bar has class data-be-aware-title
             return root.querySelector(".data-be-aware-title");
 
@@ -860,8 +866,6 @@ function getComponentTitleAreaSync(root, key) {
             return root.querySelector("#weatherMap");
 
         case 'weatherMetadata':
-        case 'weatherMetadataToday':
-        case 'weatherMetadataSevenDays':
             // "last updated"; the title has class metadata-title
             return root.querySelector(".metadata-title");
 
