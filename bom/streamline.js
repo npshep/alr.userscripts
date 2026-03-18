@@ -172,8 +172,10 @@ const siteConf = {
         //////////////////////////////////////////////////////////////////////
         // Location page - Past tab
         //
-        // The metadata uses the same settings as the home page.
-        // The data statement ("be aware") uses the same setting as the Today tab.
+        // The metadata uses the same settings as the home page. The data
+        // statement ("data quality") uses the same setting as the Today tab,
+        // but note that it can't be compressed or expanded because there is no
+        // control for doing so.
 
         // change weather station
         changeStation: 'default',
@@ -225,10 +227,10 @@ const siteConf = {
         case 'location':
             // location page
             buildComponentMapLocation().then(function (map) {
-                applyComponentOrder(map, siteConf.order.location.today);
-                applyComponentOrder(map, siteConf.order.location.sevenDays);
-                applyComponentOrder(map, siteConf.order.location.past);
-                applyDisplayStyles(map, siteConf.display);
+                for (const tab of Object.keys(map)) {
+                    applyComponentOrder(map[tab], siteConf.order.location[tab]);
+                    applyDisplayStyles(map[tab], siteConf.display);
+                }
             }).catch(function (error) {
                  console.warn(error.message);
             });
@@ -251,7 +253,6 @@ const siteConf = {
 // tab for location page), we can re-order the components by re-adding them to
 // their parent's child list in the order specified. Elements not mentioned in
 // the order array will be pushed to the bottom.
-//
 //
 // Input:
 //   map (Object) - the map output by buildComponentMap*()
@@ -428,7 +429,6 @@ function applyDisplayStyleCompressedDefaultSet(root, titleArea) {
 }
 
 
-
 // Make a component expandable (entry point).
 //
 // In most cases, the title area doesn't appear during the initial page load,
@@ -541,7 +541,7 @@ async function buildComponentMapHome() {
 
         } else {
 
-            // doesn't look the BoM home page
+            // doesn't look like the BoM home page
             reject(new ReferenceError("Could not identify the home page content."));
 
         }
@@ -566,8 +566,11 @@ async function buildComponentMapHome() {
 // of the display. This function tags each of these components with one of the
 // keys in siteConf.display.
 //
-// Returns: a Promise that resolve to a map of siteConf component keys to DOM elements;
-//   rejects if the page isn't recognised
+// The map returned by this function has one member for tab, with each member
+// being a map of siteConf component keys to an element on that tab.
+//
+// Returns: a Promise that resolve to a map of siteConf component keys to DOM
+//   elements; rejects if the page isn't recognised
 async function buildComponentMapLocation() {
 
     return new Promise(function (resolve, reject) {
@@ -587,15 +590,20 @@ async function buildComponentMapLocation() {
                     // loop through each tab in the location-page-module div
                     let tab = locationPageModule.firstElementChild;
                     while (tab != null) {
-                        let section = tab.firstElementChild;
-                        while (section != null) {
-                            const key = getComponentKey(section);
-                            if (key != null) {
-                                map[key] = section;
+                        const tabKey = getTabKey(tab);
+                        if (tabKey != null) {
+                            // build a map for this tab
+                            map[tabKey] = { };
+                            let section = tab.firstElementChild;
+                            while (section != null) {
+                                const componentKey = getComponentKey(section);
+                                if (componentKey != null) {
+                                    map[tabKey][componentKey] = section;
+                                }
+                                section = section.nextElementSibling;
                             }
-                            section = section.nextElementSibling;
+                            tab = tab.nextElementSibling;
                         }
-                        tab = tab.nextElementSibling;
                     }
 
                     // stop observing and resolve the Promise
@@ -785,9 +793,8 @@ async function getComponentTitleArea(root, key) {
 // in-function comments for the structure of each component.
 //
 // A few items don't really have title areas (e.g. the capital cities forecast
-// on the home page), in which case this function returns a reference to the
-// the whole object. The 'compressed' and 'expanded' display styles won't work
-// well (or at all) for such components.
+// on the home page), in which case this function returns null. The 'compressed'
+// and 'expanded' display styles won't work well (or at all) for such components.
 //
 // Input:
 //   root (DOMElement) - the root element of the component
@@ -899,6 +906,37 @@ function getPageKey() {
         return 'location';
     } else {
         return null;
+    }
+
+}
+
+
+// Identify a tab. Tabs on the location page are identified by an id, as noted
+// in the function below.
+//
+// Input:
+//  e (DOMElement) - the root element of a tab
+//
+// Returns: 'today', 'sevenDays' or 'past'; or null if not recognised
+function getTabKey(e) {
+
+    switch (e.id) {
+        case 'bom-tab-panel-today':
+            // "Today" tab
+            return 'today';
+
+        case 'bom-tab-panel-7-days':
+            // "7 days" tab
+            return 'sevenDays';
+
+        case 'bom-tab-panel-past':
+            // "Past" tab
+            return 'past';
+
+        default:
+            // not a tab we recognise
+            return null;
+
     }
 
 }
