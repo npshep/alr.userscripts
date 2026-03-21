@@ -23,7 +23,7 @@ describe('streamline.js', () => {
         workingSpace = document.createElement('div');
         document.body.appendChild(workingSpace);
 
-        // element identified by id        
+        // element identified by id
         const elementById = document.createElement('div');
         elementById.id = 'testElement';
         workingSpace.appendChild(elementById);
@@ -50,56 +50,78 @@ describe('streamline.js', () => {
 
 
     afterEach(() => {
-        // remove the working space
+        // remove the working space and spy
         document.body.removeChild(workingSpace);
     });
 
 
-    it('applyConfiguration', () => {
+    describe('applyConfiguration', () => {
 
-        // get references tothe test elements
-        const elementById = workingSpace.querySelector('#testElement');
-        const elementByClass = workingSpace.querySelector('.testClass');
-        const elementByHeading = workingSpace.querySelector('#testHeadingContainer .Rail_root__abc123');
+        let elementById;
+        let elementByClass;
+        let elementByHeading;
+        let errorSpy;
+        let applyRendererSpy;
+        let renderExpandableSpy;
+        let renderHiddenSpy;
 
-        // spy on rendering functions
-        const applyRendererSpy = spyOn(this, 'applyRenderer').and.callThrough();
-        const renderExpandableSpy = spyOn(this, 'renderExpandable');
-        const renderHiddenSpy = spyOn(this, 'renderHidden');
+        beforeEach(() => {
 
-        // mock configuration without saving
-        const mockConfNoSave = {
-            '#testElement': 'default',
-            '.testClass': 'expanded',
-            'Test Heading': 'compressed'
-        };
-        applyConfiguration(mockConfNoSave);
-        expect(applyRendererSpy).toHaveBeenCalledTimes(2);
-        expect(applyRendererSpy).not.toHaveBeenCalledWith('#testElement', jasmine.any(Function));
-        expect(applyRendererSpy).toHaveBeenCalledWith('.testClass', jasmine.any(Function));
-        expect(applyRendererSpy).toHaveBeenCalledWith('Test Heading', jasmine.any(Function));
-        expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, false, null);
-        expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, true, null);
+            // get references to the test elements
+            elementById = workingSpace.querySelector('#testElement');
+            elementByClass = workingSpace.querySelector('.testClass');
+            elementByHeading = workingSpace.querySelector('#testHeadingContainer .Rail_root__abc123');
 
-        // mock configuration with saving
-        applyRendererSpy.calls.reset();
-        renderExpandableSpy.calls.reset();
-        renderHiddenSpy.calls.reset();
-        GM_setValue('.testClass', 'compressed');
-        const mockConfWithSave = {
-            '#testElement': 'hidden',
-            '.testClass': 'saved',
-            'Test Heading': 'saved'
-        };
-        applyConfiguration(mockConfWithSave);
-        expect(applyRendererSpy).toHaveBeenCalledTimes(3);
-        expect(renderHiddenSpy).toHaveBeenCalledWith(elementById);
-        expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, '.testClass');
-        expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, 'Test Heading');
+            // spy on the error handler
+            errorSpy = spyOn(this, 'logUnexpectedEvent');
+
+            // spy on rendering functions
+            applyRendererSpy = spyOn(this, 'applyRenderer').and.callThrough();
+            renderExpandableSpy = spyOn(this, 'renderExpandable');
+            renderHiddenSpy = spyOn(this, 'renderHidden');
+        });
+
+        it('applies configuration without saving', () => {
+            const mockConfNoSave = {
+                '#testElement': 'default',
+                '.testClass': 'expanded',
+                'Test Heading': 'compressed'
+            };
+            applyConfiguration(mockConfNoSave);
+            expect(applyRendererSpy).toHaveBeenCalledTimes(2);
+            expect(applyRendererSpy).not.toHaveBeenCalledWith('#testElement', jasmine.any(Function));
+            expect(applyRendererSpy).toHaveBeenCalledWith('.testClass', jasmine.any(Function));
+            expect(applyRendererSpy).toHaveBeenCalledWith('Test Heading', jasmine.any(Function));
+            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, false, null);
+            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, true, null);
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
+
+        it('applies configuration with saving', () => {
+            GM_setValue('.testClass', 'compressed');
+            const mockConfWithSave = {
+                '#testElement': 'hidden',
+                '.testClass': 'saved',
+                'Test Heading': 'saved'
+            };
+            applyConfiguration(mockConfWithSave);
+            expect(applyRendererSpy).toHaveBeenCalledTimes(3);
+            expect(renderHiddenSpy).toHaveBeenCalledWith(elementById);
+            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, '.testClass');
+            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, 'Test Heading');
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
+
+        it('logs an unexpected event for an invalid configuration value', () => {
+            const mockConfBadValue = { '#testElement': 'badValue' };
+            applyConfiguration(mockConfBadValue);
+            expect(applyRendererSpy).not.toHaveBeenCalled();
+            expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+        });
 
     });
 
-    it('applyRenderer', () => {
+    describe('applyRenderer', () => {
 
         // mock rendering function
         function mockRender(target) {
@@ -108,43 +130,72 @@ describe('streamline.js', () => {
             }
         };
 
-        // get references to the test elements
-        const elementById = document.getElementById('testElement');
-        const elementsByClass = document.getElementsByClassName('testClass');
-        const elementByHeading = workingSpace.querySelector('#testHeadingContainer .Rail_root__abc123');
+        let elementById;
+        let elementsByClass;
+        let elementByHeading;
+        let errorSpy;
 
-        // invalid input should have no effect
-        applyRenderer('', mockRender);
-        applyRenderer('#', mockRender);
-        applyRenderer('.', mockRender);
-        expect(elementById.hasAttribute('data-rendered')).toBeFalse();
-        expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
-        expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
-        expect(elementByHeading.hasAttribute('data-rendered')).toBeFalse();
+        beforeEach(() => {
+            // get references to the test elements
+            elementById = document.getElementById('testElement');
+            elementsByClass = document.getElementsByClassName('testClass');
+            elementByHeading = workingSpace.querySelector('#testHeadingContainer .Rail_root__abc123');
 
-        // element identified by id
-        applyRenderer('#testElement', mockRender);
-        expect(elementById.getAttribute('data-rendered')).toBe('true');
-        expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
-        expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
-        expect(elementByHeading.hasAttribute('data-rendered')).toBeFalse();
-        elementById.removeAttribute('data-rendered');
-        
-        // elements identified by class
-        applyRenderer('.testClass', mockRender);
-        for (let e of elementsByClass) {
-            expect(e.getAttribute('data-rendered')).toBe('true');
-            e.removeAttribute('data-rendered');
-        }
-        expect(elementById.hasAttribute('data-rendered')).toBeFalse();
-        expect(elementByHeading.hasAttribute('data-rendered')).toBeFalse();
+            // spy on the error handler
+            errorSpy = spyOn(this, 'logUnexpectedEvent');
+        });
 
-        // element identified by H2 heading text
-        applyRenderer('Test Heading', mockRender);
-        expect(elementByHeading.getAttribute('data-rendered')).toBe('true');
-        expect(elementById.hasAttribute('data-rendered')).toBeFalse();
-        expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
-        expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
+        it('logs unexpected events for invalid configuration keys', () => {
+            applyRenderer('', mockRender);
+            applyRenderer('#', mockRender);
+            applyRenderer('.', mockRender);
+            expect(elementById.hasAttribute('data-rendered')).toBeFalse();
+            expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
+            expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
+            expect(elementByHeading.hasAttribute('data-rendered')).toBeFalse();
+            expect(errorSpy).toHaveBeenCalledTimes(3);
+        });
+
+        it('renders elements identified by id', () => {
+            applyRenderer('#testElement', mockRender);
+            expect(elementById.getAttribute('data-rendered')).toBe('true');
+            expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
+            expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
+            expect(elementByHeading.hasAttribute('data-rendered')).toBeFalse();
+            elementById.removeAttribute('data-rendered');
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
+
+        it('renders elements identified by class', () => {
+            applyRenderer('.testClass', mockRender);
+            for (let e of elementsByClass) {
+                expect(e.getAttribute('data-rendered')).toBe('true');
+                e.removeAttribute('data-rendered');
+            }
+            expect(elementById.hasAttribute('data-rendered')).toBeFalse();
+            expect(elementByHeading.hasAttribute('data-rendered')).toBeFalse();
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
+
+        it('renders elements identified by H2 heading text', () => {
+            applyRenderer('Test Heading', mockRender);
+            expect(elementByHeading.getAttribute('data-rendered')).toBe('true');
+            expect(elementById.hasAttribute('data-rendered')).toBeFalse();
+            expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
+            expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
+
+        it('logs an unexpected event for an unmatched configuration key', () => {
+            applyRenderer('Garbage', mockRender);
+            expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+        });
+
+        it('logs an unexpected event for a missing rail root', () => {
+            findRailRoot(elementByHeading).remove();
+            applyRenderer('Test Heading', mockRender);
+            expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+        });
 
     });
 
@@ -203,6 +254,23 @@ describe('streamline.js', () => {
 
     });
 
+    it('logUnexpectedEvent', () => {
+
+        // spy on console.warn()
+        const consoleSpy = new spyOn(console, 'warn');
+
+        // valid source identifiers should invoke console.warn()
+        logUnexpectedEvent("conf", "Conf error.");
+        expect(consoleSpy).toHaveBeenCalledWith("Configuration error: Conf error.");
+        logUnexpectedEvent("dom", "DOM error.");
+        expect(consoleSpy).toHaveBeenCalledWith("Possible DOM change: DOM error.");
+
+        // invalid source identifier should report an error
+        logUnexpectedEvent("invalid", "Invalid source.");
+        expect(consoleSpy).toHaveBeenCalledWith("logUnexpectedEvent called with invalid source: Invalid source.");
+
+    });
+
     it('onClickExpandable', () => {
 
         // get references to the test elements
@@ -237,48 +305,81 @@ describe('streamline.js', () => {
     });
 
 
-    it('renderExpandable', () => {
+    describe('renderExpandable', () => {
 
-        // get references to the test elements
-        const root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-        const header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
-        const content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
+        let root;
+        let header;
+        let content;
+        let errorSpy;
 
-        // content is visible when startCompressed is not supplied
-        renderExpandable(root);
-        expect(content.style.display).not.toBe('none');
+        beforeEach(() => {
+            // get references to the test elements
+            root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
+            header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
+            content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
 
-        // content is visible and cursor is zoom-out when startCompressed is false
-        renderExpandable(root, false);
-        expect(content.style.display).not.toBe('none');
-        expect(header.style.cursor).toBe('zoom-out');
+            // spy on the error handler
+            errorSpy = spyOn(this, 'logUnexpectedEvent');
+        });
 
-        // content is compressed and cursor is zoom-in when startCompressed is true
-        renderExpandable(root, true);
-        expect(content.style.display).toBe('none');
-        expect(header.style.cursor).toBe('zoom-in');
+        it('content is visible when startCompressed is not supplied', () => {
+            renderExpandable(root);
+            expect(content.style.display).not.toBe('none');
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
 
-        // clicking invokes onClickExpandable with correct arguments
-        const clickSpy = spyOn(this, 'onClickExpandable');
-        renderExpandable(root, true);
-        header.click();
-        expect(clickSpy).toHaveBeenCalledTimes(1);
-        expect(clickSpy).toHaveBeenCalledWith(header, content, null);
-        renderExpandable(root, true, 'testExpandable');
-        header.click();
-        expect(clickSpy).toHaveBeenCalledTimes(2);
-        expect(clickSpy).toHaveBeenCalledWith(header, content, 'testExpandable');
+        it('content is visible and cursor is zoom-out when startCompressed is false', () => {
+            renderExpandable(root, false);
+            expect(content.style.display).not.toBe('none');
+            expect(header.style.cursor).toBe('zoom-out');
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
 
-        // mouseover sets header background to 'var(--nw-colour-theme-surface-tint)'; mouseout resets it
-        const originalBackgroundColor = header.style.backgroundColor;
-        header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-        expect(header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
-        header.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-        expect(header.style.backgroundColor).toBe(originalBackgroundColor);
+        it ('content is compressed and cursor is zoom-in when startCompressed is true', () => {
+            renderExpandable(root, true);
+            expect(content.style.display).toBe('none');
+            expect(header.style.cursor).toBe('zoom-in');
+            expect(errorSpy).not.toHaveBeenCalled();
+        });
 
-        // handle malformed rail element gracefully
-        const testElement = document.getElementById('testElement');
-        expect(() => renderExpandable(testElement, false)).not.toThrow();
+        it('clicking invokes onClickExpandable with correct arguments', () => {
+            const clickSpy = spyOn(this, 'onClickExpandable');
+            renderExpandable(root, true);
+            header.click();
+            expect(clickSpy).toHaveBeenCalledTimes(1);
+            expect(clickSpy).toHaveBeenCalledWith(header, content, null);
+            renderExpandable(root, true, 'testExpandable');
+            header.click();
+            expect(clickSpy).toHaveBeenCalledTimes(2);
+            expect(clickSpy).toHaveBeenCalledWith(header, content, 'testExpandable');
+        });
+
+        it('mouseover sets header background; mouseout resets it', () => {
+            renderExpandable(root, false);
+            const originalBackgroundColor = header.style.backgroundColor;
+            header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+            expect(header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
+            header.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+            expect(header.style.backgroundColor).toBe(originalBackgroundColor);
+        });
+
+        it('logs an unexpected event for an element with no rail root', () => {
+            const testElement = document.getElementById('testElement');
+            renderExpandable(testElement, false);
+            expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+        });
+
+        it('logs an unexpected event for a rail element with no content', () => {
+            content.remove();
+            renderExpandable(root, false);
+            expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+        });
+
+        it('log an unexpected event for a rail element with no header', () => {
+            header.remove();
+            renderExpandable(root, false);
+            expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+        });
 
     });
 
@@ -324,7 +425,7 @@ function mockRailElement(id, nonce, title = null) {
     const root = document.createElement('div');
     root.className = 'Rail_root__' + nonce + ' Rail_sideScrolling__' + nonce;
     container.appendChild(root);
-    
+
     // rail header
     const header = document.createElement('div');
     header.className = 'Rail_header__' + nonce;

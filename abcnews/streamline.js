@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-11
+// @version          2026-03-21
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -114,11 +114,13 @@ const siteConf = {
 (function() {
     'use strict';
 
-    // check for unused configuration values
-    cleanStoredValues(siteConf);
+    if (typeof testingFlag === 'undefined') {
+        // check for unused configuration values
+        cleanStoredValues(siteConf);
 
-    // apply site configuration
-    applyConfiguration(siteConf);
+        // apply site configuration
+        applyConfiguration(siteConf);
+    };
 
 })();
 
@@ -158,7 +160,8 @@ function applyConfiguration(conf) {
                 break;
 
             default:
-                console.warn("Invalid value '" + componentConf + "' for configuration key " + key);
+                // not a recognised rendering style (probably a typo in siteConf)
+                logUnexpectedEvent("conf", "Invalid value '" + componentConf + "' for configuration key '" + key + "'.");
                 break;
         }
     }
@@ -173,11 +176,13 @@ function applyConfiguration(conf) {
 //   render - a function taking a single DOMElement object as input
 function applyRenderer(key, render) {
 
+    let gotMatch = false;
     if (key.charAt(0) === "#" && key.length > 1) {
 
         // component identified by id
         const element = document.getElementById(key.substring(1, key.length));
         if (element != null) {
+            gotMatch = true;
             render(element);
         }
 
@@ -187,6 +192,7 @@ function applyRenderer(key, render) {
         const elements = document.getElementsByClassName(key.substring(1, key.length));
         if (elements != null) {
             for (let i = 0; i < elements.length; i++) {
+                gotMatch = true;
                 render(elements[i]);
             }
         }
@@ -198,10 +204,21 @@ function applyRenderer(key, render) {
         if (headings != null) {
             for (let i = 0; i < headings.length; i++) {
                 if (headings[i].innerHTML === key) {
-                    render(findRailRoot(headings[i]));
+                    gotMatch = true;
+                    const railRoot = findRailRoot(headings[i]);
+                    if (railRoot != null) {
+                        render(railRoot);
+                    } else {
+                        logUnexpectedEvent("dom", "No rail root found for configuration key '" + key + "'.");
+                    }
                 }
             }
         }
+    }
+
+    if (!gotMatch) {
+        // the key didn't match anything; this may indicate a change in the ABC site
+        logUnexpectedEvent("conf", "No matches for configuration key '" + key + "'.");
     }
 
 }
@@ -250,6 +267,29 @@ function findRailRoot(element) {
     }
 
     return railRootElement;
+
+}
+
+
+// Log an unexpected configuration value or DOM structure. For now, we just
+// add a warning to the console.
+//
+// Input:
+//   source (String) - 'conf' for local configuration errors; 'dom' for unexpected DOM structure
+//   message (String) - a message describing the unexpected event
+function logUnexpectedEvent(source, message) {
+
+    let prefix = "logUnexpectedEvent called with invalid source";
+    switch (source) {
+        case 'conf':
+            prefix = "Configuration error";
+            break;
+
+        case 'dom':
+            prefix = "Possible DOM change";
+            break;
+    }
+    console.warn(prefix + ": " + message);
 
 }
 
@@ -318,7 +358,7 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
     let railRootElement = findRailRoot(element);
     if (railRootElement == null) {
         // couldn't find the rail root; bail out
-        console.warn("Couldn't find the rail root for " + element.toString());
+        logUnexpectedEvent("dom", "No rail root found for " + element.toString());
         return;
     }
 
@@ -356,7 +396,11 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
             railHeaderElement.onmouseout = function() {
                 railHeaderElement.style.backgroundColor = originalHeaderBackground;
             };
+        } else {
+            logUnexpectedEvent("dom", "No rail header found for " + element.toString());
         }
+    } else {
+        logUnexpectedEvent("dom", "No rail content found for " + element.toString());
     }
 
 }
