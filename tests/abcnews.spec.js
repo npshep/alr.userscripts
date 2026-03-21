@@ -199,14 +199,7 @@ describe('streamline.js', () => {
 
     });
 
-    it('cleanStoredValues', () => {
-
-        // mock some stored values
-        GM_setValue('savedExpanded', 'expanded');
-        GM_setValue('savedCompressed', 'compressed');
-        GM_setValue('unsavedExpanded', 'expanded');
-        GM_setValue('unsavedCompressed', 'compressed');
-        GM_setValue('deprecatedComponent', 'compressed');
+    describe('cleanStoredValues', () => {
 
         // mock configuration
         const mockConf = {
@@ -215,92 +208,137 @@ describe('streamline.js', () => {
             'unsavedExpanded': 'expanded',
             'unsavedCompressed': 'compressed'
         };
-        cleanStoredValues(mockConf);
 
-        // configuration for saved components should be unaffected
-        expect(GM_getValue('savedExpanded', null)).toBe('expanded');
-        expect(GM_getValue('savedCompressed', null)).toBe('compressed');
+        beforeEach(() => {
 
-        // configuration for no-longer-saved components should be removed
-        expect(GM_getValue('unsavedExpanded', null)).toBeNull();
-        expect(GM_getValue('unsavedCompressed', null)).toBeNull();
+            // mock some stored values
+            GM_setValue('savedExpanded', 'expanded');
+            GM_setValue('savedCompressed', 'compressed');
+            GM_setValue('unsavedExpanded', 'expanded');
+            GM_setValue('unsavedCompressed', 'compressed');
+            GM_setValue('deprecatedComponent', 'compressed');
 
-        // configuration for deprecated components should be removed
-        expect(GM_getValue('deprecatedComponent', null)).toBeNull();
+            // clean the stored values
+            cleanStoredValues(mockConf);
+        });
 
-    });
+        it('does not remove configuration for saved components', () => {
+            expect(GM_getValue('savedExpanded', null)).toBe('expanded');
+            expect(GM_getValue('savedCompressed', null)).toBe('compressed');
+        });
 
-    it('findRailRoot', () => {
+        it('removes configuration for no-longer-saved components', () => {
+            expect(GM_getValue('unsavedExpanded', null)).toBeNull();
+            expect(GM_getValue('unsavedCompressed', null)).toBeNull();
+        });
 
-        // check finding the root without any search
-        const railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-        const trivialRailRoot = findRailRoot(railRoot);
-        expect(trivialRailRoot).toBe(railRoot);
-
-        // check searching downwards
-        const railContainer = document.getElementById('railContainer');
-        const downwardsRailRoot = findRailRoot(railContainer);
-        expect(downwardsRailRoot).toBe(railRoot);
-
-        // check searching upwards
-        const railChild = railRoot.firstElementChild;
-        const upwardsRailRoot = findRailRoot(railChild);
-        expect(upwardsRailRoot).toBe(railRoot);
-
-        // return null when no rail root exists in the tree
-        const testElement = document.getElementById('testElement');
-        const nullRailRoot = findRailRoot(testElement);
-        expect(nullRailRoot).toBeNull();
+        it('removes configuration for deprecated components', () => {
+            expect(GM_getValue('deprecatedComponent', null)).toBeNull();
+        });
 
     });
 
-    it('logUnexpectedEvent', () => {
+    describe('findRailRoot', () => {
 
-        // spy on console.warn()
-        const consoleSpy = new spyOn(console, 'warn');
+        let railRoot;
 
-        // valid source identifiers should invoke console.warn()
-        logUnexpectedEvent("conf", "Conf error.");
-        expect(consoleSpy).toHaveBeenCalledWith("Configuration error: Conf error.");
-        logUnexpectedEvent("dom", "DOM error.");
-        expect(consoleSpy).toHaveBeenCalledWith("Possible DOM change: DOM error.");
+        beforeEach(() => {
+            // get a reference to the expected rail root
+            railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
+        });
 
-        // invalid source identifier should report an error
-        logUnexpectedEvent("invalid", "Invalid source.");
-        expect(consoleSpy).toHaveBeenCalledWith("logUnexpectedEvent called with invalid source: Invalid source.");
+        it('finds roots passed directly', () => {
+            const trivialRailRoot = findRailRoot(railRoot);
+            expect(trivialRailRoot).toBe(railRoot);
+        });
+
+        it('searches downwards for the rail root', () => {
+            const railContainer = document.getElementById('railContainer');
+            const downwardsRailRoot = findRailRoot(railContainer);
+            expect(downwardsRailRoot).toBe(railRoot);
+        });
+
+        it('searches upwards for the rail root', () => {
+            const railChild = railRoot.firstElementChild;
+            const upwardsRailRoot = findRailRoot(railChild);
+            expect(upwardsRailRoot).toBe(railRoot);
+        });
+
+        it('returns null when no rail root exists in the tree', () => {
+            const testElement = document.getElementById('testElement');
+            const nullRailRoot = findRailRoot(testElement);
+            expect(nullRailRoot).toBeNull();
+        });
 
     });
 
-    it('onClickExpandable', () => {
+    describe('logUnexpectedEvent', () => {
 
-        // get references to the test elements
-        const root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-        const header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
-        const content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
+        let consoleSpy;
 
-        // clicking on the default header hides content and makes the cursor zoom-in, without saving
-        onClickExpandable(header, content, null);
-        expect(content.style.display).toBe('none');
-        expect(header.style.cursor).toBe('zoom-in');
-        expect(GM_getValue('testExpandable', null)).toBeNull();
+        beforeEach(() => {
+            // spy on console.warn()
+            consoleSpy = new spyOn(console, 'warn');
+        });
 
-        // clicking on a compressed header makes content visible and cursor zoom-out
-        onClickExpandable(header, content, null);
-        expect(content.style.display).toBe('block');
-        expect(header.style.cursor).toBe('zoom-out');
-        expect(GM_getValue('testExpandable', null)).toBeNull();
+        it('valid source identifiers invoke console.warn()', () => {
+            logUnexpectedEvent("conf", "Conf error.");
+            expect(consoleSpy).toHaveBeenCalledWith("Configuration error: Conf error.");
+            logUnexpectedEvent("dom", "DOM error.");
+            expect(consoleSpy).toHaveBeenCalledWith("Possible DOM change: DOM error.");
+        });
 
-        // clicking again hides the content; this time save the result
-        onClickExpandable(header, content, 'testExpandable');
-        expect(content.style.display).toBe('none');
-        expect(header.style.cursor).toBe('zoom-in');
-        expect(GM_getValue('testExpandable', null)).toBe('compressed');
+        it('invalid source identifiers report an error', () => {
+            logUnexpectedEvent("invalid", "Invalid source.");
+            expect(consoleSpy).toHaveBeenCalledWith("logUnexpectedEvent called with invalid source: Invalid source.");
+        });
 
-        // clicking again make the content visible; this time saving the result
-        onClickExpandable(header, content, 'testExpandable');
-        expect(content.style.display).toBe('block');
-        expect(header.style.cursor).toBe('zoom-out');
-        expect(GM_getValue('testExpandable', null)).toBe('expanded');
+    });
+
+    describe('onClickExpandable', () => {
+
+        let root;
+        let header;
+        let content;
+
+        beforeEach(() => {
+
+            // get references to the test elements
+            root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
+            header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
+            content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
+
+        });
+
+        it('clicking on the default header hides content and makes the cursor zoom-in, without saving', () => {
+            onClickExpandable(header, content, null);
+            expect(content.style.display).toBe('none');
+            expect(header.style.cursor).toBe('zoom-in');
+            expect(GM_getValue('testExpandable', null)).toBeNull();
+        });
+
+        it('clicking on a compressed header makes content visible and cursor zoom-out', () => {
+            onClickExpandable(header, content, null); // compresses the element
+            onClickExpandable(header, content, null); // expands it again
+            expect(content.style.display).toBe('block');
+            expect(header.style.cursor).toBe('zoom-out');
+            expect(GM_getValue('testExpandable', null)).toBeNull();
+        });
+
+        it('clicking on an expanded header hides the content, with saving', () => {
+            onClickExpandable(header, content, 'testExpandable');
+            expect(content.style.display).toBe('none');
+            expect(header.style.cursor).toBe('zoom-in');
+            expect(GM_getValue('testExpandable', null)).toBe('compressed');
+        });
+
+        it('clicking on a compressed header makes the content visible, with saving', () => {
+            onClickExpandable(header, content, 'testExpandable'); // compresses the element
+            onClickExpandable(header, content, 'testExpandable'); // expands it again
+            expect(content.style.display).toBe('block');
+            expect(header.style.cursor).toBe('zoom-out');
+            expect(GM_getValue('testExpandable', null)).toBe('expanded');
+        });
 
     });
 
@@ -384,22 +422,24 @@ describe('streamline.js', () => {
     });
 
 
-    it('renderHidden', () => {
+    describe('renderHidden', () => {
 
-        // check single element
-        const testElement = document.getElementById('testElement');
-        testElement.style.display = 'block';
-        renderHidden(testElement);
-        expect(testElement.style.display).toBe('none');
+        it('hide single element', () => {
+            const testElement = document.getElementById('testElement');
+            testElement.style.display = 'block';
+            renderHidden(testElement);
+            expect(testElement.style.display).toBe('none');
+        });
 
-        // check rail element
-        const railContainer = document.getElementById('railContainer');
-        const railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-        const railChild = railRoot.firstElementChild;
-        renderHidden(railRoot);
-        expect(railRoot.style.display).toBe('none');
-        expect(railContainer.style.display).not.toBe('none');
-        expect(railChild.style.display).not.toBe('none');
+        it('hide rail element', () => {
+            const railContainer = document.getElementById('railContainer');
+            const railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
+            const railChild = railRoot.firstElementChild;
+            renderHidden(railRoot);
+            expect(railRoot.style.display).toBe('none');
+            expect(railContainer.style.display).not.toBe('none');
+            expect(railChild.style.display).not.toBe('none');
+        });
 
     });
 
