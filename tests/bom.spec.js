@@ -38,7 +38,6 @@ describe('streamline.js', () => {
     describe('logUnexpectedEvent', () => {
 
         let consoleSpy;
-
         beforeEach(() => {
             // spy on console.warn()
             consoleSpy = new spyOn(console, 'warn');
@@ -195,6 +194,79 @@ describe('streamline.js', () => {
             // check that the aboutStation case is involed with the default set (e1 and e2)
             applyDisplayStyleCompressed(workingSpace, null, true);
             expect(aboutStationSpy).toHaveBeenCalledWith([e1, e2]);
+
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // applyDisplayStyles
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('applyDisplayStyles', () => {
+
+        let observerSpy;
+        let unexpectedEventSpy;
+        beforeEach(() => {
+
+            // mock the display observer
+            // TODO: verify that the observer is set up with the correct callback
+            observerSpy = spyOn(this, 'applyDisplayStyleObserver');
+
+            // mock the unexpected event handler
+            unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
+
+        });
+
+        it('sets up display style observers', () => {
+
+            const map = {
+                'defaultComponent': document.createElement('div'),
+                'hiddenComponent': document.createElement('div'),
+                'compressedComponent': document.createElement('div'),
+                'expandedComponent': document.createElement('div')
+            };
+            const displayConf = {
+                'defaultComponent': 'default',
+                'hiddenComponent': 'hidden',
+                'compressedComponent': 'compressed',
+                'expandedComponent': 'expanded'
+            };
+            applyDisplayStyles(map, displayConf);
+            expect(observerSpy).toHaveBeenCalledTimes(3);
+            expect(observerSpy).toHaveBeenCalledWith(map['hiddenComponent'], jasmine.any(Function));
+            expect(observerSpy).toHaveBeenCalledWith(map['compressedComponent'], jasmine.any(Function));
+            expect(observerSpy).toHaveBeenCalledWith(map['expandedComponent'], jasmine.any(Function));
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
+
+        });
+
+        it('logs an unexpected event for an invalid display style value', () => {
+
+            const map = {
+                'component': document.createElement('div')
+            };
+            const displayConf = {
+                'component': 'junk'
+            };
+            applyDisplayStyles(map, displayConf);
+            expect(observerSpy).not.toHaveBeenCalled();
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+
+        });
+
+        it('logs an unexpeced evnet for an invalid configuration key', () => {
+
+            const map = {
+                'component': document.createElement('div')
+            };
+            const displayConf = {
+                'notComponent': 'hidden'
+            };
+            applyDisplayStyles(map, displayConf);
+            expect(observerSpy).not.toHaveBeenCalled();
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
 
         });
 
