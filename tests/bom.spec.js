@@ -60,6 +60,86 @@ describe('streamline.js', () => {
 
 
     ///////////////////////////////////////////////////////////////////////////
+    // applyComponentOrder
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('applyComponentOrder', () => {
+
+        let e1;
+        let e2;
+        let e3;
+        let map;
+        let unexpectedEventSpy;
+        beforeEach(() => {
+
+            // create some components that we can move around
+            e1 = document.createElement('div');
+            e2 = document.createElement('div');
+            e3 = document.createElement('div');
+            workingSpace.appendChild(e1);
+            workingSpace.appendChild(e2);
+            workingSpace.appendChild(e3);
+
+            // build a map
+            map = { 'e1': e1, 'e2': e2, 'e3': e3 };
+
+            // mock the unexpected event handler
+            unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
+
+        });
+
+        it('reorders all components', () => {
+
+            const order = [ 'e3', 'e2', 'e1' ];
+            applyComponentOrder(map, order);
+            expect(workingSpace.children.length).toBe(3);
+            expect(workingSpace.children.item(0)).toBe(e3);
+            expect(workingSpace.children.item(1)).toBe(e2);
+            expect(workingSpace.children.item(2)).toBe(e1);
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
+
+        });
+
+        it('pushes unordered components to the end', () => {
+
+            const order = [ 'e3', 'e1' ];
+            applyComponentOrder(map, order);
+            expect(workingSpace.children.length).toBe(3);
+            expect(workingSpace.children.item(0)).toBe(e3);
+            expect(workingSpace.children.item(1)).toBe(e1);
+            expect(workingSpace.children.item(2)).toBe(e2);
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
+
+        });
+
+        it('reorders a single component', () => {
+
+            e2.remove();
+            e3.remove();
+            const order = [  'e1' ];
+            applyComponentOrder(map, order);
+            expect(workingSpace.children.length).toBe(1);
+            expect(workingSpace.children.item(0)).toBe(e1);
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
+
+        });
+
+        it('log an unexpected event for an unrecognised order element', () => {
+
+            const order = [ 'e3', 'e2', 'junk', 'e1' ];
+            applyComponentOrder(map, order);
+            expect(workingSpace.children.length).toBe(3);
+            expect(workingSpace.children.item(0)).toBe(e3);
+            expect(workingSpace.children.item(1)).toBe(e2);
+            expect(workingSpace.children.item(2)).toBe(e1);
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
     // applyDisplayStyleCompressed
     //
     ///////////////////////////////////////////////////////////////////////////
@@ -72,7 +152,7 @@ describe('streamline.js', () => {
         let aboutStationSpy;
         beforeEach(() => {
 
-            // create some elements that we can compress
+            // create some components that we can compress
             e1 = document.createElement('div');
             e2 = document.createElement('div');
             e3 = document.createElement('div');
