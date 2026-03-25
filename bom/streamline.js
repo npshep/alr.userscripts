@@ -235,6 +235,10 @@ const siteConf = {
             });
             break;
 
+        case 'test':
+            // unit testing; do nothing
+            break;
+
         default:
             // shouldn't happen
             logUnexpectedEvent("dom", "A Little BoM executed on an unrecognised page.");
@@ -405,6 +409,11 @@ function applyDisplayStyleCompressedAboutStation(elementsToCompress) {
 //
 // Returns: an array of elements not on the path between the root and the title area
 function applyDisplayStyleCompressedDefaultSet(root, titleArea) {
+
+    // sanity check
+    if (!root.contains(titleArea)) {
+        return [ root ];
+    }
 
     let elementsToCompress = [ ];
     let e = root.firstElementChild;
@@ -912,12 +921,15 @@ function getComponentTitleAreaSync(root, key) {
 // Returns:
 //   'home' for the homepage
 //   'location' for location page
+//   'test' for executing unit tests
 function getPageKey() {
 
     if (window.location.href === 'https://www.bom.gov.au/') {
         return 'home';
     } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
         return 'location';
+    } else if (window.location.href.startsWith('file://') && window.location.href.endsWith('tests.html')) {
+        return 'test';
     } else {
         return null;
     }
