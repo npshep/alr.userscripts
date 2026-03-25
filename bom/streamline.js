@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-18
+// @version          2026-03-25
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -54,7 +54,6 @@ const siteConf = {
             default: [
                 'homepageHeader',
                 'capitalForecast',
-                'weatherMetadata',
                 'featuredNews',
                 'bomLinks'
             ],
@@ -220,7 +219,7 @@ const siteConf = {
                 }
                 applyDisplayStyles(map, siteConf.display);
             }).catch(function (error) {
-                console.warn(error.message);
+                logUnexpectedEvent("dom", error.message);
             });
             break;
 
@@ -232,13 +231,13 @@ const siteConf = {
                     applyDisplayStyles(map[tab], siteConf.display);
                 }
             }).catch(function (error) {
-                 console.warn(error.message);
+                 logUnexpectedEvent("dom", error.message);
             });
             break;
 
         default:
             // shouldn't happen
-            console.warn("A Little BoM executed on an unrecognised page.");
+            logUnexpectedEvent("dom", "A Little BoM executed on an unrecognised page.");
             break;
 
     }
@@ -264,7 +263,7 @@ function applyComponentOrder(map, order) {
         if (order[i] in map) {
             map[order[i]].parentElement.insertAdjacentElement("afterbegin", map[order[i]]);
         } else {
-            console.warn("A page order contains an unrecognised component key '" + order[i] + "'.");
+            logUnexpectedEvent("conf", "A page order contains an unrecognised component key '" + order[i] + "'.");
         }
     }
 
@@ -304,11 +303,13 @@ function applyDisplayStyles(map, displayConf) {
                     break;
 
                 default:
-                    console.warn("Display configuration '" + key + "' has an unrecognised value '" + displayConf[key] + "'.");
+                    // probably a typo in siteConf.display
+                    logUnexpectedEvent("conf", "Display configuration '" + key + "' has an unrecognised value '" + displayConf[key] + "'.");
                     break;
             }
         } else {
-            console.warn("Unrecognised display configuration key '" + key + "' in applyDisplayStyle.");
+            // probably a typo in siteConf.order
+            logUnexpectedEvent("conf", "Unrecognised display configuration key '" + key + "' in applyDisplayStyle.");
         }
     }
 
@@ -364,17 +365,29 @@ function applyDisplayStyleCompressedAboutStation(elementsToCompress) {
         }
     }
 
+    let gotExpectedDom = true;
     if (morePastWeather != null) {
         // hide the body and the buttons instead
         const morePastWeatherParagraph = morePastWeather.querySelector(".bom-body");
         const morePastWeatherButtons = morePastWeather.querySelector(".cta-module__button-container");
         if (morePastWeatherParagraph != null) {
             elementsToCompress.push(morePastWeatherParagraph);
+        } else {
+            gotExpectedDom = false;
         }
         if (morePastWeatherButtons != null) {
             elementsToCompress.push(morePastWeatherButtons);
+        } else {
+            gotExpectedDom = false;
         }
+    } else {
+        gotExpectedDom = false;
     }
+
+    if (!gotExpectedDom) {
+        logUnexpectedEvent("dom", "Could not compress 'More past weather' in applyDisplayStyleCompressedAboutStation");
+    }
+
 }
 
 
@@ -636,11 +649,11 @@ function getComponentKey(e) {
 
     // when no favourite location is set, the home page starts with two div's,
     // one with class bom-homepage-header ("Discover Your Weather") and with
-    // class bom-homepage-content-top-wrapper (the capital cite forecasts)
+    // class homepage-content-top-wrapper (the capital cite forecasts)
     if (e.classList.contains('bom-homepage-header')) {
         return 'homepageHeader';
     }
-    if (e.classList.contains('bom-homepage-content-top-wrapper')) {
+    if (e.classList.contains('homepage-content-top-wrapper')) {
         return 'capitalForecast';
     }
 
@@ -885,7 +898,8 @@ function getComponentTitleAreaSync(root, key) {
             return root.querySelector(".title--coastal");
 
         default:
-            console.warn("Unrecognised component key '" + key + "' in getComponentTitleArea.");
+            // shouldn't happen
+            logUnexpectedEvent("conf", "Unrecognised component key '" + key + "' in getComponentTitleArea.");
     }
 
     return null;
@@ -938,6 +952,29 @@ function getTabKey(e) {
             return null;
 
     }
+
+}
+
+
+// Log an unexpected configuration value or DOM structure. For now, we just
+// add a warning to the console.
+//
+// Input:
+//   source (String) - 'conf' for local configuration errors; 'dom' for unexpected DOM structure
+//   message (String) - a message describing the unexpected event
+function logUnexpectedEvent(source, message) {
+
+    let prefix = "logUnexpectedEvent called with invalid source";
+    switch (source) {
+        case 'conf':
+            prefix = "Configuration error";
+            break;
+
+        case 'dom':
+            prefix = "Possible DOM change";
+            break;
+    }
+    console.warn(prefix + ": " + message);
 
 }
 
