@@ -30,6 +30,7 @@ describe('streamline.js', () => {
         document.body.removeChild(workingSpace);
     });
 
+
     ///////////////////////////////////////////////////////////////////////////
     // logUnexpectedEvent
     //
@@ -53,6 +54,68 @@ describe('streamline.js', () => {
         it('invalid source identifiers report an error', () => {
             logUnexpectedEvent("invalid", "Invalid source.");
             expect(consoleSpy).toHaveBeenCalledWith("logUnexpectedEvent called with invalid source: Invalid source.");
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // applyDisplayStyleCompressed
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('applyDisplayStyleCompressed', () => {
+
+        let e1;
+        let e2;
+        let e3;
+        let defaultSetSpy;
+        let aboutStationSpy;
+        beforeEach(() => {
+
+            // create some elements that we can compress
+            e1 = document.createElement('div');
+            e2 = document.createElement('div');
+            e3 = document.createElement('div');
+            workingSpace.appendChild(e1);
+            workingSpace.appendChild(e2);
+            workingSpace.appendChild(e3);
+
+            // mock applyDisplayStyleCompressedDefaultSet that returns e1 and e2
+            defaultSetSpy = spyOn(this, 'applyDisplayStyleCompressedDefaultSet').and.returnValue([ e1, e2 ]);
+
+            // mock applyDisplayStyleCompressedAboutStation that does nothing
+            aboutStationSpy = spyOn(this, 'applyDisplayStyleCompressedAboutStation');
+
+        });
+
+        it('compresses (only) the default set', () => {
+
+            // mock getComponentKey that returns a key with defautl behaviour
+            spyOn(this, 'getComponentKey').and.returnValue('genericComponent');
+
+            // compress the default set (e1 and e2)
+            applyDisplayStyleCompressed(workingSpace, null, true);
+            expect(e1.style.display).toBe('none');
+            expect(e2.style.display).toBe('none');
+            expect(e3.style.display).toBe('');
+
+            // uncompress
+            applyDisplayStyleCompressed(workingSpace, null, false);
+            expect(e1.style.display).toBe('');
+            expect(e2.style.display).toBe('');
+            expect(e3.style.display).toBe('');
+
+        });
+
+        it('invokes special case for aboutStation', () => {
+
+            // mock getComponentKey that returns 'aboutStation'
+            const componentKeySpy = spyOn(this, 'getComponentKey').and.returnValue('aboutStation');
+
+            // check that the aboutStation case is involed with the default set (e1 and e2)
+            applyDisplayStyleCompressed(workingSpace, null, true);
+            expect(aboutStationSpy).toHaveBeenCalledWith([e1, e2]);
+
         });
 
     });
