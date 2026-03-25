@@ -200,4 +200,73 @@ describe('streamline.js', () => {
 
     });
 
+
+    ///////////////////////////////////////////////////////////////////////////
+    // applyDisplayStyleCompressedAboutStation
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('applyDisplayStyleCompressedDefaultSet', () => {
+
+        let root;
+        let titleArea;
+        beforeEach(() => {
+
+            // create a root element
+            root = document.createElement('div');
+            workingSpace.appendChild(root);
+
+            // create a title area put don't insert it into the tree yet
+            titleArea = document.createElement('div');
+        });
+
+        it('returns the root when no title area exists', () => {
+
+            const set = applyDisplayStyleCompressedDefaultSet(root, null);
+            expect(set).toEqual([ root ]);
+
+        });
+
+        it('returns nothing when the root is the title area', () => {
+
+            const set = applyDisplayStyleCompressedDefaultSet(root, root);
+            expect(set).toEqual([]);
+
+        });
+
+        it('returns nothing when there are no paths other than the title area', () => {
+
+            // root element with single title area as child
+            root.appendChild(titleArea);
+            const set1 = applyDisplayStyleCompressedDefaultSet(root, titleArea);
+            expect(set1).toEqual([]);
+
+            // root element with single path to title area
+            const e1 = document.createElement('div');
+            root.appendChild(e1);
+            e1.appendChild(titleArea);
+            const set2 = applyDisplayStyleCompressedDefaultSet(root, titleArea);
+            expect(set2).toEqual([]);
+
+        });
+
+        it('returns non-ancestors of the title area', () => {
+
+            // other elements at the same level as the title area
+            const e1 = document.createElement('div');
+            const e2 = document.createElement('div');
+            root.appendChild(e1);
+            root.appendChild(titleArea);
+            root.appendChild(e2);
+            const set1 = applyDisplayStyleCompressedDefaultSet(root, titleArea);
+            expect(set1).toEqual([ e1, e2 ]);
+
+            // other elements at the same level as the title area's parent
+            e1.appendChild(titleArea);
+            const set2 = applyDisplayStyleCompressedDefaultSet(root, titleArea);
+            expect(set2).toEqual([ e2 ]);
+
+        });
+
+    });
+
 });
