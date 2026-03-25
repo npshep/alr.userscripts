@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-21
+// @version          2026-03-25
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -114,7 +114,8 @@ const siteConf = {
 (function() {
     'use strict';
 
-    if (typeof testingFlag === 'undefined') {
+    // if the location is a file, we're executing unit tests, so suppress the main function
+    if (!window.location.href.startsWith('file://')) {
         // check for unused configuration values
         cleanStoredValues(siteConf);
 
