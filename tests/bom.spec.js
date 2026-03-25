@@ -32,33 +32,6 @@ describe('streamline.js', () => {
 
 
     ///////////////////////////////////////////////////////////////////////////
-    // logUnexpectedEvent
-    //
-    ///////////////////////////////////////////////////////////////////////////
-    describe('logUnexpectedEvent', () => {
-
-        let consoleSpy;
-        beforeEach(() => {
-            // spy on console.warn()
-            consoleSpy = new spyOn(console, 'warn');
-        });
-
-        it('valid source identifiers invoke console.warn()', () => {
-            logUnexpectedEvent("conf", "Conf error.");
-            expect(consoleSpy).toHaveBeenCalledWith("Configuration error: Conf error.");
-            logUnexpectedEvent("dom", "DOM error.");
-            expect(consoleSpy).toHaveBeenCalledWith("Possible DOM change: DOM error.");
-        });
-
-        it('invalid source identifiers report an error', () => {
-            logUnexpectedEvent("invalid", "Invalid source.");
-            expect(consoleSpy).toHaveBeenCalledWith("logUnexpectedEvent called with invalid source: Invalid source.");
-        });
-
-    });
-
-
-    ///////////////////////////////////////////////////////////////////////////
     // applyComponentOrder
     //
     ///////////////////////////////////////////////////////////////////////////
@@ -417,6 +390,33 @@ describe('streamline.js', () => {
             const set2 = applyDisplayStyleCompressedDefaultSet(root, titleArea);
             expect(set2).toEqual([ e2 ]);
 
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // logUnexpectedEvent
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('logUnexpectedEvent', () => {
+
+        let consoleSpy;
+        beforeEach(() => {
+            // spy on console.warn()
+            consoleSpy = new spyOn(console, 'warn');
+        });
+
+        it('valid source identifiers invoke console.warn()', () => {
+            logUnexpectedEvent("conf", "Conf error.");
+            expect(consoleSpy).toHaveBeenCalledWith("Configuration error: Conf error.");
+            logUnexpectedEvent("dom", "DOM error.");
+            expect(consoleSpy).toHaveBeenCalledWith("Possible DOM change: DOM error.");
+        });
+
+        it('invalid source identifiers report an error', () => {
+            logUnexpectedEvent("invalid", "Invalid source.");
+            expect(consoleSpy).toHaveBeenCalledWith("logUnexpectedEvent called with invalid source: Invalid source.");
         });
 
     });
