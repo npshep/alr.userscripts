@@ -90,7 +90,7 @@ describe('streamline.js', () => {
 
         it('compresses (only) the default set', () => {
 
-            // mock getComponentKey that returns a key with defautl behaviour
+            // mock getComponentKey that returns a key with the default behaviour
             spyOn(this, 'getComponentKey').and.returnValue('genericComponent');
 
             // compress the default set (e1 and e2)
@@ -116,6 +116,86 @@ describe('streamline.js', () => {
             applyDisplayStyleCompressed(workingSpace, null, true);
             expect(aboutStationSpy).toHaveBeenCalledWith([e1, e2]);
 
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // applyDisplayStyleCompressedAboutStation
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('applyDisplayStyleCompressedAboutStation', () => {
+
+        let e1;
+        let e2;
+        let morePastWeather;
+        let pastWeatherBody;
+        let pastWeatherButtons;
+        let unexpectedEventSpy;
+        beforeEach(() => {
+
+            // mock some elements that aren't part of the About Station component
+            e1 = document.createElement('div');
+            e2 = document.createElement('div');
+            workingSpace.appendChild(e1);
+            workingSpace.appendChild(e2);
+
+            // mock the About Station component
+            morePastWeather = document.createElement('div');
+            morePastWeather.classList.add('past-bom-component-container-3-1-C25_CTA');
+            pastWeatherBody = document.createElement('div');
+            pastWeatherBody.classList.add('bom-body');
+            morePastWeather.appendChild(pastWeatherBody);
+            pastWeatherButtons = document.createElement('div');
+            pastWeatherButtons.classList.add('cta-module__button-container');
+            morePastWeather.appendChild(pastWeatherButtons);
+            workingSpace.appendChild(morePastWeather);
+
+            // spy on expected events
+            unexpectedEventSpy = spyOn(window, 'logUnexpectedEvent');
+
+        });
+
+        it('removes the "more past weather container" and adds its body and buttons', () => {
+
+            // mock elements to compress
+            let elementsToCompress = [ e1, morePastWeather, e2 ];
+
+            // verify that morePastWeather is replaced by the body and buttons (at the end of the list)
+            applyDisplayStyleCompressedAboutStation(elementsToCompress);
+            expect(elementsToCompress).toEqual([ e1, e2, pastWeatherBody, pastWeatherButtons ]);
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
+        });
+
+        it('logs an unexpected event when the "more past weather" container is found but the body is missing', () => {
+
+            // if the body is missing, morePastWeather is still removed from list, but the buttons are added
+            pastWeatherBody.remove();
+            let elementsToCompress = [ morePastWeather ];
+            applyDisplayStyleCompressedAboutStation(elementsToCompress);
+            expect(elementsToCompress).toEqual([ pastWeatherButtons]);
+            expect(unexpectedEventSpy).toHaveBeenCalledWith('dom', jasmine.any(String));
+
+        });
+
+        it('logs an unexpected event when the "more past weather" container is found but missing buttons', () => {
+
+            // if the buttons are missing, morePastWeather is still removed from list, but the body is added
+            pastWeatherButtons.remove();
+            let elementsToCompress = [ morePastWeather ];
+            applyDisplayStyleCompressedAboutStation(elementsToCompress);
+            expect(elementsToCompress).toEqual([ pastWeatherBody ]);
+            expect(unexpectedEventSpy).toHaveBeenCalledWith('dom', jasmine.any(String));
+
+        });
+
+        it('logs an unexpected event when the "more past weather" container is missing', () => {
+
+            let elementsToCompress = [ e1 ];
+            applyDisplayStyleCompressedAboutStation(elementsToCompress);
+            expect(elementsToCompress).toEqual([ e1 ]);
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
     });
