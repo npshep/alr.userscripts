@@ -697,6 +697,70 @@ describe('streamline.js', () => {
 
     });
 
+
+    ///////////////////////////////////////////////////////////////////////////
+    // getComponentTitleArea
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('getComponentTitleArea', () => {
+
+        let root;
+        beforeEach(() => {
+
+            // mock component
+            root = document.createElement('div');
+            workingSpace.appendChild(root);
+
+        });
+
+        it('resolves immediately when the title area already exists', async () => {
+
+            // mock up a title area
+            const titleArea = document.createElement('div');
+            titleArea.classList.add('data-be-aware-title');
+            root.appendChild(titleArea);
+
+            // verify that the promise resolve immediately
+            const result = await getComponentTitleArea(root, 'dataStatement');
+            expect(result).toBe(titleArea);
+
+        });
+
+        it('resolves when the title area appears after invocation', async () => {
+
+            // mock up a title area but don't add it yet
+            const titleArea = document.createElement('div');
+            titleArea.classList.add('data-be-aware-title');
+
+            // get a promise to resolve the title area
+            const promise = getComponentTitleArea(root, 'dataStatement');
+
+            // add the title area and check the promise
+            root.appendChild(titleArea);
+            const result = await promise;
+            expect(result).toBe(titleArea);
+
+        });
+
+        it('returns null for an unrecognised component', () => {
+
+            const unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
+            const titleArea = getComponentTitleAreaSync(root, 'badKey');
+            expect(titleArea).toBeNull();
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+
+        });
+
+        xit('use logUnexpectedEvent to detect issues in title area recognition', () => {
+
+            // We don't bother with a unit test for the regular case; problems
+            // with title area recognition should be logged by logUnexpectedEvent
+
+        });
+
+    });
+
+
     ///////////////////////////////////////////////////////////////////////////
     // logUnexpectedEvent
     //
