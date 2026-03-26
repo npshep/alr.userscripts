@@ -675,6 +675,29 @@ describe('streamline.js', () => {
 
 
     ///////////////////////////////////////////////////////////////////////////
+    // getComponentKey
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('getComponentKey', () => {
+
+        it('returns null for an unrecognised component', () => {
+
+            const e1 = document.createElement('div');
+            workingSpace.appendChild(e1);
+            expect(getComponentKey(e1)).toBeNull();
+
+        });
+
+        xit('use logUnexpectedEvent to detect issues in component recognition', () => {
+
+            // We don't bother with a unit test for the regular case; problems
+            // with component recognition should be logged by logUnexpectedEvent
+
+        });
+
+    });
+
+    ///////////////////////////////////////////////////////////////////////////
     // logUnexpectedEvent
     //
     ///////////////////////////////////////////////////////////////////////////
