@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-25
+// @version          2026-03-26
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -454,8 +454,8 @@ function applyDisplayStyleCompressedDefaultSet(root, titleArea) {
 // Make a component expandable (entry point).
 //
 // In most cases, the title area doesn't appear during the initial page load,
-// so we set a MutationObserver to watch for it, which invokes
-// applyDisplayStyleExpandableReal() to do the real work.
+// so we use the asynchronous getComponentTitleArea(). Once the title area
+// has appeared, applyDisplayStyleExpandableSync() does the real work.
 //
 // Input:
 //   root (DOMElement) - the root element of the component
@@ -463,31 +463,46 @@ function applyDisplayStyleCompressedDefaultSet(root, titleArea) {
 //   startCompressed (boolean) - true to start in the compressed state
 function applyDisplayStyleExpandable(root, key, startCompressed = false) {
 
-    // the title area doesn't appear right away, so we need to use an asynchronous function
+    // wait for the title area to appear, then invoke the synchronous function
     getComponentTitleArea(root, key).then(function (titleArea) {
-
-        // clicking the title area toggles the compressed/expanded state
-        const originalTitleBackground = titleArea.style.backgroundColor;
-        titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
-        titleArea.style.borderRadius = "8px";
-        titleArea.onclick = function () {
-            onClickExpandableComponent(root, titleArea);
-        };
-        titleArea.onmouseover = function() {
-            titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
-        };
-        titleArea.onmouseout = function() {
-            titleArea.style.backgroundColor = originalTitleBackground;
-        };
-
-        // render initial compressed/expanded state
-        applyDisplayStyleCompressed(root, titleArea, startCompressed);
+        applyDisplayStyleExpandableSync(root, titleArea, startCompressed);
     });
 
 }
 
 
-// Apply the 'hidden' display style..
+// Make a component expandable (synchronous). This function required the title
+// area to be already available; use applyDisplayStyleExpandable() above to
+// make a component expandable when only the componet itself is known.
+//
+//
+// Input:
+//   root (DOMElement) - the root element of the component
+//   titleArea (DOMElement) - the root element of the title area
+//   startCompressed (boolean) - true to start in the compressed state
+function applyDisplayStyleExpandableSync(root, titleArea, startCompressed) {
+
+    // clicking the title area toggles the compressed/expanded state
+    const originalTitleBackground = titleArea.style.backgroundColor;
+    titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
+    titleArea.style.borderRadius = "8px";
+    titleArea.onclick = function () {
+        onClickExpandableComponent(root, titleArea);
+    };
+    titleArea.onmouseover = function() {
+       titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
+    };
+    titleArea.onmouseout = function() {
+        titleArea.style.backgroundColor = originalTitleBackground;
+    };
+
+    // render initial compressed/expanded state
+    applyDisplayStyleCompressed(root, titleArea, startCompressed);
+
+}
+
+
+// Apply the 'hidden' display style.
 //
 // Input:
 //   root (DOMElement) - the root element of the component

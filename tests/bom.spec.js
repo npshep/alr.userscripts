@@ -396,6 +396,91 @@ describe('streamline.js', () => {
 
 
     ///////////////////////////////////////////////////////////////////////////
+    // applyDisplayStyleExpandable
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('applyDisplayStyleExpandable', () => {
+
+        let root;
+        let titleArea;
+        beforeEach(() => {
+
+            // mock a component with title area
+            key = 'testKey';
+            root = document.createElement('div');
+            root.backgroundColor = 'white';
+            workingSpace.appendChild(root);
+            titleArea = document.createElement('div');
+            root.appendChild(titleArea);
+
+        });
+
+        it('invokes applyDisplayStyleExpandableSync when the title area is resolved', (done) => {
+
+            // mock getComponentTitleArea and applyDisplayStyleExpandableSync
+            const getComponentTitleAreaSpy = spyOn(this, 'getComponentTitleArea').and.returnValue(Promise.resolve(titleArea));
+            const applyDisplayStyleExpandableSyncSpy = spyOn(this, 'applyDisplayStyleExpandableSync');
+
+            // test with startCompressed = true
+            applyDisplayStyleExpandable(root, key, true);
+            setTimeout(() => {
+                expect(applyDisplayStyleExpandableSyncSpy).toHaveBeenCalledWith(root, titleArea, true);
+            }, 0);
+
+            // test with startCompressed = false
+            applyDisplayStyleExpandableSyncSpy.calls.reset();
+            applyDisplayStyleExpandable(root, key, false);
+            setTimeout(() => {
+                expect(applyDisplayStyleExpandableSyncSpy).toHaveBeenCalledWith(root, titleArea, false);
+                done();
+            }, 0);
+
+        });
+
+        it('invokes applyDisplayStyleCompressed with correct parameters', () => {
+
+            const applyDisplayStyleCompressedSpy = spyOn(this, 'applyDisplayStyleCompressed');
+
+            // with startCompressed = true
+            applyDisplayStyleExpandableSync(root, titleArea, true);
+            expect(applyDisplayStyleCompressedSpy).toHaveBeenCalledWith(root, titleArea, true);
+
+            // with startCompressed = false
+            applyDisplayStyleCompressedSpy.calls.reset()
+            applyDisplayStyleExpandableSync(root, titleArea, true);
+            expect(applyDisplayStyleCompressedSpy).toHaveBeenCalledWith(root, titleArea, true);
+
+        });
+
+        it('applies expandable styling when invoked synchronously', () => {
+
+            // cursor is zoom-out when startCompressed is false
+            applyDisplayStyleExpandableSync(root, titleArea, false);
+            expect(titleArea.style.cursor).toBe('zoom-out');
+
+            // cursor is zoom-in when startCompressed is true
+            applyDisplayStyleExpandableSync(root, titleArea, true);
+            expect(titleArea.style.cursor).toBe('zoom-in');
+
+            // clicking invokes onClickExpandableComponebt with correct arguments
+            const clickSpy = spyOn(this, 'onClickExpandableComponent');
+            applyDisplayStyleExpandableSync(root, titleArea);
+            titleArea.click();
+            expect(clickSpy).toHaveBeenCalledWith(root, titleArea);
+
+            // mouseover sets header background to 'var(--nw-colour-theme-surface-tint)'; mouseout resets it
+            const originalBackgroundColor = root.style.backgroundColor;
+            titleArea.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+            expect(titleArea.style.backgroundColor).toBe(siteConf.theme.expandableBackground);
+            titleArea.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+            expect(titleArea.style.backgroundColor).toBe(originalBackgroundColor);
+
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
     // logUnexpectedEvent
     //
     ///////////////////////////////////////////////////////////////////////////
