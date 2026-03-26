@@ -229,7 +229,7 @@ describe('streamline.js', () => {
 
         });
 
-        it('logs an unexpeced evnet for an invalid configuration key', () => {
+        it('logs an unexpeced event for an invalid configuration key', () => {
 
             const map = {
                 'component': document.createElement('div')
@@ -538,6 +538,136 @@ describe('streamline.js', () => {
                 expect(renderCalled).toBeTrue();
                 done();
             }, 0);
+
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // buildComponentMapHome
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('buildComponentMapHome', () => {
+
+        let mainPageContent;
+        beforeEach(() => {
+
+            // mock the main page content container
+            mainPageContent = document.createElement('div');
+            mainPageContent.id = 'block-mainpagecontent';
+            workingSpace.appendChild(mainPageContent);
+
+        });
+
+        it('maps recognised home page components', async () => {
+
+            // mock some content for the home page
+            const homepageHeader = document.createElement('div');
+            homepageHeader.classList.add('bom-homepage-header');
+            mainPageContent.appendChild(homepageHeader);
+            const capitalForecast = document.createElement('div');
+            capitalForecast.classList.add('homepage-content-top-wrapper');
+            mainPageContent.appendChild(capitalForecast);
+            const weatherMapContainer = document.createElement('div');
+            const weatherMapChild = document.createElement('div');
+            weatherMapChild.setAttribute('data-component', 'bom-spatial-map');
+            weatherMapContainer.appendChild(weatherMapChild);
+            mainPageContent.appendChild(weatherMapContainer);
+
+            // build and verify the map
+            const map = await buildComponentMapHome();
+            expect(Object.keys(map).sort()).toEqual(['capitalForecast', 'homepageHeader', 'weatherMap']);
+            expect(map.homepageHeader).toBe(homepageHeader);
+            expect(map.capitalForecast).toBe(capitalForecast);
+            expect(map.weatherMap).toBe(weatherMapContainer);
+
+        });
+
+        it('resolves an empty map when no recognised components are present', async () => {
+
+            // mock an unrecognised component
+            const unknown = document.createElement('div');
+            unknown.classList.add('some-random-class');
+            mainPageContent.appendChild(unknown);
+
+            // build and verify the map
+            const map = await buildComponentMapHome();
+            expect(map).toEqual({});
+
+        });
+
+        it('rejects when the home page content element is missing', async () => {
+
+            mainPageContent.remove();
+            const result = buildComponentMapHome();
+            await expectAsync(result).toBeRejectedWithError(ReferenceError);
+
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // buildComponentMapLocation
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('buildComponentMapLocation', () => {
+
+        let mainPageContent;
+        beforeEach(() => {
+
+            // mock the the main page content container
+            mainPageContent = document.createElement('div');
+            mainPageContent.id = 'block-mainpagecontent';
+            workingSpace.appendChild(mainPageContent);
+
+        });
+
+        it('maps known tabs and components when location-page-module appears', async () => {
+
+            // mock the location page with tabs
+            const locationPageModule = document.createElement('div');
+            locationPageModule.classList.add('location-page-module');
+            const todayTab = document.createElement('div');
+            todayTab.id = 'bom-tab-panel-today';
+            const todaySection = document.createElement('section');
+            todaySection.classList.add('tc-today-C04_WeatherGlanceMoreAboutToday-1');
+            todayTab.appendChild(todaySection);
+            locationPageModule.appendChild(todayTab);
+            const sevenDaysTab = document.createElement('div');
+            sevenDaysTab.id = 'bom-tab-panel-7-days';
+            const sevenDaySection = document.createElement('section');
+            sevenDaySection.classList.add('tc-7-days-C10_ForecastWithAccordion-0');
+            sevenDaysTab.appendChild(sevenDaySection);
+            locationPageModule.appendChild(sevenDaysTab);
+            const pastTab = document.createElement('div');
+            pastTab.id = 'bom-tab-panel-past';
+            const pastSection = document.createElement('section');
+            pastSection.classList.add('tc-past-C66_ObservationChart-2');
+            pastTab.appendChild(pastSection);
+            locationPageModule.appendChild(pastTab);
+
+            // get a promise to build the map
+            const mapPromise = buildComponentMapLocation();
+
+            // mutate after starting observation to trigger resolve
+            mainPageContent.appendChild(locationPageModule);
+
+            // verify the map
+            const map = await mapPromise;
+            expect(Object.keys(map).sort()).toEqual(['past', 'sevenDays', 'today']);
+            expect(map.today.moreAboutToday).toBe(todaySection);
+            expect(map.sevenDays.sevenDayForecast).toBe(sevenDaySection);
+            expect(map.past.observationChart).toBe(pastSection);
+
+        });
+
+        it('rejects when the location page content container is missing', async () => {
+
+            mainPageContent.remove();
+            const result = buildComponentMapLocation();
+            await expectAsync(result).toBeRejectedWithError(ReferenceError);
 
         });
 
