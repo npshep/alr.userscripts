@@ -504,6 +504,46 @@ describe('streamline.js', () => {
 
     });
 
+
+    ///////////////////////////////////////////////////////////////////////////
+    // applyDisplayStyleObserver
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('applyDisplayStyleObserver', () => {
+
+        let root;
+        beforeEach(() => {
+
+            // mock component
+            root = document.createElement('div');
+            workingSpace.appendChild(root);
+
+        });
+
+        it('applies the display style immediately and again after any change', (done) => {
+
+            // mock rendering function that just sets a flag
+            let renderCalled = false;
+            let mockRender = function () { renderCalled = true; };
+
+            // apply the style and set up the observer
+            applyDisplayStyleObserver(root, mockRender);
+            expect(renderCalled).toBeTrue();
+
+            // make a change and verify that the component is re-rendered at the next tick
+            renderCalled = false;
+            const e1 = document.createElement('div');
+            root.appendChild(e1);
+            setTimeout(() => {
+                expect(renderCalled).toBeTrue();
+                done();
+            }, 0);
+
+        });
+
+    });
+
+
     ///////////////////////////////////////////////////////////////////////////
     // logUnexpectedEvent
     //
