@@ -481,6 +481,30 @@ describe('streamline.js', () => {
 
 
     ///////////////////////////////////////////////////////////////////////////
+    // applyDisplayStyleHidden
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('applyDisplayStyleHidden', () => {
+
+        let root;
+        beforeEach(() => {
+
+            // mock component
+            root = document.createElement('div');
+            workingSpace.appendChild(root);
+
+        });
+
+        it('suppresses display of the component', () => {
+
+            applyDisplayStyleHidden(root);
+            expect(root.style.display).toBe('none');
+
+        });
+
+    });
+
+    ///////////////////////////////////////////////////////////////////////////
     // logUnexpectedEvent
     //
     ///////////////////////////////////////////////////////////////////////////
