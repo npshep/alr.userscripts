@@ -639,8 +639,11 @@ async function buildComponentMapLocation() {
                                 }
                                 section = section.nextElementSibling;
                             }
-                            tab = tab.nextElementSibling;
+                        } else {
+                            // log unexpected tab
+                            logUnexpectedEvent("dom", "Unexected tab with id " + tab.id + " found on the location page.");
                         }
+                        tab = tab.nextElementSibling;
                     }
 
                     // stop observing and resolve the Promise

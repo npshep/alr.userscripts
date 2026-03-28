@@ -615,6 +615,7 @@ describe('streamline.js', () => {
     describe('buildComponentMapLocation', () => {
 
         let mainPageContent;
+        let locationPageModule;
         beforeEach(() => {
 
             // mock the the main page content container
@@ -622,13 +623,15 @@ describe('streamline.js', () => {
             mainPageContent.id = 'block-mainpagecontent';
             workingSpace.appendChild(mainPageContent);
 
+            // mock the "page module" (tab container) but don't add it yet (this happens later)
+            locationPageModule = document.createElement('div');
+            locationPageModule.classList.add('location-page-module');
+
         });
 
         it('maps known tabs and components when location-page-module appears', async () => {
 
-            // mock the location page with tabs
-            const locationPageModule = document.createElement('div');
-            locationPageModule.classList.add('location-page-module');
+            // mock tabs
             const todayTab = document.createElement('div');
             todayTab.id = 'bom-tab-panel-today';
             const todaySection = document.createElement('section');
@@ -660,6 +663,31 @@ describe('streamline.js', () => {
             expect(map.today.moreAboutToday).toBe(todaySection);
             expect(map.sevenDays.sevenDayForecast).toBe(sevenDaySection);
             expect(map.past.observationChart).toBe(pastSection);
+
+        });
+
+        it('logs an unexpected event for an unrecognised tab', async () => {
+
+            // add a nonsense tab
+            const mockTab = document.createElement('div');
+            mockTab.id = 'not-a-tab';
+            const mockSection = document.createElement('section');
+            mockSection.classList.add('not-a-section');
+            mockTab.appendChild(mockSection);
+            locationPageModule.appendChild(mockTab);
+
+            // spy on the unexpected event handler
+            const unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
+
+            // get a promise to build the map
+            const mapPromise = buildComponentMapLocation();
+
+            // mutate after starting observation to trigger resolve
+            mainPageContent.appendChild(locationPageModule);
+
+            // check that an unexpected event is logged
+            await mapPromise;
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
 
         });
 
@@ -791,6 +819,31 @@ describe('streamline.js', () => {
 
             expect(getPageKey("https://www.bom.gov.au/weather-and-climate/warnings-and-alerts")).toBeNull();
             expect(getPageKey("https://www.alittleresearch.com.au")).toBeNull();
+
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // getTabKey
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('getTabKey', () => {
+
+        it('returns null for an unrecognised component', () => {
+
+            const e1 = document.createElement('div');
+            e1.className = "not-a-tab";
+            workingSpace.appendChild(e1);
+            expect(getTabKey(e1)).toBeNull();
+
+        });
+
+        xit('use logUnexpectedEvent to detect issues in tab recognition', () => {
+
+            // We don't bother with a unit test for the regular case; problems
+            // with tab recognition should be logged by logUnexpectedEvent
 
         });
 
