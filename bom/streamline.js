@@ -134,7 +134,7 @@ const siteConf = {
         favouriteLocations: 'compressed',
 
         // Last Updated
-        weatherMetadata: 'expanded',
+        weatherMetadata: 'default',
 
         // Featured news
         featuredNews: 'compressed',

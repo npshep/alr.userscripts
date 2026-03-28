@@ -37,3 +37,6 @@ Known Bugs
 
 - expandable components should use the same styling as existing "accordion"
   components, with down/up arrows beside the header
+
+- compressed the Featured News component leaves a big gap at the bottom of
+  the page
