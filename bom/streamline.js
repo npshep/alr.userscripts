@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-26
+// @version          2026-03-28
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -206,7 +206,7 @@ const siteConf = {
 (function() {
     'use strict';
 
-    switch (getPageKey()) {
+    switch (getPageKey(window.location.href)) {
         case 'home':
             // BoM home page
             buildComponentMapHome().then(function (map) {
@@ -893,7 +893,7 @@ function getComponentTitleAreaSync(root, key) {
             // 7-day forecast
             // on the home page, the title bar has class forecast-summary-table__title
             // on the location page, title bar has class forecast-table__title
-            return getPageKey() === 'home' ?
+            return getPageKey(window.location.href) === 'home' ?
                 root.querySelector(".forecast-summary-table__title") :
                 root.querySelector(".forecast-table__title");
 
@@ -933,17 +933,21 @@ function getComponentTitleAreaSync(root, key) {
 
 // Identify the type of page on which we're executing.
 //
+//
+// Input:
+//   href (string) - the vlaue of window.location.href
+//
 // Returns:
 //   'home' for the homepage
 //   'location' for location page
 //   'test' for executing unit tests
-function getPageKey() {
+function getPageKey(href) {
 
-    if (window.location.href === 'https://www.bom.gov.au/') {
+    if (href === 'https://www.bom.gov.au/') {
         return 'home';
-    } else if (window.location.href.startsWith('https://www.bom.gov.au/location/')) {
+    } else if (href.startsWith('https://www.bom.gov.au/location/')) {
         return 'location';
-    } else if (window.location.href.startsWith('file://') && window.location.href.endsWith('tests.html')) {
+    } else if (href.startsWith('file://') && href.endsWith('tests.html')) {
         return 'test';
     } else {
         return null;

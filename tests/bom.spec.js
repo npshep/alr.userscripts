@@ -762,6 +762,42 @@ describe('streamline.js', () => {
 
 
     ///////////////////////////////////////////////////////////////////////////
+    // getPageKey
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('getPageKey', () => {
+
+        it('returns "home" for BoM homepage', () => {
+
+            expect(getPageKey("https://www.bom.gov.au/")).toBe('home');
+
+        });
+
+        it('returns "location" for BoM location pages', () => {
+
+            expect(getPageKey("https://www.bom.gov.au/location/australia/new-south-wales/illawarra/bnsw_pt014-wollongong")).toBe('location');
+            expect(getPageKey("https://www.bom.gov.au/location/australia/new-south-wales/metropolitan/bnsw_pt111-parramatta")).toBe('location');
+
+        });
+
+        it('returns "test" when executing unit tests', () => {
+
+            expect(getPageKey("file:///C:/Users/xxxx/Source/alr.userscripts/tests/bom.tests.html")).toBe('test');
+            expect(getPageKey("file:///home/xxxx/src//alr.userscripts/tests/bom.tests.html")).toBe('test');
+
+        });
+
+        it('returns null for other pages', () => {
+
+            expect(getPageKey("https://www.bom.gov.au/weather-and-climate/warnings-and-alerts")).toBeNull();
+            expect(getPageKey("https://www.alittleresearch.com.au")).toBeNull();
+
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
     // logUnexpectedEvent
     //
     ///////////////////////////////////////////////////////////////////////////
