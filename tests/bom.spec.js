@@ -876,4 +876,56 @@ describe('streamline.js', () => {
 
     });
 
+
+    ///////////////////////////////////////////////////////////////////////////
+    // onClickExpandableComponent
+    //
+    ///////////////////////////////////////////////////////////////////////////
+    describe('onClickExpandableComponent', () => {
+
+        let root;
+        let titleArea;
+        let contentArea;
+        let applyDisplayStyleSpy;
+        beforeEach(() => {
+
+            // mock an expandable element
+            root = document.createElement('div');
+            workingSpace.appendChild(root);
+            titleArea = document.createElement('div');
+            root.appendChild(titleArea);
+            contentArea = document.createElement('div');
+            root.appendChild(contentArea);
+
+            // spy on the the renderer
+            applyDisplayStyleSpy = spyOn(this, 'applyDisplayStyleCompressed');
+
+        });
+
+        it('compresses an expanded component', () => {
+
+            // mimic an expanded component by setting the title cursor style to zoom-out
+            titleArea.style.cursor = "zoom-out";
+
+            // simulate a click
+            onClickExpandableComponent(root, titleArea);
+            expect(titleArea.style.cursor).toBe("zoom-in");
+            expect(applyDisplayStyleSpy).toHaveBeenCalledWith(root, titleArea, true);
+
+        });
+
+        it('expands a compressed component', () => {
+
+            // mimic a compressed component by setting the title cursor style to zoom-in
+            titleArea.style.cursor = "zoom-in";
+
+            // simulate a click
+            onClickExpandableComponent(root, titleArea);
+            expect(titleArea.style.cursor).toBe("zoom-out");
+            expect(applyDisplayStyleSpy).toHaveBeenCalledWith(root, titleArea, false);
+
+        });
+
+    });
+
 });
