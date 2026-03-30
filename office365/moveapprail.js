@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-01-29
+// @version          2026-01-31
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -9,6 +9,7 @@
 // @match            https://outlook.office.com/*
 // @match            https://outlook.office365.com/*
 // @match            https://outlook.live.com/*
+// @match            https://outlook.cloud.microsoft/*
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant            GM_getValue
 // @grant            GM_setValue
