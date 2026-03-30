@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-28
+// @version          2026-03-30
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -21,7 +21,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Configure the site. The Bureau of Meterology site doesn't identify
 // components in any consistent way, so this script refers to each one using
-// an internal code, which is a key of siteConf.display structure below.
+// an internal code, which is a key of the siteConf.display structure below.
 //
 // The 'order' arrays define the order (top to bottom) in which components will
 // be displayed. Note that components can currently only be re-ordered within
@@ -241,7 +241,7 @@ const siteConf = {
 
         default:
             // shouldn't happen
-            logUnexpectedEvent("dom", "A Little BoM executed on an unrecognised page.");
+            logUnexpectedEvent("dom", "A Little BoM executed on an unrecognised page " + window.location.href + ".");
             break;
 
     }
@@ -253,9 +253,9 @@ const siteConf = {
 //
 // Because all of the re-orderable components on any given page are children of
 // the same element (block-mainpagecontent for the home page; the section's
-// tab for location page), we can re-order the components by re-adding them to
-// their parent's child list in the order specified. Elements not mentioned in
-// the order array will be pushed to the bottom.
+// tab for the location page), we can re-order the components by re-adding them
+// to their parent's child list in the order specified. Elements not mentioned
+// in the order array will be pushed to the bottom.
 //
 // Input:
 //   map (Object) - the map output by buildComponentMap*()
@@ -395,7 +395,7 @@ function applyDisplayStyleCompressedAboutStation(elementsToCompress) {
 }
 
 
-// Get the default set of elements to gide when compressing an element.
+// Get the default set of elements to hide when compressing an element.
 //
 // This function finds elements *not* on the path between the root and the
 // title area by an in-order traversal of the tree. If the current element is
@@ -410,7 +410,7 @@ function applyDisplayStyleCompressedAboutStation(elementsToCompress) {
 // Returns: an array of elements not on the path between the root and the title area
 function applyDisplayStyleCompressedDefaultSet(root, titleArea) {
 
-    // sanity check
+    // if the root doesn't contain titleArea at all, return the root
     if (!root.contains(titleArea)) {
         return [ root ];
     }
@@ -471,10 +471,9 @@ function applyDisplayStyleExpandable(root, key, startCompressed = false) {
 }
 
 
-// Make a component expandable (synchronous). This function required the title
-// area to be already available; use applyDisplayStyleExpandable() above to
-// make a component expandable when only the componet itself is known.
-//
+// Make a component expandable (synchronous). This function assumes that the
+// title area is already available; use applyDisplayStyleExpandable() above to
+// to wait for a title area to appear on a fresh component..
 //
 // Input:
 //   root (DOMElement) - the root element of the component
@@ -935,7 +934,6 @@ function getComponentTitleAreaSync(root, key) {
 
 
 // Identify the type of page on which we're executing.
-//
 //
 // Input:
 //   href (string) - the vlaue of window.location.href

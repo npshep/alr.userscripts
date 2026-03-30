@@ -795,7 +795,7 @@ describe('streamline.js', () => {
     ///////////////////////////////////////////////////////////////////////////
     describe('getPageKey', () => {
 
-        it('returns "home" for BoM homepage', () => {
+        it('returns "home" for the BoM homepage', () => {
 
             expect(getPageKey("https://www.bom.gov.au/")).toBe('home');
 
@@ -863,15 +863,20 @@ describe('streamline.js', () => {
         });
 
         it('valid source identifiers invoke console.warn()', () => {
+
             logUnexpectedEvent("conf", "Conf error.");
             expect(consoleSpy).toHaveBeenCalledWith("Configuration error: Conf error.");
+
             logUnexpectedEvent("dom", "DOM error.");
             expect(consoleSpy).toHaveBeenCalledWith("Possible DOM change: DOM error.");
+
         });
 
         it('invalid source identifiers report an error', () => {
+
             logUnexpectedEvent("invalid", "Invalid source.");
             expect(consoleSpy).toHaveBeenCalledWith("logUnexpectedEvent called with invalid source: Invalid source.");
+
         });
 
     });
