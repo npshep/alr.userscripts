@@ -39,7 +39,4 @@ Known Bugs
   components, with down/up arrows beside the header
 
 - compressed the Featured News component leaves a big gap at the bottom of
-  the page
-
-- after expanding a compressed weather map, the map sometimes compresses again
-  when the window is scrolled
+  the home page when no favourites are set
