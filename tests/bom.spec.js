@@ -180,12 +180,15 @@ describe('streamline.js', () => {
     describe('applyDisplayStyles', () => {
 
         let observerSpy;
+        let hiddenStyleSpy;
+        let expandableStyleSpy;
         let unexpectedEventSpy;
         beforeEach(() => {
 
-            // mock the display observer
-            // TODO: verify that the observer is set up with the correct callback
-            observerSpy = spyOn(this, 'applyDisplayStyleObserver');
+            // spy on the display observer
+            observerSpy = spyOn(this, 'applyDisplayStyleObserver').and.callThrough();
+            hiddenStyleSpy = spyOn(this, 'applyDisplayStyleHidden');
+            expandableStyleSpy = spyOn(this, 'applyDisplayStyleExpandable');
 
             // mock the unexpected event handler
             unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
@@ -194,6 +197,7 @@ describe('streamline.js', () => {
 
         it('sets up display style observers', () => {
 
+            // mock a component map and display configuration
             const map = {
                 'defaultComponent': document.createElement('div'),
                 'hiddenComponent': document.createElement('div'),
@@ -206,12 +210,25 @@ describe('streamline.js', () => {
                 'compressedComponent': 'compressed',
                 'expandedComponent': 'expanded'
             };
+
+            // invoke the function under test
             applyDisplayStyles(map, displayConf);
+
+            // verify that the observers have been installed and no errors were logged
             expect(observerSpy).toHaveBeenCalledTimes(3);
             expect(observerSpy).toHaveBeenCalledWith(map['hiddenComponent'], jasmine.any(Function));
             expect(observerSpy).toHaveBeenCalledWith(map['compressedComponent'], jasmine.any(Function));
             expect(observerSpy).toHaveBeenCalledWith(map['expandedComponent'], jasmine.any(Function));
             expect(unexpectedEventSpy).not.toHaveBeenCalled();
+
+            // verify that applyDisplayStyleHidden was invoked on the hidden component
+            expect(hiddenStyleSpy).toHaveBeenCalledTimes(1);
+            expect(hiddenStyleSpy).toHaveBeenCalledWith(map['hiddenComponent']);
+
+            // verify that applyDisplayStyleExpandable was invoked on the compresssed and expanded compomnents
+            expect(expandableStyleSpy).toHaveBeenCalledTimes(2);
+            expect(expandableStyleSpy).toHaveBeenCalledWith(map['compressedComponent'], 'compressedComponent', true);
+            expect(expandableStyleSpy).toHaveBeenCalledWith(map['expandedComponent'], 'expandedComponent', false);
 
         });
 
