@@ -441,24 +441,40 @@ describe('streamline.js', () => {
 
             const applyDisplayStyleCompressedSpy = spyOn(this, 'applyDisplayStyleCompressed');
 
-            // with startCompressed = true
+            // with fresh component and startCompressed = true
+            titleArea.style.cursor = '';
             applyDisplayStyleExpandableSync(root, titleArea, true);
             expect(applyDisplayStyleCompressedSpy).toHaveBeenCalledWith(root, titleArea, true);
 
-            // with startCompressed = false
-            applyDisplayStyleCompressedSpy.calls.reset()
-            applyDisplayStyleExpandableSync(root, titleArea, true);
+            // with fresh component and startCompressed = false
+            titleArea.style.cursor = '';
+            applyDisplayStyleCompressedSpy.calls.reset();
+            applyDisplayStyleExpandableSync(root, titleArea, false);
+            expect(applyDisplayStyleCompressedSpy).toHaveBeenCalledWith(root, titleArea, false);
+
+            // with previously-compressed component
+            titleArea.style.cursor  = 'zoom-in';
+            applyDisplayStyleCompressedSpy.calls.reset();
+            applyDisplayStyleExpandableSync(root, titleArea, false);
             expect(applyDisplayStyleCompressedSpy).toHaveBeenCalledWith(root, titleArea, true);
+
+            // with previously-expanded component
+            titleArea.style.cursor  = 'zoom-out';
+            applyDisplayStyleCompressedSpy.calls.reset();
+            applyDisplayStyleExpandableSync(root, titleArea, true);
+            expect(applyDisplayStyleCompressedSpy).toHaveBeenCalledWith(root, titleArea, false);
 
         });
 
         it('applies expandable styling when invoked synchronously', () => {
 
             // cursor is zoom-out when startCompressed is false
+            titleArea.style.cursor = '';
             applyDisplayStyleExpandableSync(root, titleArea, false);
             expect(titleArea.style.cursor).toBe('zoom-out');
 
             // cursor is zoom-in when startCompressed is true
+            titleArea.style.cursor = '';
             applyDisplayStyleExpandableSync(root, titleArea, true);
             expect(titleArea.style.cursor).toBe('zoom-in');
 
@@ -468,7 +484,7 @@ describe('streamline.js', () => {
             titleArea.click();
             expect(clickSpy).toHaveBeenCalledWith(root, titleArea);
 
-            // mouseover sets header background to 'var(--nw-colour-theme-surface-tint)'; mouseout resets it
+            // mouseover sets header background to sitConf.theme.expandableBackground; mouseout resets it
             const originalBackgroundColor = root.style.backgroundColor;
             titleArea.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
             expect(titleArea.style.backgroundColor).toBe(siteConf.theme.expandableBackground);

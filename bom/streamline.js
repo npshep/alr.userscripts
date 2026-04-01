@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little BoM
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-30
+// @version          2026-04-01
 // @description      Re-arrange and compactify the Bureau of Meteorology's web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -481,22 +481,36 @@ function applyDisplayStyleExpandable(root, key, startCompressed = false) {
 //   startCompressed (boolean) - true to start in the compressed state
 function applyDisplayStyleExpandableSync(root, titleArea, startCompressed) {
 
-    // clicking the title area toggles the compressed/expanded state
-    const originalTitleBackground = titleArea.style.backgroundColor;
-    titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
-    titleArea.style.borderRadius = "8px";
-    titleArea.onclick = function () {
-        onClickExpandableComponent(root, titleArea);
-    };
-    titleArea.onmouseover = function() {
-       titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
-    };
-    titleArea.onmouseout = function() {
-        titleArea.style.backgroundColor = originalTitleBackground;
-    };
+    // if the title area already has cursor style zoom-in or zoom-out, it
+    // was previously made expandable, so keep the existing expanded state;
+    // otherwise start with the value of startCompressed
+    let compressed = startCompressed;
+    if (titleArea.style.cursor === "zoom-in") {
+        // previously-compressed component
+        compressed = true;
+    } else if (titleArea.style.cursor === "zoom-out") {
+        // previously-expanded component
+        compressed = false;
+    } else {
+        // first time called on this component; set up compressed/expanded styling
+        titleArea.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
+        titleArea.style.borderRadius = "8px";
+
+        // clicking the title area toggles the compressed/expanded state
+        const originalTitleBackground = titleArea.style.backgroundColor;
+        titleArea.onclick = function () {
+            onClickExpandableComponent(root, titleArea);
+        };
+        titleArea.onmouseover = function() {
+           titleArea.style.backgroundColor = siteConf.theme.expandableBackground;
+        };
+        titleArea.onmouseout = function() {
+            titleArea.style.backgroundColor = originalTitleBackground;
+        };
+    }
 
     // render initial compressed/expanded state
-    applyDisplayStyleCompressed(root, titleArea, startCompressed);
+    applyDisplayStyleCompressed(root, titleArea, compressed);
 
 }
 
@@ -936,7 +950,7 @@ function getComponentTitleAreaSync(root, key) {
 // Identify the type of page on which we're executing.
 //
 // Input:
-//   href (string) - the vlaue of window.location.href
+//   href (string) - the value of window.location.href
 //
 // Returns:
 //   'home' for the homepage
