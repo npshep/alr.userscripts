@@ -45,3 +45,5 @@ Known Bugs
 - when the cursor is at the end of the line, the first press of the enter
   key is consumed by the (invisible) suggestions box, even when suggestions
   are turned off
+- the cursor line and column don't appear in the status bar until clicking on
+  the display area
