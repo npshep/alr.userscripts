@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-03-31
+// @version          2026-04-03
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -251,10 +251,12 @@ function fetchBottomRail(create) {
 
 // Find the app launcher.
 //
-// The app laucher is a div with id O365_MainLink_NavMenu.
+// The app launcher is a button with id owaAppLauncherBtn_container; we use the
+// parent div that includes the margins.
 function findAppLauncher() {
 
-    return document.getElementById("O365_MainLink_NavMenu");
+    const appLauncherButton = document.getElementById("owaAppLauncherBtn_container");
+    return (appLauncherButton != null) ? appLauncherButton.parentElement : null;
 
 }
 

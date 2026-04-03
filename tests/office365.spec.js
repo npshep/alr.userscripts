@@ -28,11 +28,14 @@ describe('moveapprail.js functions', () => {
         // create working space that will be reset at the end of each test
         workingSpace = document.createElement('div');
         document.body.appendChild(workingSpace);
-        
-        // app launcher
+
+        // app launcher (including the div container and button
         const appLauncher = document.createElement('div');
-        appLauncher.id = 'O365_MainLink_NavMenu';
+        appLauncher.className = 'I7Ynq';
         workingSpace.appendChild(appLauncher);
+        const appLauncherButton = document.createElement('button');
+        appLauncherButton.id = 'owaAppLauncherBtn_container';
+        appLauncher.appendChild(appLauncherButton);
 
         // header buttons
         const headerButtonsRegion = document.createElement('div');
@@ -96,8 +99,8 @@ describe('moveapprail.js functions', () => {
         const leftRail = document.getElementById("LeftRail");
         const mainModule = document.getElementById("MainModule");
         onDocumentMutation([{ addedNodes: [leftRail, mainModule] }]);
-    
-        // the default leftRail is draggable and unhidden 
+
+        // the default leftRail is draggable and unhidden
         expect(leftRail.draggable).toBeTrue();
         expect(leftRail.style.display).toBe('');
 
@@ -182,7 +185,7 @@ describe('moveapprail.js functions', () => {
         }
     });
 
-    
+
     it('fetchBottomRail (mail screen)', () => {
 
         // mock up the mail screen
@@ -190,7 +193,7 @@ describe('moveapprail.js functions', () => {
 
         // check that fetchBottomRail(false) returns no bottom rail
         expect(fetchBottomRail(false)).toBeNull();
- 
+
         // check that the bottom rail is created with all the correct properties
         const bottomRail = fetchBottomRail(true);
         expect(bottomRail).toBeTruthy();
@@ -203,13 +206,13 @@ describe('moveapprail.js functions', () => {
         expect(fetchBottomRail(true)).toBe(bottomRail);
 
     });
-    
-    
+
+
     it('fetchBottomRail (calendar screen)', () => {
 
         // set up the calendar screen
         mockCalendarScreen(workingSpace);
- 
+
         // check that the bottom rail is created with all the correct properties
         const bottomRail = fetchBottomRail(true);
         expect(bottomRail).toBeTruthy();
@@ -226,7 +229,7 @@ describe('moveapprail.js functions', () => {
 
     it('findAppLauncher', () => {
         const appLauncher = findAppLauncher();
-        expect(appLauncher.id).toBe('O365_MainLink_NavMenu');
+        expect(appLauncher.className).toBe('I7Ynq');
     });
 
 
@@ -475,7 +478,7 @@ describe('texteditorstatusbar.js', () => {
     beforeEach(() => {
         // clear persistent values
         GM_clearValues();
-        
+
         // create working space that will be reset at the end of each test
         workingSpace = document.createElement('div');
         document.body.appendChild(workingSpace);

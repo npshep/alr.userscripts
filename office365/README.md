@@ -40,7 +40,6 @@ Known Bugs
 
 `moveapprail.js`
 - the unpin action requires re-loading to take effect
-- dragging into the nine-dot menu doesn't work for outlook.cloud.microsoft
 
 `texteditorstatusbar.js`
 - when the cursor is at the end of the line, the first press of the enter
