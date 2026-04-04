@@ -99,7 +99,8 @@ describe('moveapprail.js', () => {
 
         it('responds to a page rebuild', () => {
 
-            // trigger a page rebuild
+            // put the app rail in its default position and trigger a page rebuild
+            setAppRailPosition('default');
             const leftRail = document.getElementById("LeftRail");
             const mainModule = document.getElementById("MainModule");
             onDocumentMutation([{ addedNodes: [leftRail, mainModule] }]);
@@ -286,7 +287,7 @@ describe('moveapprail.js', () => {
 
         });
 
-        it('returns null when the header buttosn don\'t exist', () => {
+        it('returns null when the header buttons don\'t exist', () => {
 
             document.getElementById('headerButtonsRegionId').remove();
             expect(findHeaderButtonsRegion()).toBeNull();
@@ -332,9 +333,21 @@ describe('moveapprail.js', () => {
     //
     describe('getAppRailPosition/setAppRailPosition', () => {
 
+        beforeEach(() => {
+
+            // clear saved app rail position
+            appRailPosition = null;
+            GM_clearValues();
+
+        });
+
         it('returns the default position on first call', () => {
 
-            expect(getAppRailPosition()).toBe(appRailConf);
+            if (appRailConf === 'saved') {
+                expect(getAppRailPosition()).toBe('default');
+            } else {
+                expect(getAppRailPosition()).toBe(appRailConf);
+            }
 
         });
 
@@ -343,8 +356,29 @@ describe('moveapprail.js', () => {
             // check valid values for appRailPosition
             for (const pos of [ 'default', 'header', 'footer', 'none' ]) {
                 setAppRailPosition(pos);
-                expect(GM_getValue('appRailPosition', null)).toBe(pos);
                 expect(getAppRailPosition()).toBe(pos);
+            }
+
+        });
+
+        it('respects appRailConf', () => {
+            // because appRailConf is a constant, we can only test whatever value
+            // it happens to be
+
+            if (appRailConf === 'saved') {
+                // when nothing is saved yet, the app rail should be in its default position
+                expect(getAppRailPosition()).toBe('default');
+
+                // move the app rail and check the position is saved
+                setAppRailPosition('footer');
+                expect(getAppRailPosition()).toBe('footer');
+                expect(GM_getValue('appRailPosition', 'default')).toBe('footer');
+
+            } else {
+
+                setAppRailPosition('footer');
+                expect(GM_getValue('appRailPosition', 'default')).toBe('default');
+
             }
 
         });

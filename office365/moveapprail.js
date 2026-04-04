@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-04-03
+// @version          2026-04-04
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -32,16 +32,17 @@
 //             headerButtonsConf configuration below
 // 'none'    - no app rail at all; drag the App Launcher into the header or
 //             footer to bring it back
+// 'saved'   - save the positon between sessions
 //
-// Dragging the app rail moves it to one of the other positions above. The
-// current position persists through the 'appRailPosition' value stored by
-// GM_setValue().
+// Dragging the app rail moves it to one of the other positions above. If
+// appRailConf is 'saved', the current position persists through the
+// 'appRailPosition' value stored by GM_setValue().
 //
 // headerButtonsConf sets which buttons remain in the header buttons region
 // when the app rail is in the header. The setting button is the only one that
 // I use, but feel free to re-enable any other buttons you find useful here.
 ///////////////////////////////////////////////////////////////////////////////
-const appRailConf = 'default';
+const appRailConf = 'saved';
 const headerButtonsConf = {
     'owaMeetNowButton_container': false,
     'teams_container': false,
@@ -297,9 +298,21 @@ function findLeftPanel() {
 
 
 // Get the app rail position ('default', 'header', 'footer', or 'none')
+let appRailPosition = null;
 function getAppRailPosition() {
 
-    return GM_getValue('appRailPosition', appRailConf);
+    if (appRailPosition == null) {
+        // initialise appRailPosition from appRailConf
+        appRailPosition = (appRailConf === 'saved') ? 'default' : appRailConf;
+    }
+
+    if (appRailConf === 'saved') {
+        // use the saved position, or 'default' if nothing has been saved
+        return GM_getValue('appRailPosition', 'default');
+    } else {
+        // use the position from the curent session
+        return appRailPosition;
+    }
 
 }
 
@@ -331,7 +344,12 @@ function setAppRailPosition(position) {
         case 'header':
         case 'footer':
         case 'none':
-            GM_setValue('appRailPosition', position);
+            // update the position for the current session
+            appRailPosition = position;
+            if (appRailConf === 'saved') {
+                // save the position for the next session
+                GM_setValue('appRailPosition', position);
+            }
             break;
 
         default:
