@@ -40,6 +40,9 @@ Known Bugs
 
 `moveapprail.js`
 - the unpin action requires re-loading to take effect
+- some possible changes to the Outlook application aren't logged (e.g. changes
+  to mainModule and the left rail) due to their disappearing and re-appearing
+  during page rebuilds
 
 `texteditorstatusbar.js`
 - when the cursor is at the end of the line, the first press of the enter

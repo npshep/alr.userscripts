@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-04-04
+// @version          2026-04-05
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -210,6 +210,8 @@ function onMainModuleMutation(mutations, observer) {
     if (appLauncher != null) {
         // when the app rail is invisible, dragging the app launcher brings it back
         makeDragDropRail(appLauncher, getAppRailPosition() === 'none');
+    } else {
+        logUnexpectedEvent("dom", "App launcher not found.");
     }
 
     // reconnect the document observer
@@ -241,7 +243,8 @@ function fetchBottomRail(create) {
         if (leftPanel != null) {
             leftPanel.appendChild(bottomRail);
         } else {
-            console.warn("Couldn't find a location for the bottom rail.");
+            logUnexpectedEvent("dom", "Couldn't find a location for the bottom rail.");
+            return null;
         }
     }
 
@@ -362,7 +365,7 @@ function setAppRailPosition(position) {
             break;
 
         default:
-            console.warn("Ignoring invalid setting for appRailPosition: " + position);
+            logUnexpectedEvent("conf", "Ignoring invalid setting for appRailPosition: " + position);
     }
 
 }
@@ -563,6 +566,8 @@ function removeHeaderButtons() {
             }
             child = next;
         }
+    } else {
+        logUnexpectedEvent("dom", "Header buttons region not found.");
     }
 
 }
@@ -575,5 +580,32 @@ function restoreHeaderButtons() {
         while (headerButtonsCollection.length > 0) {
             headerButtonsRegion.appendChild(headerButtonsCollection.shift());
         }
+    } else {
+        logUnexpectedEvent("dom", "Header buttons region not found.");
     }
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Log an unexpected configuration value or DOM structure. For now, we just
+// add a warning to the console.
+//
+// Input:
+//   source (String) - 'conf' for local configuration errors; 'dom' for unexpected DOM structure
+//   message (String) - a message describing the unexpected event
+///////////////////////////////////////////////////////////////////////////////
+function logUnexpectedEvent(source, message) {
+
+    let prefix = "logUnexpectedEvent called with invalid source";
+    switch (source) {
+        case 'conf':
+            prefix = "Configuration error";
+            break;
+
+        case 'dom':
+            prefix = "Possible DOM change";
+            break;
+    }
+    console.warn(prefix + ": " + message);
+
 }

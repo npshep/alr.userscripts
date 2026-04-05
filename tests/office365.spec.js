@@ -134,10 +134,14 @@ describe('moveapprail.js', () => {
     //
     describe('onMainModuleMutation', () => {
 
+        let unexpectedEventSpy;
         beforeEach(() => {
 
             // mock up the mail screen
             mockMailScreen(workingSpace);
+
+            // spy on unexpected events
+            unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
         });
 
         it('handles every position of the app rail', () => {
@@ -146,6 +150,7 @@ describe('moveapprail.js', () => {
                 // move the app rail to the new position
                 setAppRailPosition(pos);
                 onMainModuleMutation(null, null);
+                expect(unexpectedEventSpy).not.toHaveBeenCalled();
 
                 if (pos !== 'none') {
                     // check that the app rail is displayed and draggable
@@ -206,6 +211,15 @@ describe('moveapprail.js', () => {
             }
         });
 
+        it('logs an unexpected event when the app launcher is not found', () => {
+
+            const appLauncher = findAppLauncher();
+            appLauncher.remove();
+            onMainModuleMutation(null, null);
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+
+        });
+
     });
 
 
@@ -214,6 +228,14 @@ describe('moveapprail.js', () => {
     //
     describe('fetchBottomRail', () => {
 
+        let unexpectedEventSpy;
+        beforeEach(() => {
+
+            // spy on unexpected events
+            unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
+
+        });
+
         it('fetches the bottom rail on the mail screen', () => {
 
             // mock up the mail screen
@@ -221,9 +243,11 @@ describe('moveapprail.js', () => {
 
             // check that fetchBottomRail(false) returns no bottom rail
             expect(fetchBottomRail(false)).toBeNull();
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
 
             // check that the bottom rail is created with all the correct properties
             const bottomRail = fetchBottomRail(true);
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
             expect(bottomRail).toBeTruthy();
             expect(bottomRail.id).toBe('bottomRail');
             expect(bottomRail.style.display).toBe('flex');
@@ -239,9 +263,11 @@ describe('moveapprail.js', () => {
 
             // mock up the calendar screen
             mockCalendarScreen(workingSpace);
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
 
             // check that the bottom rail is created with all the correct properties
             const bottomRail = fetchBottomRail(true);
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
             expect(bottomRail).toBeTruthy();
             expect(bottomRail.id).toBe('bottomRail');
             expect(bottomRail.style.display).toBe('flex');
@@ -250,6 +276,19 @@ describe('moveapprail.js', () => {
             // check that a second call to fetchBottomRail returns the bottom rail created earlier
             expect(fetchBottomRail(false)).toBe(bottomRail);
             expect(fetchBottomRail(true)).toBe(bottomRail);
+
+        });
+
+        it('logs an unexpected event when no place for the rail can be found', () => {
+
+            // mock up the mail screen but remove the left panel
+            mockMailScreen(workingSpace);
+            findLeftPanel().remove();
+
+            // check that removing the panel results in an unexpected event
+            const bottomRail = fetchBottomRail(true);
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+            expect(bottomRail).toBeNull();
 
         });
 
@@ -353,10 +392,14 @@ describe('moveapprail.js', () => {
 
         it('handles all valid values for appRailPosition', () => {
 
+            // spy on the unexpected event handler
+            const unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
+
             // check valid values for appRailPosition
             for (const pos of [ 'default', 'header', 'footer', 'none' ]) {
                 setAppRailPosition(pos);
                 expect(getAppRailPosition()).toBe(pos);
+                expect(unexpectedEventSpy).not.toHaveBeenCalled();
             }
 
         });
@@ -385,9 +428,13 @@ describe('moveapprail.js', () => {
 
         it('rejects invalid values for appRailPosition', () => {
 
+            // spy on the unexpected event handler
+            const unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
+
             const oldValue = getAppRailPosition();
             setAppRailPosition('invalid');
             expect(getAppRailPosition()).toBe(oldValue);
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
 
         });
 
@@ -426,6 +473,37 @@ describe('moveapprail.js', () => {
 
             setAppRailPosition('default');
             expect(getAppRailRegion().id).toBe('LeftRail');
+        });
+
+    });
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // logUnexpectedEvent
+    //
+    describe('logUnexpectedEvent', () => {
+
+        let consoleSpy;
+
+        beforeEach(() => {
+            // spy on console.warn()
+            consoleSpy = new spyOn(console, 'warn');
+        });
+
+        it('valid source identifiers invoke console.warn()', () => {
+
+            logUnexpectedEvent("conf", "Conf error.");
+            expect(consoleSpy).toHaveBeenCalledWith("Configuration error: Conf error.");
+            logUnexpectedEvent("dom", "DOM error.");
+            expect(consoleSpy).toHaveBeenCalledWith("Possible DOM change: DOM error.");
+
+        });
+
+        it('invalid source identifiers report an error', () => {
+
+            logUnexpectedEvent("invalid", "Invalid source.");
+            expect(consoleSpy).toHaveBeenCalledWith("logUnexpectedEvent called with invalid source: Invalid source.");
+
         });
 
     });
@@ -591,6 +669,7 @@ describe('moveapprail.js', () => {
     describe('removeHeaderButtons/restoreHeaderButtons', () => {
 
         let headerButtonsRegion;
+        let unexpectedEventSpy;
         beforeEach(() => {
 
             headerButtonsRegion = findHeaderButtonsRegion();
@@ -610,6 +689,9 @@ describe('moveapprail.js', () => {
             button3.className = '___77lcry0';
             headerButtonsRegion.appendChild(button3);
 
+            // spy on the unexpected event handler
+            unexpectedEventSpy = spyOn(this, 'logUnexpectedEvent');
+
         });
 
         it('removes and restores header buttons', () => {
@@ -621,10 +703,25 @@ describe('moveapprail.js', () => {
             removeHeaderButtons();
             expect(headerButtonsCollection.find(x => x.id === 'owaMeetNowButton_container')).toBeTruthy();
             expect(headerButtonsRegion.querySelector('.___77lcry0')).toBeNull();
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
 
             // restore buttons and check that button1 returns
             restoreHeaderButtons();
             expect(headerButtonsRegion.querySelector('#owaMeetNowButton_container')).toBeTruthy();
+            expect(unexpectedEventSpy).not.toHaveBeenCalled();
+        });
+
+        it('logs an unexpected event when no header region is found', () => {
+
+            headerButtonsRegion.remove();
+
+            removeHeaderButtons();
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+
+            unexpectedEventSpy.calls.reset();
+            restoreHeaderButtons();
+            expect(unexpectedEventSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+
         });
 
     });
