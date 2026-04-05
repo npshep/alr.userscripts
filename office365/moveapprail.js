@@ -297,8 +297,18 @@ function findLeftPanel() {
 }
 
 
-// Get the app rail position ('default', 'header', 'footer', or 'none')
-let appRailPosition = null;
+///////////////////////////////////////////////////////////////////////////////
+// Get and set the app rail position.
+//
+// The appRailPosition stores the current location of the app rail, which may
+// be one of 'default', 'header', 'footer', or 'none'. If appRailConf is
+// 'saved', this value is also saved to the appRailPosition value by
+// GM_setValue(); otherwise appRailPosition is reset from appRailConf on every
+// page load.
+///////////////////////////////////////////////////////////////////////////////
+var appRailPosition = null;
+
+// Get the current app rail position (the string code 'default', etc.)
 function getAppRailPosition() {
 
     if (appRailPosition == null) {
@@ -329,12 +339,11 @@ function getAppRailRegion() {
        case 'none':
            return null;
 
-        default:
+       default:
             return document.getElementById("LeftRail");
     }
 
 }
-
 
 // Set the app rail position
 function setAppRailPosition(position) {
