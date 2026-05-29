@@ -127,7 +127,7 @@ const siteConf = {
 };
 
 // separator used for building compound GM_setValue() keys
-const storageKeySeparator = '*';
+const storageKeySeparator = '**';
 
 
 (function() {
@@ -495,7 +495,7 @@ function storageKeyBare(sk) {
 
     const pos = sk.indexOf(storageKeySeparator);
     if (pos != -1) {
-        return sk.substring(pos + 1);
+        return sk.substring(pos + storageKeySeparator.length);
     } else {
         return sk;
     }
