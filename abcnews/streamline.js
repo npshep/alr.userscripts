@@ -121,7 +121,24 @@ const siteConf = {
     //
     article: {
 
-        // TODO
+        // "In short" summary at the top of the article
+        '.ArticleSummary_summary__Zf0LG': 'hidden',
+
+        // "Top Stories" - the first is the sidebar; the second is panel at the bottom
+        'Top Stories': 'hidden',
+        '.TopStories_container__G_Fb1': 'hidden',
+
+        // "Related stories" sidebar
+        '#Related stories': 'compressed',
+
+        // "Popular now" sidebar
+        'Popular now': 'hidden',
+
+        // "Share your view" form at the bottom of the article
+        '.ZendeskForm_zendeskForm__5eLgR': 'hidden',
+
+        // the marketing banner at the end of the article (usually for ABC iView)
+        '.ArticleWeb_marketingBanner__WEtHh': 'hidden'
 
     }
 };
