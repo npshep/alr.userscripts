@@ -87,7 +87,7 @@ describe('streamline.js', () => {
                 '.testClass': 'expanded',
                 'Test Heading': 'compressed'
             };
-            applyConfiguration(mockConfNoSave);
+            applyConfiguration("test", mockConfNoSave);
             expect(applyRendererSpy).toHaveBeenCalledTimes(2);
             expect(applyRendererSpy).not.toHaveBeenCalledWith('#testElement', jasmine.any(Function));
             expect(applyRendererSpy).toHaveBeenCalledWith('.testClass', jasmine.any(Function));
@@ -98,23 +98,23 @@ describe('streamline.js', () => {
         });
 
         it('applies configuration with saving', () => {
-            GM_setValue('.testClass', 'compressed');
+            GM_setValue(storageKey('test', '.testClass'), 'compressed');
             const mockConfWithSave = {
                 '#testElement': 'hidden',
                 '.testClass': 'saved',
                 'Test Heading': 'saved'
             };
-            applyConfiguration(mockConfWithSave);
+            applyConfiguration("test", mockConfWithSave);
             expect(applyRendererSpy).toHaveBeenCalledTimes(3);
             expect(renderHiddenSpy).toHaveBeenCalledWith(elementById);
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, '.testClass');
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, 'Test Heading');
+            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, storageKey('test', '.testClass'));
+            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, storageKey('test', 'Test Heading'));
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
         it('logs an unexpected event for an invalid configuration value', () => {
             const mockConfBadValue = { '#testElement': 'badValue' };
-            applyConfiguration(mockConfBadValue);
+            applyConfiguration("test", mockConfBadValue);
             expect(applyRendererSpy).not.toHaveBeenCalled();
             expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
         });
@@ -212,27 +212,32 @@ describe('streamline.js', () => {
         beforeEach(() => {
 
             // mock some stored values
-            GM_setValue('savedExpanded', 'expanded');
-            GM_setValue('savedCompressed', 'compressed');
-            GM_setValue('unsavedExpanded', 'expanded');
-            GM_setValue('unsavedCompressed', 'compressed');
+            GM_setValue(storageKey('article', 'savedExpanded'), 'expanded');
+            GM_setValue(storageKey('article', 'savedCompressed'), 'compressed');
+            GM_setValue(storageKey('article', 'unsavedCompressed'), 'compressed');
+            GM_setValue(storageKey('home', 'unsavedExpanded'), 'expanded');
+            GM_setValue(storageKey('home', 'unsavedCompressed'), 'compressed');
+            GM_setValue(storageKey('home', 'savedCompressed'), 'compressed');
             GM_setValue('deprecatedComponent', 'compressed');
 
-            // clean the stored values
-            cleanStoredValues(mockConf);
         });
 
         it('does not remove configuration for saved components', () => {
-            expect(GM_getValue('savedExpanded', null)).toBe('expanded');
-            expect(GM_getValue('savedCompressed', null)).toBe('compressed');
+            cleanStoredValues('article', mockConf);
+            expect(GM_getValue(storageKey('article', 'savedExpanded'), null)).toBe('expanded');
+            expect(GM_getValue(storageKey('article', 'savedCompressed'), null)).toBe('compressed');
+            expect(GM_getValue(storageKey('home', 'savedCompressed'), null)).toBe('compressed');
         });
 
         it('removes configuration for no-longer-saved components', () => {
-            expect(GM_getValue('unsavedExpanded', null)).toBeNull();
-            expect(GM_getValue('unsavedCompressed', null)).toBeNull();
+            cleanStoredValues('home', mockConf);
+            expect(GM_getValue(storageKey('home', 'unsavedExpanded'), null)).toBeNull();
+            expect(GM_getValue(storageKey('home', 'unsavedCompressed'), null)).toBeNull();
+            expect(GM_getValue(storageKey('article', 'unsavedCompressed'), null)).toBe('compressed');
         });
 
         it('removes configuration for deprecated components', () => {
+            cleanStoredValues('home', mockConf);
             expect(GM_getValue('deprecatedComponent', null)).toBeNull();
         });
 
@@ -268,6 +273,35 @@ describe('streamline.js', () => {
             const testElement = document.getElementById('testElement');
             const nullRailRoot = findRailRoot(testElement);
             expect(nullRailRoot).toBeNull();
+        });
+
+    });
+
+    describe('getPageType', () => {
+
+        it('recognises the home page', () => {
+
+            expect(getPageType('https://www.abc.net.au/')).toBe('home');
+
+        });
+
+        it('recognises an article page', () => {
+
+            expect(getPageType('https://www.abc.net.au/news/2026-05-27/article-title/number')).toBe('article');
+
+        });
+
+        it('recognises unit testing', () => {
+
+            expect(getPageType('file:///home/alittler/src/alr.userscripts/spec.html')).toBe('test');
+
+        });
+
+        it('returns null for unrecognised pages', () => {
+
+            expect(getPageType('https://www.abc.net.au/news/politics')).toBeNull();
+            expect(getPageType('https://www.alittleresearch.com.au')).toBeNull();
+
         });
 
     });
@@ -439,6 +473,46 @@ describe('streamline.js', () => {
             expect(railRoot.style.display).toBe('none');
             expect(railContainer.style.display).not.toBe('none');
             expect(railChild.style.display).not.toBe('none');
+        });
+
+    });
+
+    describe('storageKey', () => {
+
+        it('constructs and deconstructs storage keys', () => {
+
+            const sk = storageKey('cat', 'dog');
+            expect(storageKeyCategory(sk)).toBe('cat');
+            expect(storageKeyBare(sk)).toBe('dog');
+
+        });
+
+        it('handles keys containing the separator', () => {
+
+            const sk = storageKey('cat', 'dog*');
+            expect(storageKeyCategory(sk)).toBe('cat');
+            expect(storageKeyBare(sk)).toBe('dog*');
+
+        });
+
+        it('handles keys containing CSS selectors', () => {
+
+            const sk1 = storageKey('cat', '.dog');
+            expect(storageKeyCategory(sk1)).toBe('cat');
+            expect(storageKeyBare(sk1)).toBe('.dog');
+
+            const sk2 = storageKey('cat', '#dog');
+            expect(storageKeyCategory(sk2)).toBe('cat');
+            expect(storageKeyBare(sk2)).toBe('#dog');
+
+        });
+
+        it('deconstucts deprecated keys', () => {
+
+            const sk = '.deprecated_key';
+            expect(storageKeyCategory(sk)).toBeNull();
+            expect(storageKeyBare(sk)).toBe(sk);
+
         });
 
     });

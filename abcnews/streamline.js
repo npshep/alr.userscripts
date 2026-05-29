@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-25
+// @version          2026-05-29
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
 // @contributionURL  https://ko-fi.com/npsheppard
 // @match            https://www.abc.net.au
-// @match            https://www.abc.net.au/news
+// @match            https://www.abc.net.au/news/*
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant            GM_deleteValue
 // @grant            GM_getValue
@@ -47,91 +47,109 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 const siteConf = {
-    // Top Stories
-    '#topStories': 'default',
 
-    // State Top Storeis
-    '#stateTopStories': 'default',
+    //
+    // Components appearing on the home page, https://www.abc.net.au
+    //
+    home: {
 
-    // the fixed copy of Just In that appears at the top right)
-    '#justIn': 'default',
+        // Top Stories
+        '#topStories': 'default',
 
-    // Dive Deeper (formerly called Today's Topics)
-    '#todaysTopics': 'expanded',
+        // State Top Stories
+        '#stateTopStories': 'default',
 
-    // Story Feeds
-    'Story Feeds': 'compressed',
+        // the fixed copy of Just In that appears at the top right)
+        '#justIn': 'default',
 
-    // For You
-    'For You': 'compressed',
+        // Dive Deeper (formerly called Today's Topics)
+        '#todaysTopics': 'expanded',
 
-    // Local News
-    '#localNews': 'default',
+        // Story Feeds
+        'Story Feeds': 'compressed',
 
-    // Video Shorts
-    '#videoShorts': 'compressed',
+        // For You
+        'For You': 'compressed',
 
-    // More News
-    '#moreNews': 'expanded',
+        // Local News
+        '#localNews': 'default',
 
-    // Everyone's Talking About...
-    '#theBigPicture': 'compressed',
+        // Video Shorts
+        '#videoShorts': 'compressed',
 
-    // Around Australia
-    '#aroundAustralia': 'saved',
+        // More News
+        '#moreNews': 'expanded',
 
-    // Politics
-    '#politics': 'saved',
+        // Everyone's Talking About...
+        '#theBigPicture': 'compressed',
 
-    // World
-    '#world': 'saved',
+        // Around Australia
+        '#aroundAustralia': 'saved',
 
-    // Business
-    '#business': 'saved',
+        // Politics
+        '#politics': 'saved',
 
-    // Sport
-    '#sport': 'saved',
+        // World
+        '#world': 'saved',
 
-    // Lifestyle
-    '#lifestyle': 'saved',
+        // Business
+        '#business': 'saved',
 
-    // Entertainment
-    '#entertainment': 'saved',
+        // Sport
+        '#sport': 'saved',
 
-    // the floating copy of Just In that sticks to the right when scrolling done
-    '.Home_justin__mnv4y Home_justinSticky__A9Hqa': 'hidden',
+        // Lifestyle
+        '#lifestyle': 'saved',
 
-    // marketing banners (usually promoting ABC iView)
-    '.Home_marketingBannerMain__zEIHT': 'hidden',
-    '.Home_marketingBannerMobile__u2kCT': 'hidden',
-    '.Home_marketingBannerSidebar__L7di0': 'hidden',
+        // Entertainment
+        '#entertainment': 'saved',
 
-    // the category headings that appear above each story
-    '.Tag_container__7_5W6': 'default'
+        // the floating copy of Just In that sticks to the right when scrolling done
+        '.Home_justin__mnv4y Home_justinSticky__A9Hqa': 'hidden',
+
+        // marketing banners (usually promoting ABC iView)
+        '.Home_marketingBannerMain__zEIHT': 'hidden',
+        '.Home_marketingBannerMobile__u2kCT': 'hidden',
+        '.Home_marketingBannerSidebar__L7di0': 'hidden',
+
+        // the category headings that appear above each story
+        '.Tag_container__7_5W6': 'default'
+    },
+
+    //
+    // Components appearing on article pages, https://www.abc.net.au/news/YYYY-DD-MM/*
+    //
+    article: {
+
+        // TODO
+
+    }
 };
+
+// separator used for building compound GM_setValue() keys
+const storageKeySeparator = '*';
 
 
 (function() {
     'use strict';
 
-    // if the location is a file, we're executing unit tests, so suppress the main function
-    if (!window.location.href.startsWith('file://')) {
-        // check for unused configuration values
-        cleanStoredValues(siteConf);
-
-        // apply site configuration
-        applyConfiguration(siteConf);
-    };
+    // check the page type and apply corresponding configuration
+    const pageType = getPageType(window.location.href);
+    if (pageType != null && pageType != 'test') {
+        cleanStoredValues(pageType, siteConf[pageType]);
+        applyConfiguration(pageType, siteConf[pageType]);
+    }
 
 })();
 
 
-// Configure the ABC News web site. See the comment above siteConf for the
+// Configure the current page. See the comment above siteConf for the
 // format of component identifiers and display states
 //
 // Input:
+//   category (String) - the configuration category, "home" or "article"
 //   conf (Object) - an array of component identifiers mapped to display states
-function applyConfiguration(conf) {
+function applyConfiguration(category, conf) {
 
     for (const key of Object.keys(conf)) {
 
@@ -139,8 +157,8 @@ function applyConfiguration(conf) {
         let componentSaveKey = null;
         if (componentConf === 'saved') {
             // restore saved value, defaulting to 'expanded'
-            componentConf = GM_getValue(key, 'expanded');
-            componentSaveKey = key;
+            componentSaveKey = storageKey(category, key);
+            componentConf = GM_getValue(componentSaveKey, 'expanded');
         }
 
         switch (componentConf) {
@@ -230,12 +248,20 @@ function applyRenderer(key, render) {
 // configuration was previously 'saved' but is now fixed in siteConf.
 //
 // Input:
+//   category (String) - the configuration category, "home" or "article"
 //   conf (Object) - an array of component identifiers mapped to display states
-function cleanStoredValues(conf) {
+function cleanStoredValues(category, conf) {
 
-    for (const key of GM_listValues()) {
-        if (!(key in conf) || conf[key] !== 'saved') {
-            GM_deleteValue(key);
+    for (const storageKey of GM_listValues()) {
+        const storageCategory = storageKeyCategory(storageKey);
+        if (storageCategory != "home" && storageCategory != "article") {
+            // deprecated key from pre-2026 version
+            GM_deleteValue(storageKey);
+        } else if (storageCategory === category) {
+            const confKey = storageKeyBare(storageKey);
+            if (!(confKey in conf) || conf[confKey] !== 'saved') {
+                GM_deleteValue(storageKey);
+            }
         }
     }
 
@@ -268,6 +294,28 @@ function findRailRoot(element) {
     }
 
     return railRootElement;
+
+}
+
+
+// Get the type of page corresponding to a URL.
+//
+// Input:
+//  url (String) - the page URL
+//
+// Returns: "home" for the home page; "article" for an article; "test" for unit tests
+//    null if the URL is not one recognises by this script
+function getPageType(url) {
+
+    if (url === "https://www.abc.net.au/") {
+        return "home";
+    } else if (url.search(/^https:\/\/www\.abc\.net\.au\/news\/\d\d\d\d-\d\d-\d\d/) != -1) {
+        return "article";
+    } else if (url.startsWith("file://")) {
+        return "test";
+    }
+
+    return null;
 
 }
 
@@ -415,5 +463,41 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
 function renderHidden(element) {
 
     element.style.display = "none";
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Storage key functions.
+//
+// Configuration keys have the format 'category*key' where 'category' is the
+// page type and 'key' is the element identifier used in the siteConf structure.
+//
+////////////////////////////////////////////////////////////////////////////////
+function storageKey(category, key) {
+
+    return category + storageKeySeparator + key;
+
+}
+
+function storageKeyCategory(sk) {
+
+    const pos = sk.indexOf(storageKeySeparator);
+    if (pos != -1) {
+        return sk.substring(0, pos);
+    } else {
+        return null;
+    }
+
+}
+
+function storageKeyBare(sk) {
+
+    const pos = sk.indexOf(storageKeySeparator);
+    if (pos != -1) {
+        return sk.substring(pos + 1);
+    } else {
+        return sk;
+    }
 
 }
