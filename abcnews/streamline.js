@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-05-29
+// @version          2026-06-04
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -125,17 +125,17 @@ const siteConf = {
         '.ArticleSummary_summary__Zf0LG': 'hidden',
 
         // "Top Stories" - the first is the sidebar; the second is panel at the bottom
-        'Top Stories': 'hidden',
-        '.TopStories_container__G_Fb1': 'hidden',
+        'Top Stories': 'compressed',
+        '.TopStories_container__G_Fb1': 'compressed',
 
         // "Related stories" sidebar
         '#Related stories': 'compressed',
 
         // "Popular now" sidebar
-        'Popular now': 'hidden',
+        'Popular now': 'compressed',
 
         // "Share your view" form at the bottom of the article
-        '.ZendeskForm_zendeskForm__5eLgR': 'hidden',
+        '.ZendeskForm_zendeskForm__5eLgR': 'compressed',
 
         // the marketing banner at the end of the article (usually for ABC iView)
         '.ArticleWeb_marketingBanner__WEtHh': 'hidden'
@@ -407,7 +407,7 @@ function onClickExpandable(headerElement, contentElement, saveKey = null) {
 //         <button title="Move left"><svg .../></button>
 //         <button title="Move right"><svg .../></button>
 //       </div>
-//       <div class="Rail_content__xxxxx">
+//       <div class="Rail_content__xxxxx"> or <div class="Grid_row__xxxx">
 //         <ul .../>
 //       </div>
 //     </div>
@@ -440,6 +440,10 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
             } else if (railChild.className.startsWith("Rail_scollNavigation__")) {
                 railNavigationElement = railChild;
             } else if (railChild.className.startsWith("Rail_content__")) {
+                // main page uses Rail_content__xxxxx
+                railContentElement = railChild;
+            } else if (railChild.className.startsWith("Grid_row__")) {
+                // sidebars use Grid_row__xxxxx
                 railContentElement = railChild;
             }
         }

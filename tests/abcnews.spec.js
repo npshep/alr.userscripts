@@ -39,18 +39,22 @@ describe('streamline.js', () => {
         }
 
         // element identified by H2 heading test
-        const headingContainer = mockRailElement('testHeadingContainer', 'abc123', 'Test Heading');
+        const headingContainer = mockRailElement('testHeadingContainer', 'abc123', 'Test Heading', false);
         workingSpace.appendChild(headingContainer);
 
-        // mock rail element
-        const railContainer = mockRailElement('railContainer', 'abc123');
+        // mock in-body rail element
+        const railContainer = mockRailElement('railContainer', 'abc123', 'In-body rail', false);
         workingSpace.appendChild(railContainer);
+
+        // mock sidebar rail element
+        const railSidebar = mockRailElement('railSidebar', 'abc123', 'Sidebar Rail', true);
+        workingSpace.appendChild(railSidebar);
 
     });
 
 
     afterEach(() => {
-        // remove the working space and spy
+        // remove the working space
         document.body.removeChild(workingSpace);
     });
 
@@ -379,60 +383,78 @@ describe('streamline.js', () => {
 
     describe('renderExpandable', () => {
 
-        let root;
-        let header;
-        let content;
+        let expandableElements;
         let errorSpy;
-
         beforeEach(() => {
-            // get references to the test elements
-            root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-            header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
-            content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
+
+            // build a list of expandable elements of different types
+            expandableElements = [];
+
+            // in-body rail element
+            expandableElements.push({
+                root: workingSpace.querySelector('#railContainer > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
+            });
+
+            // sidebar rail element
+            expandableElements.push({
+                root: workingSpace.querySelector('#railSidebar > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railSidebar .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railSidebar .Grid_row__abc123')
+            });
 
             // spy on the error handler
             errorSpy = spyOn(this, 'logUnexpectedEvent');
         });
 
         it('content is visible when startCompressed is not supplied', () => {
-            renderExpandable(root);
-            expect(content.style.display).not.toBe('none');
+            for (const e of expandableElements) {
+                renderExpandable(e.root);
+                expect(e.content.style.display).not.toBe('none');
+            }
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
         it('content is visible and cursor is zoom-out when startCompressed is false', () => {
-            renderExpandable(root, false);
-            expect(content.style.display).not.toBe('none');
-            expect(header.style.cursor).toBe('zoom-out');
+            for (const e of expandableElements) {
+                renderExpandable(e.root, false);
+                expect(e.content.style.display).not.toBe('none');
+                expect(e.header.style.cursor).toBe('zoom-out');
+            }
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
         it ('content is compressed and cursor is zoom-in when startCompressed is true', () => {
-            renderExpandable(root, true);
-            expect(content.style.display).toBe('none');
-            expect(header.style.cursor).toBe('zoom-in');
+            for (const e of expandableElements) {
+                renderExpandable(e.root, true);
+                expect(e.content.style.display).toBe('none');
+                expect(e.header.style.cursor).toBe('zoom-in');
+            }
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
         it('clicking invokes onClickExpandable with correct arguments', () => {
+            const e = expandableElements[0];
             const clickSpy = spyOn(this, 'onClickExpandable');
-            renderExpandable(root, true);
-            header.click();
+            renderExpandable(e.root, true);
+            e.header.click();
             expect(clickSpy).toHaveBeenCalledTimes(1);
-            expect(clickSpy).toHaveBeenCalledWith(header, content, null);
-            renderExpandable(root, true, 'testExpandable');
-            header.click();
+            expect(clickSpy).toHaveBeenCalledWith(e.header, e.content, null);
+            renderExpandable(e.root, true, 'testExpandable');
+            e.header.click();
             expect(clickSpy).toHaveBeenCalledTimes(2);
-            expect(clickSpy).toHaveBeenCalledWith(header, content, 'testExpandable');
+            expect(clickSpy).toHaveBeenCalledWith(e.header, e.content, 'testExpandable');
         });
 
         it('mouseover sets header background; mouseout resets it', () => {
-            renderExpandable(root, false);
-            const originalBackgroundColor = header.style.backgroundColor;
-            header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-            expect(header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
-            header.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-            expect(header.style.backgroundColor).toBe(originalBackgroundColor);
+            const e = expandableElements[0];
+            renderExpandable(e.root, false);
+            const originalBackgroundColor = e.header.style.backgroundColor;
+            e.header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+            expect(e.header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
+            e.header.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+            expect(e.header.style.backgroundColor).toBe(originalBackgroundColor);
         });
 
         it('logs an unexpected event for an element with no rail root', () => {
@@ -442,14 +464,16 @@ describe('streamline.js', () => {
         });
 
         it('logs an unexpected event for a rail element with no content', () => {
-            content.remove();
-            renderExpandable(root, false);
+            const e = expandableElements[0];
+            e.content.remove();
+            renderExpandable(e.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
         it('log an unexpected event for a rail element with no header', () => {
-            header.remove();
-            renderExpandable(root, false);
+            const e = expandableElements[0];
+            e.header.remove();
+            renderExpandable(e.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
@@ -527,9 +551,10 @@ describe('streamline.js', () => {
 //   id (string) - an id for the containing div
 //   nonce (string) - an arbitrary string to append to class names
 //   title (string) - the text content of the header
+//   sidebar (boolean) - true to use sidebar style; false to use in-text style
 //
 // Returns: a div containing a rail element in the format used by the ABC site
-function mockRailElement(id, nonce, title = null) {
+function mockRailElement(id, nonce, title, sidebar = false) {
 
     // containing div
     const container = document.createElement('div');
@@ -550,14 +575,18 @@ function mockRailElement(id, nonce, title = null) {
         header.append(headerContent);
     }
 
-    // scrolling window
-    const navigation = document.createElement('div');
-    navigation.className = 'Rail_scollNavigation__' + nonce;
-    root.appendChild(navigation);
+    if (!sidebar) {
+        // scrolling window
+        const navigation = document.createElement('div');
+        navigation.className = 'Rail_scollNavigation__' + nonce;
+        root.appendChild(navigation);
+    }
 
     // content
     const content = document.createElement('div');
-    content.className = 'Rail_content__' + nonce;
+    content.className = (sidebar) ?
+        'Grid_row__' + nonce :
+        'Rail_content__' + nonce;
     root.appendChild(content);
 
     return container;
