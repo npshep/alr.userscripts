@@ -50,6 +50,15 @@ describe('streamline.js', () => {
         const railSidebar = mockRailElement('railSidebar', 'abc123', 'Sidebar Rail', true);
         workingSpace.appendChild(railSidebar);
 
+        // mock article summary
+        const articleSummary = document.createElement('div');
+        articleSummary.id = 'articleSummary';
+        articleSummary.innerHTML = '<div class="ArticleSummary_summary__abc123">' +
+            '<div class="Article_main__abc123">' + '<h2>In Short</h2>' +
+            '<p>Paragraph 1</p><p>Paragraph 2</p><p>Paragraph 3</p>' +
+            '</div></div>';
+        workingSpace.appendChild(articleSummary);
+
     });
 
 
@@ -196,7 +205,7 @@ describe('streamline.js', () => {
         });
 
         it('logs an unexpected event for a missing rail root', () => {
-            findRailRoot(elementByHeading).remove();
+            elementByHeading.remove();
             applyRenderer('Test Heading', mockRender);
             expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
         });
@@ -243,40 +252,6 @@ describe('streamline.js', () => {
         it('removes configuration for deprecated components', () => {
             cleanStoredValues('home', mockConf);
             expect(GM_getValue('deprecatedComponent', null)).toBeNull();
-        });
-
-    });
-
-    describe('findRailRoot', () => {
-
-        let railRoot;
-
-        beforeEach(() => {
-            // get a reference to the expected rail root
-            railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-        });
-
-        it('finds roots passed directly', () => {
-            const trivialRailRoot = findRailRoot(railRoot);
-            expect(trivialRailRoot).toBe(railRoot);
-        });
-
-        it('searches downwards for the rail root', () => {
-            const railContainer = document.getElementById('railContainer');
-            const downwardsRailRoot = findRailRoot(railContainer);
-            expect(downwardsRailRoot).toBe(railRoot);
-        });
-
-        it('searches upwards for the rail root', () => {
-            const railChild = railRoot.firstElementChild;
-            const upwardsRailRoot = findRailRoot(railChild);
-            expect(upwardsRailRoot).toBe(railRoot);
-        });
-
-        it('returns null when no rail root exists in the tree', () => {
-            const testElement = document.getElementById('testElement');
-            const nullRailRoot = findRailRoot(testElement);
-            expect(nullRailRoot).toBeNull();
         });
 
     });
@@ -333,49 +308,141 @@ describe('streamline.js', () => {
 
     });
 
-    describe('onClickExpandable', () => {
+    describe('mapExpandableComponent', () => {
 
-        let root;
-        let header;
-        let content;
-
+        let expandableComponents;
         beforeEach(() => {
 
-            // get references to the test elements
-            root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-            header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
-            content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
+            // get references to the known expandable components
+            expandableComponents = [];
+
+            // in-body rail component
+            expandableComponents.push({
+                container: document.getElementById('railContainer'),
+                root: workingSpace.querySelector('#railContainer > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
+            });
+
+            // sidebar rail component
+            expandableComponents.push({
+                container: document.getElementById('railSidebar'),
+                root: workingSpace.querySelector('#railSidebar > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railSidebar .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railSidebar .Grid_row__abc123')
+             });
+
+             // article summary
+             expandableComponents.push({
+                container: document.getElementById('articleSummary'),
+                root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
+                header: workingSpace.querySelector('#articleSummary h2'),
+                content: workingSpace.querySelectorAll('#articleSummary p')
+            });
+
+        });
+
+        it('finds roots passed directly', () => {
+            for (const c of expandableComponents) {
+                const parts = mapExpandableComponent(c.root);
+                expect(parts.root).toBe(c.root);
+            }
+        });
+
+        it('searches downwards for the component root', () => {
+            for (const c of expandableComponents) {
+                const parts = mapExpandableComponent(c.container);
+                expect(parts.root).toBe(c.root);
+            }
+        });
+
+        it('searches upwards for the component root', () => {
+            for (const c of expandableComponents) {
+                const parts = mapExpandableComponent(c.root.firstElementChild);
+                expect(parts.root).toBe(c.root);
+            }
+        });
+
+        it('returns null when no rail component root exists in the tree', () => {
+            const testElement = document.getElementById('testElement');
+            expect(mapExpandableComponent(testElement)).toBeNull();
+        });
+
+        it('correctly maps the root, header, and content', () => {
+            for (const c of expandableComponents) {
+                const parts = mapExpandableComponent(c.container);
+                expect(parts.root).toBe(c.root);
+                expect(parts.header).toBe(c.header);
+                expect(parts.content).toEqual(c.content);
+            }
+        });
+    });
+
+    describe('onClickExpandable', () => {
+
+        let parts;
+        beforeEach(() => {
+
+            // get references to some test elements
+            parts = {
+                root: workingSpace.querySelector('#railContainer > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
+            };
 
         });
 
         it('clicking on the default header hides content and makes the cursor zoom-in, without saving', () => {
-            onClickExpandable(header, content, null);
-            expect(content.style.display).toBe('none');
-            expect(header.style.cursor).toBe('zoom-in');
+            onClickExpandable(parts.header, parts.content, null);
+            expect(parts.content.style.display).toBe('none');
+            expect(parts.header.style.cursor).toBe('zoom-in');
             expect(GM_getValue('testExpandable', null)).toBeNull();
         });
 
         it('clicking on a compressed header makes content visible and cursor zoom-out', () => {
-            onClickExpandable(header, content, null); // compresses the element
-            onClickExpandable(header, content, null); // expands it again
-            expect(content.style.display).toBe('block');
-            expect(header.style.cursor).toBe('zoom-out');
+            onClickExpandable(parts.header, parts.content, null); // compresses the element
+            onClickExpandable(parts.header, parts.content, null); // expands it again
+            expect(parts.content.style.display).toBe('block');
+            expect(parts.header.style.cursor).toBe('zoom-out');
             expect(GM_getValue('testExpandable', null)).toBeNull();
         });
 
         it('clicking on an expanded header hides the content, with saving', () => {
-            onClickExpandable(header, content, 'testExpandable');
-            expect(content.style.display).toBe('none');
-            expect(header.style.cursor).toBe('zoom-in');
+            onClickExpandable(parts.header, parts.content, 'testExpandable');
+            expect(parts.content.style.display).toBe('none');
+            expect(parts.header.style.cursor).toBe('zoom-in');
             expect(GM_getValue('testExpandable', null)).toBe('compressed');
         });
 
         it('clicking on a compressed header makes the content visible, with saving', () => {
-            onClickExpandable(header, content, 'testExpandable'); // compresses the element
-            onClickExpandable(header, content, 'testExpandable'); // expands it again
-            expect(content.style.display).toBe('block');
-            expect(header.style.cursor).toBe('zoom-out');
+            onClickExpandable(parts.header, parts.content, 'testExpandable'); // compresses the element
+            onClickExpandable(parts.header, parts.content, 'testExpandable'); // expands it again
+            expect(parts.content.style.display).toBe('block');
+            expect(parts.header.style.cursor).toBe('zoom-out');
             expect(GM_getValue('testExpandable', null)).toBe('expanded');
+        });
+
+        it('handles multiple content elements', () => {
+            // use the article summary, which has multiple paragraphs
+            const summary = {
+               root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
+               header: workingSpace.querySelector('#articleSummary h2'),
+               content: workingSpace.querySelectorAll('#articleSummary p')
+           }
+
+           // compress expanded component
+           onClickExpandable(summary.header, summary.content, null);
+           for (let i = 0; i < summary.content.length; i++) {
+               expect(summary.content[i].style.display).toBe('none');
+           }
+           expect(summary.header.style.cursor).toBe('zoom-in');
+
+           // expand compressed component
+           onClickExpandable(summary.header, summary.content, null);
+           for (let i = 0; i < summary.content.length; i++) {
+               expect(summary.content[i].style.display).toBe('block');
+           }
+           expect(summary.header.style.cursor).toBe('zoom-out');
         });
 
     });
@@ -383,97 +450,111 @@ describe('streamline.js', () => {
 
     describe('renderExpandable', () => {
 
-        let expandableElements;
+        let parts;
+        let makeExpandableSpy;
         let errorSpy;
         beforeEach(() => {
 
-            // build a list of expandable elements of different types
-            expandableElements = [];
-
-            // in-body rail element
-            expandableElements.push({
+            // mock mapExpandableComponent
+            parts = {
                 root: workingSpace.querySelector('#railContainer > .Rail_root__abc123'),
                 header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
                 content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
-            });
+            };
+            makeExpandableSpy = spyOn(this, 'mapExpandableComponent').and.returnValue(parts);
 
-            // sidebar rail element
-            expandableElements.push({
-                root: workingSpace.querySelector('#railSidebar > .Rail_root__abc123'),
-                header: workingSpace.querySelector('#railSidebar .Rail_header__abc123'),
-                content: workingSpace.querySelector('#railSidebar .Grid_row__abc123')
-            });
 
             // spy on the error handler
             errorSpy = spyOn(this, 'logUnexpectedEvent');
         });
 
         it('content is visible when startCompressed is not supplied', () => {
-            for (const e of expandableElements) {
-                renderExpandable(e.root);
-                expect(e.content.style.display).not.toBe('none');
-            }
+            renderExpandable(parts.root);
+            expect(parts.content.style.display).not.toBe('none');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
         it('content is visible and cursor is zoom-out when startCompressed is false', () => {
-            for (const e of expandableElements) {
-                renderExpandable(e.root, false);
-                expect(e.content.style.display).not.toBe('none');
-                expect(e.header.style.cursor).toBe('zoom-out');
-            }
+            renderExpandable(parts.root, false);
+            expect(parts.content.style.display).not.toBe('none');
+            expect(parts.header.style.cursor).toBe('zoom-out');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
         it ('content is compressed and cursor is zoom-in when startCompressed is true', () => {
-            for (const e of expandableElements) {
-                renderExpandable(e.root, true);
-                expect(e.content.style.display).toBe('none');
-                expect(e.header.style.cursor).toBe('zoom-in');
-            }
+            renderExpandable(parts.root, true);
+            expect(parts.content.style.display).toBe('none');
+            expect(parts.header.style.cursor).toBe('zoom-in');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
+        it('handles multiple content items', () => {
+            // use the article summary, which has multiple lines
+            let summary = {
+               root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
+               header: workingSpace.querySelector('#articleSummary h2'),
+               content: workingSpace.querySelectorAll('#articleSummary p')
+            }
+            makeExpandableSpy.and.returnValue(summary);
+
+            // start expanded
+            renderExpandable(summary.root, false);
+            expect(summary.header.style.cursor).toBe('zoom-out');
+            for (let i = 0; i < summary.content.length; i++) {
+                expect(summary.content[i].style.display).toBe('');
+            }
+
+            // start compressed
+            renderExpandable(summary.root, true);
+            expect(summary.header.style.cursor).toBe('zoom-in');
+            for (let i = 0; i < summary.content.length; i++) {
+                expect(summary.content[i].style.display).toBe('none');
+            }
+
+        });
+
         it('clicking invokes onClickExpandable with correct arguments', () => {
-            const e = expandableElements[0];
             const clickSpy = spyOn(this, 'onClickExpandable');
-            renderExpandable(e.root, true);
-            e.header.click();
+            renderExpandable(parts.root, true);
+            parts.header.click();
             expect(clickSpy).toHaveBeenCalledTimes(1);
-            expect(clickSpy).toHaveBeenCalledWith(e.header, e.content, null);
-            renderExpandable(e.root, true, 'testExpandable');
-            e.header.click();
+            expect(clickSpy).toHaveBeenCalledWith(parts.header, parts.content, null);
+            renderExpandable(parts.root, true, 'testExpandable');
+            parts.header.click();
             expect(clickSpy).toHaveBeenCalledTimes(2);
-            expect(clickSpy).toHaveBeenCalledWith(e.header, e.content, 'testExpandable');
+            expect(clickSpy).toHaveBeenCalledWith(parts.header, parts.content, 'testExpandable');
         });
 
         it('mouseover sets header background; mouseout resets it', () => {
-            const e = expandableElements[0];
-            renderExpandable(e.root, false);
-            const originalBackgroundColor = e.header.style.backgroundColor;
-            e.header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-            expect(e.header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
-            e.header.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-            expect(e.header.style.backgroundColor).toBe(originalBackgroundColor);
+            renderExpandable(parts.root, false);
+            const originalBackgroundColor = parts.header.style.backgroundColor;
+            parts.header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+            expect(parts.header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
+            parts.header.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+            expect(parts.header.style.backgroundColor).toBe(originalBackgroundColor);
         });
 
-        it('logs an unexpected event for an element with no rail root', () => {
-            const testElement = document.getElementById('testElement');
-            renderExpandable(testElement, false);
+        it('logs an unexpected event for a non-expandable component', () => {
+            makeExpandableSpy.and.returnValue(null);
+            renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
-        it('logs an unexpected event for a rail element with no content', () => {
-            const e = expandableElements[0];
-            e.content.remove();
-            renderExpandable(e.root, false);
+        it('logs an unexpected event for an expandable component with no content', () => {
+            makeExpandableSpy.and.returnValue({
+                root: parts.root,
+                header: parts.header
+            });
+            renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
-        it('log an unexpected event for a rail element with no header', () => {
-            const e = expandableElements[0];
-            e.header.remove();
-            renderExpandable(e.root, false);
+        it('log an unexpected event for an expandable component with no header', () => {
+            makeExpandableSpy.and.returnValue({
+                root: parts.root,
+                content: parts.content
+            });
+            renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
@@ -578,7 +659,7 @@ function mockRailElement(id, nonce, title, sidebar = false) {
     if (!sidebar) {
         // scrolling window
         const navigation = document.createElement('div');
-        navigation.className = 'Rail_scollNavigation__' + nonce;
+        navigation.className = 'Rail_scrollNavigation__' + nonce;
         root.appendChild(navigation);
     }
 

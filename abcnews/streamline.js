@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-06-04
+// @version          2026-06-05
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -122,7 +122,7 @@ const siteConf = {
     article: {
 
         // "In short" summary at the top of the article
-        '.ArticleSummary_summary__Zf0LG': 'hidden',
+        '.ArticleSummary_summary__Zf0LG': 'compressed',
 
         // "Top Stories" - the first is the sidebar; the second is panel at the bottom
         'Top Stories': 'compressed',
@@ -241,9 +241,9 @@ function applyRenderer(key, render) {
             for (let i = 0; i < headings.length; i++) {
                 if (headings[i].innerHTML === key) {
                     gotMatch = true;
-                    const railRoot = findRailRoot(headings[i]);
-                    if (railRoot != null) {
-                        render(railRoot);
+                    const parts = mapExpandableComponent(headings[i]);
+                    if (parts != null) {
+                        render(parts.root);
                     } else {
                         logUnexpectedEvent("dom", "No rail root found for configuration key '" + key + "'.");
                     }
@@ -281,36 +281,6 @@ function cleanStoredValues(category, conf) {
             }
         }
     }
-
-}
-
-
-// Find the root element of a rail component associated with a given
-// element. The rail component may either enclose the element, or be
-// contained within the element.
-//
-// Input:
-//   element (DOMElement) - an element with the rail component
-//
-// Returns: the root element of the rail component, or null if no element is found
-function findRailRoot(element) {
-
-    // first, search downwards for a rail component contained within the element
-    let railRootElement = element;
-    while (railRootElement != null && (!railRootElement.hasAttribute('class') || !railRootElement.className.startsWith("Rail_root__"))) {
-        railRootElement = railRootElement.firstElementChild;
-    }
-    if (railRootElement != null) {
-        return railRootElement;
-    }
-
-    // now search upwards for a rail component containing the element
-    railRootElement = element;
-    while (railRootElement != null && (!railRootElement.hasAttribute('class') || !railRootElement.className.startsWith("Rail_root__"))) {
-        railRootElement = railRootElement.parentElement;
-    }
-
-    return railRootElement;
 
 }
 
@@ -360,36 +330,93 @@ function logUnexpectedEvent(source, message) {
 }
 
 
-// Respond to a click on an expandable rail component.
+// Find the components of an article summary used for renderExpandable().
+//
+// The article summary has the following structure, where xxxx is sequence of
+// letters and numbers with no obvious meaning.
+//
+// <div class="ArticleSummary_summary__Zf0LG Article_head__D5qU4">
+//   <div class="Article_main__wLtNk">
+//     <h2>In Short</h2>
+//     ...a series of <p> elements containing the body..
+//   </div>
+// </div>
 //
 // Input:
-//   headerElement (DOMElement) - the rail header element
-//   contentElement (DOMElement) - the rail content element
-//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
-function onClickExpandable(headerElement, contentElement, saveKey = null) {
+//   container (DOMElement) - the root element of the article summary
+//
+// Returns: an associate array with properties root, header, content; or null
+//   if the input element is not recognised as an article summary
+function mapExpandableArticleSummary(container) {
 
-    if (contentElement.style.display === "none") {
-        // expand a compressed element
-        contentElement.style.display = "block";
-        headerElement.style.cursor = "zoom-out";
-        if (saveKey != null) {
-            GM_setValue(saveKey, 'expanded');
-        }
+    if (container.className.startsWith("ArticleSummary_summary__")) {
+        return {
+            root: container,
+            header: container.querySelector("h2"),
+            content: container.querySelectorAll("p")
+        };
     } else {
-        contentElement.style.display = "none";
-        headerElement.style.cursor = "zoom-in";
-        if (saveKey != null) {
-            GM_setValue(saveKey, 'compressed');
-        }
+        // not an article summary
+        return null;
     }
 
 }
 
 
-// Make a "rail" component expandable. In the expanded state, the component
-// displays as usual, but its header region changes colour when the cursor
-// hovers over it. When clicked, the contents are hidden. Similarly, clicking
-// on the header region in the compressed state re-expands the component.
+// Find the parts of an expandable element.
+//
+// Input:
+//   element (DOMElement) - an element within the componnet
+//
+// Returns: an associative array with properties root, header, content; or null
+//   if the input element is not recognised as a rail element
+function mapExpandableComponent(element) {
+
+    // identify known expandable components
+    function isExpandableComponentRoot(e) {
+        if (e.hasAttribute('class')) {
+            if (e.className.startsWith("Rail_root__")) {
+                return "Rail_root";
+            } else if (e.className.startsWith("ArticleSummary_summary__")) {
+                return "ArticleSummary";
+            } else if (e.className.startsWith("TopStories_container__")) {
+                return "TopStories";
+            } else if (e.className.startsWith("ZendeskForm_zendeskForm__")) {
+                return "ZendeskForm";
+            }
+        }
+        return null;
+    }
+
+    // first, search downwards for a recognised root element contained within the element
+    let e = element;
+    while (e != null && !isExpandableComponentRoot(e)) {
+        e = e.firstElementChild;
+    }
+
+    if (e == null) {
+        // now search upwards for a recognised root element containing the element
+        e = element;
+        while (e != null && !isExpandableComponentRoot(e)) {
+            e = e.parentElement;
+        }
+    }
+
+    // invoke the mapper for the kind of root we found
+    if (e != null) {
+        switch (isExpandableComponentRoot(e)) {
+            case "Rail_root": return mapExpandableRailComponent(e);
+            case "ArticleSummary": return mapExpandableArticleSummary(e);
+            default: return null;
+        }
+    } else {
+        return null;
+    }
+
+}
+
+
+// Find the components of a "rail" element used for renderExpandable().
 //
 // The general structure of a rail component is as follows, where the xxxxx's
 // are code that differs from component to component but has no obvious
@@ -415,62 +442,131 @@ function onClickExpandable(headerElement, contentElement, saveKey = null) {
 // </div>
 //
 // Input:
-//   element (DOMElement) - the root element of the rail component to be suppressed
+//   container (DOMElement) - the root element of the rail component
+//
+// Returns: as mapExpandableComponent
+function mapExpandableRailComponent(container) {
+
+    if (container.className.startsWith("Rail_root__")) {
+        // search the children of the container for the components of interest
+        let parts = { root: container };
+        let e = parts.root.firstElementChild;
+        while (e != null) {
+            if (e.className != null) {
+                if (e.className.startsWith("Rail_header__")) {
+                    parts.header = e;
+                } else if (e.className.startsWith("Rail_scollNavigation__")) {
+                    parts.nav = e;
+                } else if (e.className.startsWith("Rail_content__")) {
+                    // in-text components use Rail_content__xxxxx
+                    parts.content = e;
+                } else if (e.className.startsWith("Grid_row__")) {
+                    // sidebars use Grid_row__xxxxx
+                    parts.content = e;
+                }
+            }
+            e = e.nextElementSibling;
+        }
+        return parts;
+    } else {
+        // not a rail component
+        return null;
+    }
+
+}
+
+
+// Respond to a click on an expandable component.
+//
+// Input:
+//   header (DOMElement) - the header element
+//   content (DOMElement or NodeList) - the content
+//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
+function onClickExpandable(header, content, saveKey = null) {
+
+    // work out the styles after clicking
+    let targetDisplayStyle;
+    let headerCursorStyle;
+    const currentDisplayStyle = (content instanceof NodeList) ?
+        content[0].style.display : content.style.display;
+    if (currentDisplayStyle === "none") {
+        // expanding a compressed component
+        targetDisplayStyle = "block";
+        headerCursorStyle = "zoom-out";
+    } else {
+        // compressing an expanded component
+        targetDisplayStyle = "none";
+        headerCursorStyle = "zoom-in";
+    }
+
+    // apply styles
+    header.style.cursor = headerCursorStyle;
+    if (content instanceof NodeList) {
+        for (let i = 0; i < content.length; i++) {
+            content[i].style.display = targetDisplayStyle;
+        }
+    } else {
+        content.style.display = targetDisplayStyle;
+    }
+
+    if (saveKey != null) {
+        // save state
+        GM_setValue(saveKey, targetDisplayStyle === "block" ? 'expanded' : 'compressed');
+    }
+
+}
+
+
+// Make a component expandable. In the expanded state, the component displays
+// as usual, but its header region changes colour when the cursor hovers over
+// it. When clicked, the contents are hidden. Similarly, clicking on the
+// header region in the compressed state re-expands the component.
+//
+// See the comments above each mapExpandable*() function for the structure of
+// each kind of expandable element.
+//
+// Input:
+//   element (DOMElement) - the root element of the component to be suppressed
 //   startCompressed (boolean) - true to start in the compressed state; false to start in the expanded state
 //   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
 function renderExpandable(element, startCompressed = false, saveKey = null) {
 
-    // find the rail root
-    let railRootElement = findRailRoot(element);
-    if (railRootElement == null) {
-        // couldn't find the rail root; bail out
-        logUnexpectedEvent("dom", "No rail root found for " + element.toString());
+    // get the parts of the expandable element
+    let parts = mapExpandableComponent(element);
+    if (parts == null) {
+        // the element is not expandable; bail out
+        logUnexpectedEvent("dom", "Expandability not supported for " + element.toString());
         return;
     }
 
-    // get the components of the rail root
-    let railHeaderElement = null;
-    let railNavigationElement = null;
-    let railContentElement = null;
-    let railChild = railRootElement.firstElementChild;
-    while (railChild != null) {
-        if(railChild.className != null) {
-            if (railChild.className.startsWith("Rail_header__")) {
-                railHeaderElement = railChild;
-            } else if (railChild.className.startsWith("Rail_scollNavigation__")) {
-                railNavigationElement = railChild;
-            } else if (railChild.className.startsWith("Rail_content__")) {
-                // main page uses Rail_content__xxxxx
-                railContentElement = railChild;
-            } else if (railChild.className.startsWith("Grid_row__")) {
-                // sidebars use Grid_row__xxxxx
-                railContentElement = railChild;
+    // suppress display of the component content
+    if ('content' in parts && parts.content != null) {
+        const targetDisplayStyle = startCompressed ? "none" : "";
+        if (parts.content instanceof NodeList) {
+            for (let i = 0; i < parts.content.length; i++) {
+                parts.content[i].style.display = targetDisplayStyle;
             }
+        } else {
+            parts.content.style.display = targetDisplayStyle;
         }
-        railChild = railChild.nextElementSibling;
-    }
-
-    // suppress display of the rail content
-    if (railContentElement != null) {
-        railContentElement.style.display = startCompressed ? "none" : "";
-        if (railHeaderElement != null) {
-            const originalHeaderBackground = railHeaderElement.style.backgroundColor;
-            railHeaderElement.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
-            railHeaderElement.style.borderRadius = "8px";
-            railHeaderElement.onclick = function () {
-                onClickExpandable(railHeaderElement, railContentElement, saveKey);
+        if ('header' in parts && parts.header != null) {
+            const originalHeaderBackground = parts.header.style.backgroundColor;
+            parts.header.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
+            parts.header.style.borderRadius = "8px";
+            parts.header.onclick = function () {
+                onClickExpandable(parts.header, parts.content, saveKey);
             };
-            railHeaderElement.onmouseover = function() {
-                railHeaderElement.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
+            parts.header.onmouseover = function() {
+                parts.header.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
             };
-            railHeaderElement.onmouseout = function() {
-                railHeaderElement.style.backgroundColor = originalHeaderBackground;
+            parts.header.onmouseout = function() {
+                parts.header.style.backgroundColor = originalHeaderBackground;
             };
         } else {
-            logUnexpectedEvent("dom", "No rail header found for " + element.toString());
+            logUnexpectedEvent("dom", "No expandable header found for " + element.toString());
         }
     } else {
-        logUnexpectedEvent("dom", "No rail content found for " + element.toString());
+        logUnexpectedEvent("dom", "No expandable content found for " + element.toString());
     }
 
 }
