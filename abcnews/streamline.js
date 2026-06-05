@@ -332,11 +332,11 @@ function logUnexpectedEvent(source, message) {
 
 // Find the components of an article summary used for renderExpandable().
 //
-// The article summary has the following structure, where xxxx is sequence of
-// letters and numbers with no obvious meaning.
+// The article summary has the following structure, where the xxxxx's are
+// sequences of letters and numbers with no obvious meaning.
 //
-// <div class="ArticleSummary_summary__Zf0LG Article_head__D5qU4">
-//   <div class="Article_main__wLtNk">
+// <div class="ArticleSummary_summary__xxxxx Article_head__xxxxx">
+//   <div class="Article_main__xxxxx">
 //     <h2>In Short</h2>
 //     ...a series of <p> elements containing the body..
 //   </div>
@@ -353,7 +353,7 @@ function mapExpandableArticleSummary(container) {
         return {
             root: container,
             header: container.querySelector("h2"),
-            content: container.querySelectorAll("p")
+            content: container.querySelectorAll("p, h2:not(h2:first-of-type)")
         };
     } else {
         // not an article summary
