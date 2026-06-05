@@ -134,6 +134,9 @@ const siteConf = {
         // "Popular now" sidebar
         'Popular now': 'compressed',
 
+        // "Sport" sidebar
+        '#Sport': 'compressed',
+
         // "Share your view" form at the bottom of the article
         '.ZendeskForm_zendeskForm__5eLgR': 'compressed',
 
