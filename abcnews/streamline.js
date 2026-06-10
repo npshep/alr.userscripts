@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-06-05
+// @version          2026-06-10
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -341,7 +341,7 @@ function logUnexpectedEvent(source, message) {
 // <div class="ArticleSummary_summary__xxxxx Article_head__xxxxx">
 //   <div class="Article_main__xxxxx">
 //     <h2>In Short</h2>
-//     ...a series of <p> elements containing the body..
+//     ...a series of <p> elements containing the body...
 //   </div>
 // </div>
 //
@@ -410,9 +410,43 @@ function mapExpandableComponent(element) {
         switch (isExpandableComponentRoot(e)) {
             case "Rail_root": return mapExpandableRailComponent(e);
             case "ArticleSummary": return mapExpandableArticleSummary(e);
+            case "ZendeskForm": return mapExpandableContactForm(e);
             default: return null;
         }
     } else {
+        return null;
+    }
+
+}
+
+
+// Find the components of a contact form used for renderExpandable().
+//
+// The contact form has the following structure, where the xxxxx's are
+// sequences of letters and numbers with no obvious meaning.
+//
+// <div class="ZendeskForm_zendeskForm__xxxxx" data-component="ZendeskForm">
+//   <div data-component="ZendeskFormUI">
+//     <h3>Contact...</h3>
+//     <form>...</form>
+//   </div>
+// </div>
+//
+// Input:
+//   container (DOMElement) - the root element of the article summary
+//
+// Returns: an associate array with properties root, header, content; or null
+//   if the input element is not recognised as a contact form
+function mapExpandableContactForm(container) {
+
+    if (container.className.startsWith("ZendeskForm_zendeskForm__")) {
+        return {
+            root: container,
+            header: container.querySelector("h3"),
+            content: container.querySelector("form")
+        };
+    } else {
+        // not a contact form
         return null;
     }
 

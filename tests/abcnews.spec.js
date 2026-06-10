@@ -59,6 +59,15 @@ describe('streamline.js', () => {
             '</div></div>';
         workingSpace.appendChild(articleSummary);
 
+        // mock contact form
+        const zendeskForm = document.createElement('div');
+        zendeskForm.id = 'zendeskForm';
+        zendeskForm.innerHTML = '<div class="ZendeskForm_zendeskForm__abc123">' +
+            '<div data-component="ZendeskFormUI">' + '<h3>Contact ...</h3>' +
+            '<form><input type="text" name="zendeskInput"></input></form>' +
+            '</div></div';
+        workingSpace.appendChild(zendeskForm);
+
     });
 
 
@@ -338,6 +347,14 @@ describe('streamline.js', () => {
                 root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
                 header: workingSpace.querySelector('#articleSummary h2'),
                 content: workingSpace.querySelectorAll('#articleSummary p')
+            });
+
+            // contact form
+            expandableComponents.push({
+                container: document.getElementById('zendeskForm'),
+                root: workingSpace.querySelector('#zendeskForm .ZendeskForm_zendeskForm__abc123'),
+                header: workingSpace.querySelector('#zendeskForm h3'),
+                content: workingSpace.querySelector('#zendeskForm form')
             });
 
         });
