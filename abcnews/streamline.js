@@ -411,6 +411,7 @@ function mapExpandableComponent(element) {
             case "Rail_root": return mapExpandableRailComponent(e);
             case "ArticleSummary": return mapExpandableArticleSummary(e);
             case "ZendeskForm": return mapExpandableContactForm(e);
+            case "TopStories": return mapExpandableTopStories(e);
             default: return null;
         }
     } else {
@@ -507,6 +508,39 @@ function mapExpandableRailComponent(container) {
         return parts;
     } else {
         // not a rail component
+        return null;
+    }
+
+}
+
+
+// Find the components of the Top Stories box used for renderExpandable().
+//
+// The Top Stoires has the following structure, where the xxxxx's are
+// sequences of letters and numbers with no obvious meaning.
+//
+// <div class="TopStories_container__G_Fb1__xxxxx" data-component="TopStories">
+//   <header class="SectionHeader_header__xxxxx TopStories_collectionHeading__xxxxx>
+//     ...
+//   </header>
+//   <ol class="TopStories_list__URxOJ">...</ol>
+// </div>
+//
+// Input:
+//   container (DOMElement) - the root element of the article summary
+//
+// Returns: an associate array with properties root, header, content; or null
+//   if the input element is not recognised as a contact form
+function mapExpandableTopStories(container) {
+
+    if (container.className.startsWith("TopStories_container__")) {
+        return {
+            root: container,
+            header: container.querySelector("header"),
+            content: container.querySelector("ol")
+        };
+    } else {
+        // not the Top Stories box
         return null;
     }
 

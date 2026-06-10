@@ -65,8 +65,19 @@ describe('streamline.js', () => {
         zendeskForm.innerHTML = '<div class="ZendeskForm_zendeskForm__abc123">' +
             '<div data-component="ZendeskFormUI">' + '<h3>Contact ...</h3>' +
             '<form><input type="text" name="zendeskInput"></input></form>' +
-            '</div></div';
+            '</div></div>';
         workingSpace.appendChild(zendeskForm);
+
+        const topStoriesFooter = document.createElement('div');
+        topStoriesFooter.id = 'topStoriesFooter';
+        topStoriesFooter.innerHTML = '<div class="TopStories_container__abc123">' +
+            '<header class="SectionHeader_header__4_bXM TopStories_collectionHeading__abc123">'
+            '<div class="SectionHeader_mainSectionHeader___abc123">' + '<h2>Top Stories</h2>' +
+            '</div></header>' +
+            '<ol class="TopStories_list__abc123"><li>Story 1</li></ol>' +
+            '</div></div>';
+        workingSpace.appendChild(topStoriesFooter);
+
 
     });
 
@@ -355,6 +366,14 @@ describe('streamline.js', () => {
                 root: workingSpace.querySelector('#zendeskForm .ZendeskForm_zendeskForm__abc123'),
                 header: workingSpace.querySelector('#zendeskForm h3'),
                 content: workingSpace.querySelector('#zendeskForm form')
+            });
+
+            // top stories
+            expandableComponents.push({
+                container: document.getElementById('topStoriesFooter'),
+                root: workingSpace.querySelector('#topStoriesFooter .TopStories_container__abc123'),
+                header: workingSpace.querySelector('#topStoriesFooter header'),
+                content: workingSpace.querySelector('#topStoriesFooter ol')
             });
 
         });
