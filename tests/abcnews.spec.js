@@ -78,6 +78,21 @@ describe('streamline.js', () => {
             '</div></div>';
         workingSpace.appendChild(topStoriesFooter);
 
+        const asideWithH2 = document.createElement('aside');
+        asideWithH2.id = 'asideWithH2';
+        asideWithH2.className = 'Article_aside__abc123';
+        asideWithH2.innerHTML = '<div data-component="ArticleAside">' +
+            '<h2 class="ArticleAside_title__abc123">Aside title</h2>' +
+            '<ul><li>Aside1</li><li>Aside2</li></ul>' +
+            '</div>';
+        workingSpace.appendChild(asideWithH2);
+
+        const asideWithRailHeader = document.createElement('div');
+        asideWithRailHeader.id = 'asideWithRailHeader';
+        asideWithRailHeader.className = 'Home_aside1__abc123';
+        asideWithRailHeader.innerHTML = '<div class="Rail_header__abc123">Header</div>' +
+            '<div>Content 1</div>' + '<div>Content 2</div>';
+        workingSpace.appendChild(asideWithRailHeader);
 
     });
 
@@ -374,6 +389,25 @@ describe('streamline.js', () => {
                 root: workingSpace.querySelector('#topStoriesFooter .TopStories_container__abc123'),
                 header: workingSpace.querySelector('#topStoriesFooter header'),
                 content: workingSpace.querySelector('#topStoriesFooter ol')
+            });
+
+            // aside with h2 heading
+            expandableComponents.push({
+                container: document.getElementById('asideWithH2'),
+                root: workingSpace.querySelector('#asideWithH2'),
+                header: workingSpace.querySelector('#asideWithH2 h2'),
+                content: [ workingSpace.querySelector('#asideWithH2 ul') ]
+            });
+
+            // aside with rail header
+            expandableComponents.push({
+                container: document.getElementById('asideWithRailHeader'),
+                root: workingSpace.querySelector('#asideWithRailHeader'),
+                header: workingSpace.querySelector('#asideWithRailHeader .Rail_header__abc123'),
+                content: [
+                    workingSpace.querySelector('#asideWithRailHeader > div:nth-child(2)'),
+                    workingSpace.querySelector('#asideWithRailHeader > div:nth-child(3)')
+                ]
             });
 
         });

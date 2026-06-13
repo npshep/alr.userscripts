@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-06-10
+// @version          2026-06-13
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -126,7 +126,7 @@ const siteConf = {
 
         // "Top Stories" - the first is the sidebar; the second is panel at the bottom
         'Top Stories': 'compressed',
-        '.TopStories_container__G_Fb1': 'compressed',
+        '.TopStories_container__G_Fb1': 'hidden',
 
         // "Related stories" sidebar
         '#Related stories': 'compressed',
@@ -141,7 +141,13 @@ const siteConf = {
         '.ZendeskForm_zendeskForm__5eLgR': 'compressed',
 
         // the marketing banner at the end of the article (usually for ABC iView)
-        '.ArticleWeb_marketingBanner__WEtHh': 'hidden'
+        '.ArticleWeb_marketingBanner__WEtHh': 'hidden',
+
+        // the "Related topics" that appear near the bottom
+        '.RelatedTopics_title__W9qTi': 'hidden',
+
+        // the "Just In" stories that appear at the bottom
+        '.LatestStories_heading__0dNMm': 'hidden'
 
     }
 };
@@ -366,6 +372,66 @@ function mapExpandableArticleSummary(container) {
 }
 
 
+// Find the components of an <aside> element (used in the sidebar).
+//
+// "Aside" elements have several slightly different structures, but the basic
+// idea is:
+//
+//  <aside class="Article_aside_xxxxx"> or <div class="Home_aside1__xxxxx">
+//     <div class="Rail_header__xxxxxx">...</div> or <h2>...<h2>
+//     ...more elements...
+//  </aside> or </div>
+//
+// Input:
+//   container (DOMElement) - the <aside> element
+//
+// Returns: an associate array with properties root, header, content; or null
+//   if the input element is not recognised as <aside>
+function mapExpandableAside(container) {
+
+    // identify known header elements
+    function isAsideHeader(e) {
+        if (e.tagName === "H2" || e.tagName === "H3") {
+            return true;
+        } else if (e.hasAttribute("class") && e.className.startsWith("Rail_header__")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    // the root element is the <aside> element itself
+    let parts = { root: container };
+
+    // descend until we find the header
+    parts.header = container.firstElementChild;
+    while (parts.header != null && !isAsideHeader(parts.header)) {
+        parts.header = parts.header.firstElementChild;
+    }
+
+    if (parts.header != null) {
+
+        // the content is made up of the siblings of the header
+        parts.content = [];
+        let e = parts.header.nextElementSibling;
+        while (e != null) {
+            parts.content.push(e);
+            e = e.nextElementSibling;
+        }
+
+        return parts;
+
+    } else {
+
+        // we can't expand elements without a header, so give up
+        return null;
+
+    }
+
+}
+
+
+
 // Find the parts of an expandable element.
 //
 // Input:
@@ -379,9 +445,11 @@ function mapExpandableComponent(element) {
     function isExpandableComponentRoot(e) {
         if (e.hasAttribute('class')) {
             if (e.className.startsWith("Rail_root__")) {
-                return "Rail_root";
+                return "RailRoot";
             } else if (e.className.startsWith("ArticleSummary_summary__")) {
                 return "ArticleSummary";
+            } else if (e.className.startsWith("Home_aside1__") || e.className.startsWith("Article_aside__")) {
+                return "Aside";
             } else if (e.className.startsWith("TopStories_container__")) {
                 return "TopStories";
             } else if (e.className.startsWith("ZendeskForm_zendeskForm__")) {
@@ -408,10 +476,11 @@ function mapExpandableComponent(element) {
     // invoke the mapper for the kind of root we found
     if (e != null) {
         switch (isExpandableComponentRoot(e)) {
-            case "Rail_root": return mapExpandableRailComponent(e);
+            case "RailRoot": return mapExpandableRailComponent(e);
             case "ArticleSummary": return mapExpandableArticleSummary(e);
-            case "ZendeskForm": return mapExpandableContactForm(e);
+            case "Aside": return mapExpandableAside(e);
             case "TopStories": return mapExpandableTopStories(e);
+            case "ZendeskForm": return mapExpandableContactForm(e);
             default: return null;
         }
     } else {
@@ -516,7 +585,7 @@ function mapExpandableRailComponent(container) {
 
 // Find the components of the Top Stories box used for renderExpandable().
 //
-// The Top Stoires has the following structure, where the xxxxx's are
+// The Top Stories has the following structure, where the xxxxx's are
 // sequences of letters and numbers with no obvious meaning.
 //
 // <div class="TopStories_container__G_Fb1__xxxxx" data-component="TopStories">
@@ -572,10 +641,8 @@ function onClickExpandable(header, content, saveKey = null) {
 
     // apply styles
     header.style.cursor = headerCursorStyle;
-    if (content instanceof NodeList) {
-        for (let i = 0; i < content.length; i++) {
-            content[i].style.display = targetDisplayStyle;
-        }
+    if (content instanceof NodeList || Array.isArray(content)) {
+        content.forEach((e) => { e.style.display = targetDisplayStyle; });
     } else {
         content.style.display = targetDisplayStyle;
     }
@@ -613,10 +680,8 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
     // suppress display of the component content
     if ('content' in parts && parts.content != null) {
         const targetDisplayStyle = startCompressed ? "none" : "";
-        if (parts.content instanceof NodeList) {
-            for (let i = 0; i < parts.content.length; i++) {
-                parts.content[i].style.display = targetDisplayStyle;
-            }
+        if (parts.content instanceof NodeList || Array.isArray(parts.content)) {
+            parts.content.forEach((e) => { e.style.display = targetDisplayStyle; });
         } else {
             parts.content.style.display = targetDisplayStyle;
         }
