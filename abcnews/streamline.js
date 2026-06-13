@@ -715,7 +715,14 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
 //
 function renderHidden(element) {
 
-    element.style.display = "none";
+    let parts = mapExpandableComponent(element);
+    if (parts != null) {
+        // hide the whole component that contains the element
+        parts.root.style.display = "none";
+    } else {
+        // only need to hide the given element
+        element.style.display = "none";
+    }
 
 }
 
