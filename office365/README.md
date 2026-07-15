@@ -40,6 +40,8 @@ Known Bugs
 
 `moveapprail.js`
 - the unpin action requires re-loading to take effect
+- the header buttons region can contain at most five items; excess buttons
+  disappear from the display (this behaviour is designed into Outlook)
 - some possible changes to the Outlook application aren't logged (e.g. changes
   to mainModule and the left rail) due to their disappearing and re-appearing
   during page rebuilds
