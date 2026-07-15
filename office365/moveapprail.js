@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-04-05
+// @version          2026-07-15
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -39,8 +39,11 @@
 // 'appRailPosition' value stored by GM_setValue().
 //
 // headerButtonsConf sets which buttons remain in the header buttons region
-// when the app rail is in the header. The setting button is the only one that
-// I use, but feel free to re-enable any other buttons you find useful here.
+// when the app rail is in the header. Note that the header buttons region
+// only allows space for five items in total, including the apps and the
+// buttons enabled below. Buttons beyond five are tagged by an attribute
+// 'data-overflowing', which has a display style of 'none', making them
+// completely inaccessible.
 ///////////////////////////////////////////////////////////////////////////////
 const appRailConf = 'saved';
 const headerButtonsConf = {
