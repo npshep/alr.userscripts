@@ -322,29 +322,6 @@ function getPageType(url) {
 }
 
 
-// Log an unexpected configuration value or DOM structure. For now, we just
-// add a warning to the console.
-//
-// Input:
-//   source (String) - 'conf' for local configuration errors; 'dom' for unexpected DOM structure
-//   message (String) - a message describing the unexpected event
-function logUnexpectedEvent(source, message) {
-
-    let prefix = "logUnexpectedEvent called with invalid source";
-    switch (source) {
-        case 'conf':
-            prefix = "Configuration error";
-            break;
-
-        case 'dom':
-            prefix = "Possible DOM change";
-            break;
-    }
-    console.warn(prefix + ": " + message);
-
-}
-
-
 // Find the components of an article summary used for renderExpandable().
 //
 // The article summary has the following structure, where the xxxxx's are
@@ -745,7 +722,7 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
     let parts = mapExpandableComponent(element);
     if (parts == null) {
         // the element is not expandable; bail out
-        logUnexpectedEvent("dom", "Expandability not supported for " + element.toString());
+        logUnexpectedEvent("dom", "Expandability not supported for " + stringifyElement(element));
         return;
     }
 
@@ -771,10 +748,10 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
                 parts.header.style.backgroundColor = originalHeaderBackground;
             };
         } else {
-            logUnexpectedEvent("dom", "No expandable header found for " + element.toString());
+            logUnexpectedEvent("dom", "No expandable header found for " + stringifyElement(element));
         }
     } else {
-        logUnexpectedEvent("dom", "No expandable content found for " + element.toString());
+        logUnexpectedEvent("dom", "No expandable content found for " + stringifyElement(element));
     }
 
 }
@@ -830,6 +807,44 @@ function storageKeyBare(sk) {
         return sk.substring(pos + storageKeySeparator.length);
     } else {
         return sk;
+    }
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// The following functions are used to log an unexpected configuration value or
+// DOM structure. For now, we just add a warning to the console.
+//
+// Input:
+//   source (String) - 'conf' for local configuration errors; 'dom' for unexpected DOM structure
+//   message (String) - a message describing the unexpected event
+////////////////////////////////////////////////////////////////////////////////
+function logUnexpectedEvent(source, message) {
+
+    let prefix = "logUnexpectedEvent called with invalid source";
+    switch (source) {
+        case 'conf':
+            prefix = "Configuration error";
+            break;
+
+        case 'dom':
+            prefix = "Possible DOM change";
+            break;
+    }
+    console.warn(prefix + ": " + message);
+
+}
+
+// get a readable string for an element
+function stringifyElement(e) {
+
+    if (e.hasAttribute('id') && e.id != null) {
+        return "#" + e.id;
+    } else if (e.hasAttribute('class') && e.classList.length > 0) {
+        return '.' + e.classList[0];
+    } else {
+        return 'anonymous ' + e.tagName;
     }
 
 }

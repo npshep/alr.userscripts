@@ -696,39 +696,61 @@ describe('streamline.js', () => {
     describe('storageKey', () => {
 
         it('constructs and deconstructs storage keys', () => {
-
             const sk = storageKey('cat', 'dog');
             expect(storageKeyCategory(sk)).toBe('cat');
             expect(storageKeyBare(sk)).toBe('dog');
-
         });
 
         it('handles keys containing the separator', () => {
-
             const sk = storageKey('cat', 'dog*');
             expect(storageKeyCategory(sk)).toBe('cat');
             expect(storageKeyBare(sk)).toBe('dog*');
-
         });
 
         it('handles keys containing CSS selectors', () => {
-
             const sk1 = storageKey('cat', '.dog');
             expect(storageKeyCategory(sk1)).toBe('cat');
             expect(storageKeyBare(sk1)).toBe('.dog');
-
             const sk2 = storageKey('cat', '#dog');
             expect(storageKeyCategory(sk2)).toBe('cat');
             expect(storageKeyBare(sk2)).toBe('#dog');
-
         });
 
-        it('deconstucts deprecated keys', () => {
-
+        it('deconstructs deprecated keys', () => {
             const sk = '.deprecated_key';
             expect(storageKeyCategory(sk)).toBeNull();
             expect(storageKeyBare(sk)).toBe(sk);
+        });
 
+    });
+
+    describe('stringifyElement', () => {
+
+        it('handles elements with ids', () => {
+            const e = document.createElement('div');
+            e.id = "testid";
+            workingSpace.appendChild(e);
+            expect(stringifyElement(e)).toBe("#testid");
+        });
+
+        it('handles elements with a single class', () => {
+            const e = document.createElement('div');
+            e.className = "testclass";
+            workingSpace.appendChild(e);
+            expect(stringifyElement(e)).toBe(".testclass");
+        });
+
+        it('handles elements with multiple classes', () => {
+            const e = document.createElement('div');
+            e.className = "testclass1 testclass2";
+            workingSpace.appendChild(e);
+            expect(stringifyElement(e)).toBe(".testclass1");
+        });
+
+        it('handles elements with neither id nor class', () => {
+            const e = document.createElement('div');
+            workingSpace.appendChild(e);
+            expect(stringifyElement(e)).toBe("anonymous DIV");
         });
 
     });
