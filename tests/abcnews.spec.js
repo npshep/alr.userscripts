@@ -68,6 +68,7 @@ describe('streamline.js', () => {
             '</div></div>';
         workingSpace.appendChild(zendeskForm);
 
+        // mock the top stories panel in the footer
         const topStoriesFooter = document.createElement('div');
         topStoriesFooter.id = 'topStoriesFooter';
         topStoriesFooter.innerHTML = '<div class="TopStories_container__abc123">' +
@@ -78,6 +79,7 @@ describe('streamline.js', () => {
             '</div></div>';
         workingSpace.appendChild(topStoriesFooter);
 
+        // mock sidebar element with H2 title
         const asideWithH2 = document.createElement('aside');
         asideWithH2.id = 'asideWithH2';
         asideWithH2.className = 'Article_aside__abc123';
@@ -87,12 +89,22 @@ describe('streamline.js', () => {
             '</div>';
         workingSpace.appendChild(asideWithH2);
 
+        // mock sidebar element with rail header
         const asideWithRailHeader = document.createElement('div');
         asideWithRailHeader.id = 'asideWithRailHeader';
         asideWithRailHeader.className = 'Home_aside1__abc123';
         asideWithRailHeader.innerHTML = '<div class="Rail_header__abc123">Header</div>' +
             '<div>Content 1</div>' + '<div>Content 2</div>';
         workingSpace.appendChild(asideWithRailHeader);
+
+        // mock in-article panel
+        const inArticlePanel = document.createElement('div');
+        inArticlePanel.id = 'inArticlePanel';
+        inArticlePanel.className = 'Panel_root__abc123';
+        inArticlePanel.innerHTML = '<div class="Panel_content__abc123">' +
+            '<div class="Rail_header__abc123"><h2>Title</h2><div>Subtitle</div></div>' +
+            '<div>Panel contents</div></div>';
+         workingSpace.appendChild(inArticlePanel);
 
     });
 
@@ -410,6 +422,17 @@ describe('streamline.js', () => {
                 ]
             });
 
+            // in-article panel
+            expandableComponents.push({
+                container: document.getElementById('inArticlePanel'),
+                root: workingSpace.querySelector('#inArticlePanel'),
+                header: workingSpace.querySelector('#inArticlePanel h2'),
+                content: [
+                    workingSpace.querySelector('#inArticlePanel .Rail_header__abc123 > div:nth-child(2)'),
+                    workingSpace.querySelector('#inArticlePanel .Panel_content__abc123 > div:nth-child(2)')
+                ]
+            });
+
         });
 
         it('finds roots passed directly', () => {
@@ -449,6 +472,24 @@ describe('streamline.js', () => {
     });
 
     describe('onClickExpandable', () => {
+
+        // verify that the parts of an expandable component respond property
+        function expectExpandable(parts) {
+
+            // compress expanded component
+            onClickExpandable(parts.header, parts.content, null);
+            for (let i = 0; i < parts.content.length; i++) {
+                expect(parts.content[i].style.display).toBe('none');
+            }
+            expect(parts.header.style.cursor).toBe('zoom-in');
+
+            // expand compressed component
+            onClickExpandable(parts.header, parts.content, null);
+            for (let i = 0; i < parts.content.length; i++) {
+                expect(parts.content[i].style.display).toBe('block');
+            }
+            expect(parts.header.style.cursor).toBe('zoom-out');
+        }
 
         let parts;
         beforeEach(() => {
@@ -492,27 +533,27 @@ describe('streamline.js', () => {
             expect(GM_getValue('testExpandable', null)).toBe('expanded');
         });
 
-        it('handles multiple content elements', () => {
+        it('handles NodeList contents', () => {
             // use the article summary, which has multiple paragraphs
-            const summary = {
+            const parts = {
                root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
                header: workingSpace.querySelector('#articleSummary h2'),
                content: workingSpace.querySelectorAll('#articleSummary p')
-           }
+           };
+           expectExpandable(parts);
+        });
 
-           // compress expanded component
-           onClickExpandable(summary.header, summary.content, null);
-           for (let i = 0; i < summary.content.length; i++) {
-               expect(summary.content[i].style.display).toBe('none');
-           }
-           expect(summary.header.style.cursor).toBe('zoom-in');
-
-           // expand compressed component
-           onClickExpandable(summary.header, summary.content, null);
-           for (let i = 0; i < summary.content.length; i++) {
-               expect(summary.content[i].style.display).toBe('block');
-           }
-           expect(summary.header.style.cursor).toBe('zoom-out');
+        it('handles array contents', () => {
+            // use the aside with rail header, which has mutliple div's
+            const parts = {
+                root: workingSpace.querySelector('#asideWithRailHeader'),
+                header: workingSpace.querySelector('#asideWithRailHeader .Rail_header__abc123'),
+                content: [
+                    workingSpace.querySelector('#asideWithRailHeader > div:nth-child(2)'),
+                    workingSpace.querySelector('#asideWithRailHeader > div:nth-child(3)')
+                ]
+            };
+            expectExpandable(parts);
         });
 
     });

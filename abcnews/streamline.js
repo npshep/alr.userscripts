@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-06-13
+// @version          2026-07-16
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -123,6 +123,12 @@ const siteConf = {
 
         // "In short" summary at the top of the article
         '.ArticleSummary_summary__Zf0LG': 'compressed',
+
+        // in-article panels linking to other stories -
+        // "More about...", "More analysis..." and "Sign up to...", respectively
+        '.RecirculationRecommendations_container__7nH0U': 'hidden',
+        '.AnalysisCarouselEmbed_container__9jCk1': 'compressed',
+        '.Newsletter_newsletterContainer__ki2K6': 'compressed',
 
         // "Top Stories" - the first is the sidebar; the second is panel at the bottom
         'Top Stories': 'compressed',
@@ -444,12 +450,14 @@ function mapExpandableComponent(element) {
     // identify known expandable components
     function isExpandableComponentRoot(e) {
         if (e.hasAttribute('class')) {
-            if (e.className.startsWith("Rail_root__")) {
-                return "RailRoot";
-            } else if (e.className.startsWith("ArticleSummary_summary__")) {
+            if (e.className.startsWith("ArticleSummary_summary__")) {
                 return "ArticleSummary";
             } else if (e.className.startsWith("Home_aside1__") || e.className.startsWith("Article_aside__")) {
                 return "Aside";
+            } else if (e.className.startsWith("Panel_root__")) {
+                return "PanelRoot";
+            } else if (e.className.startsWith("Rail_root__")) {
+                return "RailRoot";
             } else if (e.className.startsWith("TopStories_container__")) {
                 return "TopStories";
             } else if (e.className.startsWith("ZendeskForm_zendeskForm__")) {
@@ -476,9 +484,10 @@ function mapExpandableComponent(element) {
     // invoke the mapper for the kind of root we found
     if (e != null) {
         switch (isExpandableComponentRoot(e)) {
-            case "RailRoot": return mapExpandableRailComponent(e);
             case "ArticleSummary": return mapExpandableArticleSummary(e);
             case "Aside": return mapExpandableAside(e);
+            case "PanelRoot": return mapExpandablePanel(e);
+            case "RailRoot": return mapExpandableRailComponent(e);
             case "TopStories": return mapExpandableTopStories(e);
             case "ZendeskForm": return mapExpandableContactForm(e);
             default: return null;
@@ -523,25 +532,88 @@ function mapExpandableContactForm(container) {
 }
 
 
-// Find the components of a "rail" element used for renderExpandable().
+// Find the components of an expandable panel for use with renderExpandable.
 //
-// The general structure of a rail component is as follows, where the xxxxx's
-// are code that differs from component to component but has no obvious
-// meaning.
+// Panels have thhe structure below, where the xxxxxx's are a code that
+// differs from component to component but has no obvious meaning.
 //
+// <div id="..." or class="...">
+//   <div class="Panel_root__xxxxxx">
+//     <div class="Panel_content__xxxxxx">
+//       <div class="Rail_header__xxxxxx">
+//         <h2>...header text...</h2>
+//         <div>...introductory text...</div>
+//       </div>
+//     <div>...form content...</div>
+//   </div>
+// </div>
+//
+// Input:
+//   container (DOMElement) - the root element of the rail component
+//
+// Returns: as mapExpandableComponent
+function mapExpandablePanel(container) {
+
+    if (container.className.startsWith("Panel_root__")) {
+        // first, look for the Panel_content element
+        let parts = { root: container, content: [] };
+        let panelContent = null;
+        let e = parts.root.firstElementChild;
+        while (e != null) {
+            if (e.className != null && e.className.startsWith("Panel_content__")) {
+                // found it
+                panelContent = e;
+                break;
+            }
+            e = e.nextElementSibling;
+        }
+
+        if (panelContent != null) {
+            // now, look for the Rail_header element and content
+            let e = panelContent.firstElementChild;
+            while (e != null) {
+                if (e.className != null && e.className.startsWith("Rail_header__")) {
+                    // the h2 child of Rail_header is the header; everything afterwards is content
+                    for (let i = 0; i < e.children.length; i++) {
+                        if (e.children.item(i).tagName == "H2") {
+                            parts.header = e.children.item(i);
+                        } else if ('header' in parts && parts.header != null) {
+                            parts.content.push(e.children.item(i));
+                        }
+                    }
+                } else if ('header' in parts && parts.header != null) {
+                    // elements after Rail_header are content
+                    parts.content.push(e);
+                }
+                e = e.nextElementSibling;
+            }
+        }
+        return parts;
+    } else {
+        // not a panel we recognise
+        return null;
+    }
+
+}
+
+
+// Find the components of a "rail" element for use with renderExpandable().
+//
+// Rail components have the structure below, where the xxxxxx's are a code that
+// differs from component to component but has no obvious meaning.
 //
 // <div id="..." or class="...">
 //   <!-- sometimes a div contains the Rail_root -->
-//     <div class="Rail_root__xxxxx Rail_sideScrolling__xxxxx">
-//       <div class="Rail_header__xxxxx">
+//     <div class="Rail_root__xxxxxx Rail_sideScrolling__xxxxxx">
+//       <div class="Rail_header__xxxxxx">
 //         <h2>...</h2>
 //         <div>...</div>
 //       </div>
-//       <div class="Rail_scollNavigation__xxxxx">
+//       <div class="Rail_scollNavigation__xxxxxx">
 //         <button title="Move left"><svg .../></button>
 //         <button title="Move right"><svg .../></button>
 //       </div>
-//       <div class="Rail_content__xxxxx"> or <div class="Grid_row__xxxx">
+//       <div class="Rail_content__xxxxxx"> or <div class="Grid_row__xxxxxx">
 //         <ul .../>
 //       </div>
 //     </div>
@@ -627,7 +699,7 @@ function onClickExpandable(header, content, saveKey = null) {
     // work out the styles after clicking
     let targetDisplayStyle;
     let headerCursorStyle;
-    const currentDisplayStyle = (content instanceof NodeList) ?
+    const currentDisplayStyle = (content instanceof NodeList || Array.isArray(content)) ?
         content[0].style.display : content.style.display;
     if (currentDisplayStyle === "none") {
         // expanding a compressed component
