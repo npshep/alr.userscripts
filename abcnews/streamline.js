@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-07-16
+// @version          2026-08-03
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -296,6 +296,28 @@ function cleanStoredValues(category, conf) {
             }
         }
     }
+
+}
+
+
+// Get the <aside> element that contains the given element.
+//
+// Most of the time, the container is an <aside> element with class
+// Home_aside1__xxxxx or Article_aside__xxxxx, but occassionally it's a <div>,
+// so we use the class names.
+//
+// Input:
+//   e (DOMElement) - an element
+//
+// Returns: the enclosing <aside> element if it exists, or null otherwise
+function getContainingAside(e) {
+
+    let container = e;
+    while (container != null && !container.className.startsWith("Home_aside1__") && !container.className.startsWith("Article_aside__")) {
+        container = container.parentElement;
+    }
+
+    return container;
 
 }
 
@@ -724,6 +746,12 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
         // the element is not expandable; bail out
         logUnexpectedEvent("dom", "Expandability not supported for " + stringifyElement(element));
         return;
+    }
+
+    // if the expandable element is inside the sidebar, align it to the top
+    let aside = getContainingAside(parts.root);
+    if (aside != null) {
+        aside.style.alignSelf = "start";
     }
 
     // suppress display of the component content

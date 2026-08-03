@@ -47,7 +47,9 @@ describe('streamline.js', () => {
         workingSpace.appendChild(railContainer);
 
         // mock sidebar rail element
-        const railSidebar = mockRailElement('railSidebar', 'abc123', 'Sidebar Rail', true);
+        const railSidebar = document.createElement('aside');
+        railSidebar.className = 'Home_aside1__abc123';
+        railSidebar.appendChild(mockRailElement('railSidebar', 'abc123', 'Sidebar Rail', true));
         workingSpace.appendChild(railSidebar);
 
         // mock article summary
@@ -299,6 +301,25 @@ describe('streamline.js', () => {
         it('removes configuration for deprecated components', () => {
             cleanStoredValues('home', mockConf);
             expect(GM_getValue('deprecatedComponent', null)).toBeNull();
+        });
+
+    });
+
+    describe('getContainingAside', () => {
+
+        it('returns null when not in the sidebar', () => {
+            const e = document.getElementById('articleSummary');
+            expect(getContainingAside(e)).toBeNull();
+        });
+
+        it('returns the containing aside on an article page', () => {
+            const e = workingSpace.querySelector('#asideWithH2 h2');
+            expect(getContainingAside(e).id).toBe('asideWithH2');
+        });
+
+        it ('returns the containing aside on the home page', () => {
+            const e = workingSpace.querySelector('#railSidebar div');
+            expect(getContainingAside(e).className).toBe('Home_aside1__abc123');
         });
 
     });
@@ -562,7 +583,7 @@ describe('streamline.js', () => {
     describe('renderExpandable', () => {
 
         let parts;
-        let makeExpandableSpy;
+        let mapExpandableSpy;
         let errorSpy;
         beforeEach(() => {
 
@@ -572,8 +593,7 @@ describe('streamline.js', () => {
                 header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
                 content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
             };
-            makeExpandableSpy = spyOn(this, 'mapExpandableComponent').and.returnValue(parts);
-
+            mapExpandableSpy = spyOn(this, 'mapExpandableComponent').and.returnValue(parts);
 
             // spy on the error handler
             errorSpy = spyOn(this, 'logUnexpectedEvent');
@@ -606,7 +626,7 @@ describe('streamline.js', () => {
                header: workingSpace.querySelector('#articleSummary h2'),
                content: workingSpace.querySelectorAll('#articleSummary p')
             }
-            makeExpandableSpy.and.returnValue(summary);
+            mapExpandableSpy.and.returnValue(summary);
 
             // start expanded
             renderExpandable(summary.root, false);
@@ -622,6 +642,17 @@ describe('streamline.js', () => {
                 expect(summary.content[i].style.display).toBe('none');
             }
 
+        });
+
+        it('moves expandable sidebar elements to the top', () => {
+            let sidebar = {
+               root: document.getElementById('railSidebar'),
+               header: workingSpace.querySelector('#railSidebar h2'),
+               content: workingSpace.querySelectorAll('#railSidebar div')
+            }
+            mapExpandableSpy.and.returnValue(sidebar);
+            renderExpandable(sidebar.root, true);
+            expect(sidebar.root.parentElement.style.alignSelf).toBe('start');
         });
 
         it('clicking invokes onClickExpandable with correct arguments', () => {
@@ -646,13 +677,13 @@ describe('streamline.js', () => {
         });
 
         it('logs an unexpected event for a non-expandable component', () => {
-            makeExpandableSpy.and.returnValue(null);
+            mapExpandableSpy.and.returnValue(null);
             renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
         it('logs an unexpected event for an expandable component with no content', () => {
-            makeExpandableSpy.and.returnValue({
+            mapExpandableSpy.and.returnValue({
                 root: parts.root,
                 header: parts.header
             });
@@ -661,7 +692,7 @@ describe('streamline.js', () => {
         });
 
         it('log an unexpected event for an expandable component with no header', () => {
-            makeExpandableSpy.and.returnValue({
+            mapExpandableSpy.and.returnValue({
                 root: parts.root,
                 content: parts.content
             });
