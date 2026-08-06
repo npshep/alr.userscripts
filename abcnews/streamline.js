@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-08-03
+// @version          2026-08-06
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -748,10 +748,15 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
         return;
     }
 
-    // if the expandable element is inside the sidebar, align it to the top
-    let aside = getContainingAside(parts.root);
-    if (aside != null) {
-        aside.style.alignSelf = "start";
+    if ('root' in parts && parts.root != null) {
+        // make the container shrink and expand according to its contents
+        parts.root.style.height = 'fit-content';
+
+        // if the expandable element is inside the sidebar, align it to the top
+        let aside = getContainingAside(parts.root);
+        if (aside != null) {
+            aside.style.alignSelf = "start";
+        }
     }
 
     // suppress display of the component content

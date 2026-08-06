@@ -601,12 +601,14 @@ describe('streamline.js', () => {
 
         it('content is visible when startCompressed is not supplied', () => {
             renderExpandable(parts.root);
+            expect(parts.root.style.height).toBe('fit-content');
             expect(parts.content.style.display).not.toBe('none');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
         it('content is visible and cursor is zoom-out when startCompressed is false', () => {
             renderExpandable(parts.root, false);
+            expect(parts.root.style.height).toBe('fit-content');
             expect(parts.content.style.display).not.toBe('none');
             expect(parts.header.style.cursor).toBe('zoom-out');
             expect(errorSpy).not.toHaveBeenCalled();
@@ -614,6 +616,7 @@ describe('streamline.js', () => {
 
         it ('content is compressed and cursor is zoom-in when startCompressed is true', () => {
             renderExpandable(parts.root, true);
+            expect(parts.root.style.height).toBe('fit-content');
             expect(parts.content.style.display).toBe('none');
             expect(parts.header.style.cursor).toBe('zoom-in');
             expect(errorSpy).not.toHaveBeenCalled();
