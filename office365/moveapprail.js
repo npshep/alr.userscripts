@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Move Outlook App Rail
 // @namespace        http://www.alittleresearch.com.au/
-// @version          2026-07-15
+// @version          2026-08-15
 // @description      Move Outlook's app rail to the header or footer.
 // @author           Nick Sheppard
 // @license          MIT
@@ -270,10 +270,17 @@ function findAppLauncher() {
 
 // Find the header buttons region.
 //
-// The header buttons are contained within a div with id headerButtonsRegionId.
+// The header buttons are contained within a div with id owaHeaderButtonGroupRight_container.
+// Older veriosns used id headerButtonsRegionId.
 function findHeaderButtonsRegion() {
 
-    return document.getElementById("headerButtonsRegionId")
+    const headerButtonsRegion = document.getElementById("owaHeaderButtonGroupRight_container");
+    if (headerButtonsRegion != null) {
+        return headerButtonsRegion;
+    } else {
+        // try the old version
+        return document.getElementById("headerButtonsRegionId");
+    }
 
 }
 
@@ -541,7 +548,7 @@ function insertAppRail(target) {
 ///////////////////////////////////////////////////////////////////////////////
 // Manage the collection of header buttons.
 //
-// The header buttons are contained within a div with id headerButtonsRegionId.
+// The header buttons are contained within a div (see findHeaderButtonsRegion()).
 // Each button is identified by a class name, which is used as a key in the
 // headerButtonsConf structure.
 //
@@ -553,7 +560,7 @@ function insertAppRail(target) {
 var headerButtonsCollection = []
 function removeHeaderButtons() {
 
-    const headerButtonsRegion = document.getElementById("headerButtonsRegionId");
+    const headerButtonsRegion = findHeaderButtonsRegion();
     if (headerButtonsRegion != null) {
         var child = headerButtonsRegion.firstElementChild;
         while (child != null) {
@@ -578,7 +585,7 @@ function removeHeaderButtons() {
 
 function restoreHeaderButtons() {
 
-    const headerButtonsRegion = document.getElementById("headerButtonsRegionId");
+    const headerButtonsRegion = findHeaderButtonsRegion();
     if (headerButtonsRegion != null) {
         while (headerButtonsCollection.length > 0) {
             headerButtonsRegion.appendChild(headerButtonsCollection.shift());
