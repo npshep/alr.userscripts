@@ -126,6 +126,7 @@ describe('streamline.js', () => {
         let applyRendererSpy;
         let renderExpandableSpy;
         let renderHiddenSpy;
+        let onLoadSpy;
 
         beforeEach(() => {
 
@@ -141,6 +142,9 @@ describe('streamline.js', () => {
             applyRendererSpy = spyOn(this, 'applyRenderer').and.callThrough();
             renderExpandableSpy = spyOn(this, 'renderExpandable');
             renderHiddenSpy = spyOn(this, 'renderHidden');
+
+            // spy on the deferred configuration handler
+            onLoadSpy = spyOn(this, 'applyConfigurationOnLoad');
         });
 
         it('applies configuration without saving', () => {
@@ -157,6 +161,7 @@ describe('streamline.js', () => {
             expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, false, null);
             expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, true, null);
             expect(errorSpy).not.toHaveBeenCalled();
+            expect(onLoadSpy).not.toHaveBeenCalled();
         });
 
         it('applies configuration with saving', () => {
@@ -172,6 +177,7 @@ describe('streamline.js', () => {
             expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, storageKey('test', '.testClass'));
             expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, storageKey('test', 'Test Heading'));
             expect(errorSpy).not.toHaveBeenCalled();
+            expect(onLoadSpy).not.toHaveBeenCalled();
         });
 
         it('logs an unexpected event for an invalid configuration value', () => {
@@ -181,6 +187,58 @@ describe('streamline.js', () => {
             expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
         });
 
+        it('forwards unconfigured keys to applyConfigurationOnLoad', () => {
+            const mockConfDeferredLoad = {
+                '#testElement': 'hidden',
+                '.testClass': 'saved',
+                '#deferredElement': 'expanded'
+            };
+            applyConfiguration("test", mockConfDeferredLoad);
+            expect(onLoadSpy).toHaveBeenCalledWith("test", { '#deferredElement': 'expanded' });
+        });
+
+    });
+
+    describe('applyConfigurationOnLoad', () => {
+
+        let errorSpy;
+
+        beforeEach(() => {
+
+            // spy on the error handler
+            errorSpy = spyOn(this, 'logUnexpectedEvent');
+
+        });
+
+        it('installs a MutationObserver on the app container', (done) => {
+
+            // mock the app container
+            const appContainer = document.createElement('div');
+            appContainer.id = 'app-container';
+            workingSpace.appendChild(appContainer);
+
+            // verify that the observer is created and attached
+            const observationSpy = spyOn(MutationObserver.prototype, 'observe').and.callThrough();
+            const mockConf = {};
+            applyConfigurationOnLoad("test", mockConf);
+            expect(observationSpy).toHaveBeenCalledWith(appContainer, jasmine.any(Object));
+            expect(errorSpy).not.toHaveBeenCalled();
+
+            // mock a mutation
+            const mutationSpy = spyOn(this, 'onAppContainerMutation');
+            const lateLoadedElement = document.createElement('div');
+            appContainer.appendChild(lateLoadedElement);
+            setTimeout(() => {
+                expect(mutationSpy).toHaveBeenCalledWith(jasmine.any(Array), jasmine.any(MutationObserver), "test", mockConf );
+                done();
+            }, 0);
+
+        });
+
+        it('logs an error when the app container doesn\'t exist', () => {
+           applyConfigurationOnLoad("test", {});
+           expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+        });
     });
 
     describe('applyRenderer', () => {
@@ -208,9 +266,9 @@ describe('streamline.js', () => {
         });
 
         it('logs unexpected events for invalid configuration keys', () => {
-            applyRenderer('', mockRender);
-            applyRenderer('#', mockRender);
-            applyRenderer('.', mockRender);
+            expect(applyRenderer('', mockRender)).toBeFalse();
+            expect(applyRenderer('#', mockRender)).toBeFalse();
+            expect(applyRenderer('.', mockRender)).toBeFalse();
             expect(elementById.hasAttribute('data-rendered')).toBeFalse();
             expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
             expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
@@ -219,7 +277,7 @@ describe('streamline.js', () => {
         });
 
         it('renders elements identified by id', () => {
-            applyRenderer('#testElement', mockRender);
+            expect(applyRenderer('#testElement', mockRender)).toBeTrue();
             expect(elementById.getAttribute('data-rendered')).toBe('true');
             expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
             expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
@@ -229,7 +287,7 @@ describe('streamline.js', () => {
         });
 
         it('renders elements identified by class', () => {
-            applyRenderer('.testClass', mockRender);
+            expect(applyRenderer('.testClass', mockRender)).toBeTrue();
             for (let e of elementsByClass) {
                 expect(e.getAttribute('data-rendered')).toBe('true');
                 e.removeAttribute('data-rendered');
@@ -240,7 +298,7 @@ describe('streamline.js', () => {
         });
 
         it('renders elements identified by H2 heading text', () => {
-            applyRenderer('Test Heading', mockRender);
+            expect(applyRenderer('Test Heading', mockRender)).toBeTrue();
             expect(elementByHeading.getAttribute('data-rendered')).toBe('true');
             expect(elementById.hasAttribute('data-rendered')).toBeFalse();
             expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
@@ -248,15 +306,14 @@ describe('streamline.js', () => {
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it('logs an unexpected event for an unmatched configuration key', () => {
-            applyRenderer('Garbage', mockRender);
-            expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+        it('returns false for an unmatched configuration key', () => {
+            expect(applyRenderer('Garbage', mockRender)).toBeFalse();
         });
 
         it('logs an unexpected event for a missing rail root', () => {
-            elementByHeading.remove();
-            applyRenderer('Test Heading', mockRender);
-            expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+            elementByHeading.className = "notRailRoot";
+            expect(applyRenderer('Test Heading', mockRender)).toBeTrue();
+            expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
     });
@@ -489,6 +546,27 @@ describe('streamline.js', () => {
                 expect(parts.header).toBe(c.header);
                 expect(parts.content).toEqual(c.content);
             }
+        });
+    });
+
+    describe('onAppContainerMutation', () => {
+
+        let connected = true;
+        const mockObserver = {
+            disconnect: function () { connected = false; }
+        };
+
+        it('disconnects the observer', () => {
+            connected = true;
+            onAppContainerMutation(null, mockObserver, "test", {});
+            expect(connected).toBeFalse();
+        });
+
+        it('forwards configuration to applyConfiguration', () => {
+            const applyConfigurationSpy = spyOn(this, 'applyConfiguration');
+            const mockConf = { '#testElement': 'hidden' };
+            onAppContainerMutation(null, mockObserver, "test", mockConf);
+            expect(applyConfigurationSpy).toHaveBeenCalledWith("test", mockConf);
         });
     });
 

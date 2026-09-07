@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-08-06
+// @version          2026-09-03
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -180,11 +180,12 @@ const storageKeySeparator = '**';
 //
 // Input:
 //   category (String) - the configuration category, "home" or "article"
-//   conf (Object) - an array of component identifiers mapped to display states
+//   conf (Object) - an associative array mapping component identifiers to display states
 function applyConfiguration(category, conf) {
 
+    // build a list of keys to be configured
+    let unconf = {};
     for (const key of Object.keys(conf)) {
-
         let componentConf = conf[key];
         let componentSaveKey = null;
         if (componentConf === 'saved') {
@@ -193,31 +194,61 @@ function applyConfiguration(category, conf) {
             componentConf = GM_getValue(componentSaveKey, 'expanded');
         }
 
+        let configured = false;
         switch (componentConf) {
-        	case 'hidden':
-        		applyRenderer(key, (element) => { renderHidden(element); });
-        		break;
-
-        	case 'compressed':
-                applyRenderer(key, (element) => { renderExpandable(element, true, componentSaveKey); });
+            case 'hidden':
+                configured = applyRenderer(key, (element) => { renderHidden(element); });
                 break;
 
-        	case 'expanded':
-                applyRenderer(key, (element) => { renderExpandable(element, false, componentSaveKey); });
+            case 'compressed':
+                configured = applyRenderer(key, (element) => { renderExpandable(element, true, componentSaveKey); });
+                break;
+
+            case 'expanded':
+                configured = applyRenderer(key, (element) => { renderExpandable(element, false, componentSaveKey); });
                 break;
 
             case 'default':
                 // do nothing
+                configured = true;
                 break;
 
             default:
                 // not a recognised rendering style (probably a typo in siteConf)
-                logUnexpectedEvent("conf", "Invalid value '" + componentConf + "' for configuration key '" + key + "'.");
+                logUnexpectedEvent("conf", "Invalid value '" + conf[key] + "' for configuration key '" + key + "'.");
+                configured = true;
                 break;
+        }
+        if (!configured) {
+            unconf[key] = conf[key];
         }
     }
 
+    // if any unconfigured keys remain, forward to applyConfigurationOnLoad
+    if (Object.keys(unconf).length > 0) {
+        applyConfigurationOnLoad(category, unconf);
+    }
+
 }
+
+
+// Watch for components to be loaded before configuring them.
+//
+// Input:
+//   category (String) - the configuration category, "home" or "article"
+//   conf (Object) - an associative array mapping component identifiers to display states
+function applyConfigurationOnLoad(category, conf) {
+
+    const appContainer = document.getElementById("app-container");
+    if (appContainer != null) {
+        const appContainerObserver = new MutationObserver((m, o) => { onAppContainerMutation(m, o, category, conf); });
+        appContainerObserver.observe(appContainer, { childList: true, subtree: true, attributes: false, characterData: false });
+    } else {
+        logUnexpectedEvent("dom", "No app container found.");
+    }
+
+}
+
 
 // Apply a renderer to all of the elements matching a given key from the
 // siteConf structure.
@@ -225,30 +256,36 @@ function applyConfiguration(category, conf) {
 // Input:
 //   key - the key from the siteConf structure
 //   render - a function taking a single DOMElement object as input
+//
+// Returns: true if at least one matching element was found; false otherwise
 function applyRenderer(key, render) {
 
     let gotMatch = false;
-    if (key.charAt(0) === "#" && key.length > 1) {
-
-        // component identified by id
-        const element = document.getElementById(key.substring(1, key.length));
-        if (element != null) {
-            gotMatch = true;
-            render(element);
-        }
-
-    } else if (key.charAt(0) === "." && key.length > 1) {
-
-        // component identified by class name
-        const elements = document.getElementsByClassName(key.substring(1, key.length));
-        if (elements != null) {
-            for (let i = 0; i < elements.length; i++) {
+    if (key.charAt(0) === "#") {
+        if (key.length > 1) {
+            // component identified by id
+            const element = document.getElementById(key.substring(1, key.length));
+            if (element != null) {
                 gotMatch = true;
-                render(elements[i]);
+                render(element);
             }
+        } else {
+            logUnexpectedEvent("conf", "Configuration key # with no id.");
         }
-
-    } else {
+    } else if (key.charAt(0) === ".") {
+        if (key.length > 1) {
+            // component identified by class name
+            const elements = document.getElementsByClassName(key.substring(1, key.length));
+            if (elements != null) {
+                for (let i = 0; i < elements.length; i++) {
+                    gotMatch = true;
+                   render(elements[i]);
+                }
+            }
+        } else {
+            logUnexpectedEvent("conf", "Configuration key . with no class name.");
+        }
+    } else if (key.length > 1) {
 
         // component identified by <h2>
         const headings = document.getElementsByTagName("H2");
@@ -265,12 +302,11 @@ function applyRenderer(key, render) {
                 }
             }
         }
+    } else {
+        logUnexpectedEvent("conf", "Empy configuration key.");
     }
 
-    if (!gotMatch) {
-        // the key didn't match anything; this may indicate a change in the ABC site
-        logUnexpectedEvent("conf", "No matches for configuration key '" + key + "'.");
-    }
+    return gotMatch;
 
 }
 
@@ -683,6 +719,24 @@ function mapExpandableTopStories(container) {
         // not the Top Stories box
         return null;
     }
+
+}
+
+
+// Respond to mutation of the app container.
+//
+// Input:
+//   mutations (Array) - the list of mutations
+//   observer (MutationObserver) - the MutationObserver that triggered this event
+//   category (String) - the configuration category, "home" or "article"
+//   unconf (Object) - the unconfigured keys
+function onAppContainerMutation(mutations, observer, category, unconf) {
+
+    // stop observing
+    observer.disconnect();
+
+    // re-execute applyConfiguration to clean up unconfigured components
+    applyConfiguration(category, unconf);
 
 }
 
