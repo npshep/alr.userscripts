@@ -379,6 +379,40 @@ function getPageType(url) {
 }
 
 
+// Create Promise object that will resolve when a content matching a given
+// specification has loaded
+//
+// Input:
+//  container (DOMElement) - the element to watch for mutations
+//  matcher (function) - the matching function
+//
+// The matching function accepts the container as its only parameter. It should
+// return null if the content has not been loaded, or the return value expected
+// by the Promise user otherwise.
+function makePromiseOnLoad(container, matcher) {
+
+    const match0 = matcher(container);
+    if (matcher(container)) {
+        // the target content already exists
+        return Promise.resolve(match0);
+    } else {
+        // set a MutationObserver to wait for matching content
+        return new Promise((resolve, reject) => {
+            const observer = new MutationObserver((m , o) => {
+                const match = matcher(container);
+                if (match != null) {
+                    // stop observeing and resolve the promise
+                    o.disconnect();
+                    resolve(match);
+                }
+            });
+            observer.observe(container, { childList: true, subtree: true, attributes: false, characterData: false });
+        });
+    }
+
+}
+
+
 // Find the components of an article summary used for renderExpandable().
 //
 // The article summary has the following structure, where the xxxxx's are
@@ -547,12 +581,24 @@ function mapExpandableComponent(element) {
 // Returns: as mapExpandableComponent()
 function mapExpandableContactForm(container) {
 
+    // map the contact form synchronously for makePromiseOnLoad()
+    function mapExpandableContactFormSync(container) {
+        const header = container.querySelector("h3");
+        const content = container.querySelector("form");
+        if (header != null && content != null) {
+            return {
+                root: container,
+                header: container.querySelector("h3"),
+                content: container.querySelector("form")
+            }
+        } else {
+            return null;
+        }
+    }
+
     if (container.className.startsWith("ZendeskForm_zendeskForm__")) {
-        return Promise.resolve({
-            root: container,
-            header: container.querySelector("h3"),
-            content: container.querySelector("form")
-        });
+        // the contact form isn't loaded right away, so make a promise to return it
+        return makePromiseOnLoad(container, mapExpandableContactFormSync);
     } else {
         // not a contact form
         return Promise.reject(new ReferenceError("mapExpandableContactForm() called on an unrecognised container."));
