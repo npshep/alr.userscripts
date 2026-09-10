@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-09-03
+// @version          2026-09-10
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -293,12 +293,11 @@ function applyRenderer(key, render) {
             for (let i = 0; i < headings.length; i++) {
                 if (headings[i].innerHTML === key) {
                     gotMatch = true;
-                    const parts = mapExpandableComponent(headings[i]);
-                    if (parts != null) {
+                    mapExpandableComponent(headings[i]).then((parts) => {
                         render(parts.root);
-                    } else {
+                    }).catch(() => {
                         logUnexpectedEvent("dom", "No rail root found for configuration key '" + key + "'.");
-                    }
+                    });
                 }
             }
         }
@@ -395,19 +394,18 @@ function getPageType(url) {
 // Input:
 //   container (DOMElement) - the root element of the article summary
 //
-// Returns: an associate array with properties root, header, content; or null
-//   if the input element is not recognised as an article summary
+// Returns: as mapExpandableComponent()
 function mapExpandableArticleSummary(container) {
 
     if (container.className.startsWith("ArticleSummary_summary__")) {
-        return {
+        return Promise.resolve({
             root: container,
             header: container.querySelector("h2"),
             content: container.querySelectorAll("p, h2:not(h2:first-of-type)")
-        };
+        });
     } else {
         // not an article summary
-        return null;
+        return Promise.reject(new ReferenceError("A container passed to mapExpandableArticleSummary() is not an article summary."));
     }
 
 }
@@ -426,8 +424,7 @@ function mapExpandableArticleSummary(container) {
 // Input:
 //   container (DOMElement) - the <aside> element
 //
-// Returns: an associate array with properties root, header, content; or null
-//   if the input element is not recognised as <aside>
+// Returns: as mapExpandableComponent()
 function mapExpandableAside(container) {
 
     // identify known header elements
@@ -460,17 +457,16 @@ function mapExpandableAside(container) {
             e = e.nextElementSibling;
         }
 
-        return parts;
+        return Promise.resolve(parts);
 
     } else {
 
         // we can't expand elements without a header, so give up
-        return null;
+        return Promise.reject(new ReferenceError("No header found in mapExpandableAside()."));
 
     }
 
 }
-
 
 
 // Find the parts of an expandable element.
@@ -478,8 +474,7 @@ function mapExpandableAside(container) {
 // Input:
 //   element (DOMElement) - an element within the componnet
 //
-// Returns: an associative array with properties root, header, content; or null
-//   if the input element is not recognised as a rail element
+// Returns: a Promise for an associative array with properties root, header, content
 function mapExpandableComponent(element) {
 
     // identify known expandable components
@@ -525,10 +520,10 @@ function mapExpandableComponent(element) {
             case "RailRoot": return mapExpandableRailComponent(e);
             case "TopStories": return mapExpandableTopStories(e);
             case "ZendeskForm": return mapExpandableContactForm(e);
-            default: return null;
+            default: Promise.reject(new ReferenceError("Unrecognised root element."));
         }
     } else {
-        return null;
+        return Promise.reject(new ReferenceError("No root element found."));
     }
 
 }
@@ -549,19 +544,18 @@ function mapExpandableComponent(element) {
 // Input:
 //   container (DOMElement) - the root element of the article summary
 //
-// Returns: an associate array with properties root, header, content; or null
-//   if the input element is not recognised as a contact form
+// Returns: as mapExpandableComponent()
 function mapExpandableContactForm(container) {
 
     if (container.className.startsWith("ZendeskForm_zendeskForm__")) {
-        return {
+        return Promise.resolve({
             root: container,
             header: container.querySelector("h3"),
             content: container.querySelector("form")
-        };
+        });
     } else {
         // not a contact form
-        return null;
+        return Promise.reject(new ReferenceError("mapExpandableContactForm() called on an unrecognised container."));
     }
 
 }
@@ -586,7 +580,7 @@ function mapExpandableContactForm(container) {
 // Input:
 //   container (DOMElement) - the root element of the rail component
 //
-// Returns: as mapExpandableComponent
+// Returns: as mapExpandableComponent()
 function mapExpandablePanel(container) {
 
     if (container.className.startsWith("Panel_root__")) {
@@ -623,10 +617,10 @@ function mapExpandablePanel(container) {
                 e = e.nextElementSibling;
             }
         }
-        return parts;
+        return Promise.resolve(parts);
     } else {
         // not a panel we recognise
-        return null;
+        return Promise.reject(new ReferenceError("mapExpandablePanel() called on an unrecognised panel."));
     }
 
 }
@@ -658,7 +652,7 @@ function mapExpandablePanel(container) {
 // Input:
 //   container (DOMElement) - the root element of the rail component
 //
-// Returns: as mapExpandableComponent
+// Returns: as mapExpandableComponent()
 function mapExpandableRailComponent(container) {
 
     if (container.className.startsWith("Rail_root__")) {
@@ -681,10 +675,10 @@ function mapExpandableRailComponent(container) {
             }
             e = e.nextElementSibling;
         }
-        return parts;
+        return Promise.resolve(parts);
     } else {
         // not a rail component
-        return null;
+        return Promise.reject(new ReferenceError("mapExpandableRailComponent() called on non-rail component."));
     }
 
 }
@@ -705,19 +699,18 @@ function mapExpandableRailComponent(container) {
 // Input:
 //   container (DOMElement) - the root element of the article summary
 //
-// Returns: an associate array with properties root, header, content; or null
-//   if the input element is not recognised as a contact form
+// Returns: as mapExpandablePanel()
 function mapExpandableTopStories(container) {
 
     if (container.className.startsWith("TopStories_container__")) {
-        return {
+        return Promise.resolve({
             root: container,
             header: container.querySelector("header"),
             content: container.querySelector("ol")
-        };
+        });
     } else {
         // not the Top Stories box
-        return null;
+        return Promise.reject(new ReferenceError("mapExpandableTopStories() called on an unrecognised container."));
     }
 
 }
@@ -792,54 +785,58 @@ function onClickExpandable(header, content, saveKey = null) {
 //   element (DOMElement) - the root element of the component to be suppressed
 //   startCompressed (boolean) - true to start in the compressed state; false to start in the expanded state
 //   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
+//
+// Returns: a Promise that resolve to true (successful) or false (failed)
 function renderExpandable(element, startCompressed = false, saveKey = null) {
 
     // get the parts of the expandable element
-    let parts = mapExpandableComponent(element);
-    if (parts == null) {
+    return mapExpandableComponent(element).then((parts) => {
+        if ('root' in parts && parts.root != null) {
+            // make the container shrink and expand according to its contents
+            parts.root.style.height = 'fit-content';
+
+            // if the expandable element is inside the sidebar, align it to the top
+            let aside = getContainingAside(parts.root);
+            if (aside != null) {
+                aside.style.alignSelf = "start";
+            }
+        }
+
+        // suppress display of the component content
+        if ('content' in parts && parts.content != null) {
+            const targetDisplayStyle = startCompressed ? "none" : "";
+            if (parts.content instanceof NodeList || Array.isArray(parts.content)) {
+                parts.content.forEach((e) => { e.style.display = targetDisplayStyle; });
+            } else {
+                parts.content.style.display = targetDisplayStyle;
+            }
+            if ('header' in parts && parts.header != null) {
+                const originalHeaderBackground = parts.header.style.backgroundColor;
+                parts.header.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
+                parts.header.style.borderRadius = "8px";
+                parts.header.onclick = function () {
+                    onClickExpandable(parts.header, parts.content, saveKey);
+                };
+                parts.header.onmouseover = function() {
+                    parts.header.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
+                };
+                parts.header.onmouseout = function() {
+                    parts.header.style.backgroundColor = originalHeaderBackground;
+                };
+                return true;
+            } else {
+                logUnexpectedEvent("dom", "No expandable header found for " + stringifyElement(element));
+                return false;
+            }
+        } else {
+            logUnexpectedEvent("dom", "No expandable content found for " + stringifyElement(element));
+            return false;
+        }
+    }).catch((error) => {
         // the element is not expandable; bail out
-        logUnexpectedEvent("dom", "Expandability not supported for " + stringifyElement(element));
-        return;
-    }
-
-    if ('root' in parts && parts.root != null) {
-        // make the container shrink and expand according to its contents
-        parts.root.style.height = 'fit-content';
-
-        // if the expandable element is inside the sidebar, align it to the top
-        let aside = getContainingAside(parts.root);
-        if (aside != null) {
-            aside.style.alignSelf = "start";
-        }
-    }
-
-    // suppress display of the component content
-    if ('content' in parts && parts.content != null) {
-        const targetDisplayStyle = startCompressed ? "none" : "";
-        if (parts.content instanceof NodeList || Array.isArray(parts.content)) {
-            parts.content.forEach((e) => { e.style.display = targetDisplayStyle; });
-        } else {
-            parts.content.style.display = targetDisplayStyle;
-        }
-        if ('header' in parts && parts.header != null) {
-            const originalHeaderBackground = parts.header.style.backgroundColor;
-            parts.header.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
-            parts.header.style.borderRadius = "8px";
-            parts.header.onclick = function () {
-                onClickExpandable(parts.header, parts.content, saveKey);
-            };
-            parts.header.onmouseover = function() {
-                parts.header.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
-            };
-            parts.header.onmouseout = function() {
-                parts.header.style.backgroundColor = originalHeaderBackground;
-            };
-        } else {
-            logUnexpectedEvent("dom", "No expandable header found for " + stringifyElement(element));
-        }
-    } else {
-        logUnexpectedEvent("dom", "No expandable content found for " + stringifyElement(element));
-    }
+        logUnexpectedEvent("dom", "Expandability not supported for " + stringifyElement(element) + "(" + error.message + ")");
+        return false;
+    });
 
 }
 
@@ -849,16 +846,18 @@ function renderExpandable(element, startCompressed = false, saveKey = null) {
 // Input:
 //   element (DOMElement) - the DOM element at the root of the component to be suppressed
 //
+// Returns: a Promise that resolves to true (this function never fails)
 function renderHidden(element) {
 
-    let parts = mapExpandableComponent(element);
-    if (parts != null) {
+    return mapExpandableComponent(element).then((parts) => {
         // hide the whole component that contains the element
         parts.root.style.display = "none";
-    } else {
+        return true;
+    }).catch(() => {
         // only need to hide the given element
         element.style.display = "none";
-    }
+        return true;
+    });
 
 }
 

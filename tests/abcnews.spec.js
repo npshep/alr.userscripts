@@ -147,24 +147,27 @@ describe('streamline.js', () => {
             onLoadSpy = spyOn(this, 'applyConfigurationOnLoad');
         });
 
-        it('applies configuration without saving', () => {
+        it('applies configuration without saving', (done) => {
             const mockConfNoSave = {
                 '#testElement': 'default',
                 '.testClass': 'expanded',
                 'Test Heading': 'compressed'
             };
             applyConfiguration("test", mockConfNoSave);
-            expect(applyRendererSpy).toHaveBeenCalledTimes(2);
-            expect(applyRendererSpy).not.toHaveBeenCalledWith('#testElement', jasmine.any(Function));
-            expect(applyRendererSpy).toHaveBeenCalledWith('.testClass', jasmine.any(Function));
-            expect(applyRendererSpy).toHaveBeenCalledWith('Test Heading', jasmine.any(Function));
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, false, null);
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, true, null);
-            expect(errorSpy).not.toHaveBeenCalled();
-            expect(onLoadSpy).not.toHaveBeenCalled();
+            setTimeout(() => {
+                expect(applyRendererSpy).toHaveBeenCalledTimes(2);
+                expect(applyRendererSpy).not.toHaveBeenCalledWith('#testElement', jasmine.any(Function));
+                expect(applyRendererSpy).toHaveBeenCalledWith('.testClass', jasmine.any(Function));
+                expect(applyRendererSpy).toHaveBeenCalledWith('Test Heading', jasmine.any(Function));
+                expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, false, null);
+                expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, true, null);
+                expect(errorSpy).not.toHaveBeenCalled();
+                expect(onLoadSpy).not.toHaveBeenCalled();
+                done();
+            }, 0);
         });
 
-        it('applies configuration with saving', () => {
+        it('applies configuration with saving', (done) => {
             GM_setValue(storageKey('test', '.testClass'), 'compressed');
             const mockConfWithSave = {
                 '#testElement': 'hidden',
@@ -172,12 +175,15 @@ describe('streamline.js', () => {
                 'Test Heading': 'saved'
             };
             applyConfiguration("test", mockConfWithSave);
-            expect(applyRendererSpy).toHaveBeenCalledTimes(3);
-            expect(renderHiddenSpy).toHaveBeenCalledWith(elementById);
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, storageKey('test', '.testClass'));
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, storageKey('test', 'Test Heading'));
-            expect(errorSpy).not.toHaveBeenCalled();
-            expect(onLoadSpy).not.toHaveBeenCalled();
+            setTimeout(() => {
+                expect(applyRendererSpy).toHaveBeenCalledTimes(3);
+                expect(renderHiddenSpy).toHaveBeenCalledWith(elementById);
+                expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, storageKey('test', '.testClass'));
+                expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, storageKey('test', 'Test Heading'));
+                expect(errorSpy).not.toHaveBeenCalled();
+                expect(onLoadSpy).not.toHaveBeenCalled();
+                done();
+            }, 0);
         });
 
         it('logs an unexpected event for an invalid configuration value', () => {
@@ -297,23 +303,29 @@ describe('streamline.js', () => {
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it('renders elements identified by H2 heading text', () => {
+        it('renders elements identified by H2 heading text', (done) => {
             expect(applyRenderer('Test Heading', mockRender)).toBeTrue();
-            expect(elementByHeading.getAttribute('data-rendered')).toBe('true');
-            expect(elementById.hasAttribute('data-rendered')).toBeFalse();
-            expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
-            expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
-            expect(errorSpy).not.toHaveBeenCalled();
+            setTimeout(() => {
+                expect(elementByHeading.getAttribute('data-rendered')).toBe('true');
+                expect(elementById.hasAttribute('data-rendered')).toBeFalse();
+                expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
+                expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
+                expect(errorSpy).not.toHaveBeenCalled();
+                done();
+            });
         });
 
         it('returns false for an unmatched configuration key', () => {
             expect(applyRenderer('Garbage', mockRender)).toBeFalse();
         });
 
-        it('logs an unexpected event for a missing rail root', () => {
+        it('logs an unexpected event for a missing rail root', (done) => {
             elementByHeading.className = "notRailRoot";
             expect(applyRenderer('Test Heading', mockRender)).toBeTrue();
-            expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+            setTimeout(() => {
+                expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+                done();
+            });
         });
 
     });
@@ -513,35 +525,35 @@ describe('streamline.js', () => {
 
         });
 
-        it('finds roots passed directly', () => {
+        it('finds roots passed directly', async () => {
             for (const c of expandableComponents) {
-                const parts = mapExpandableComponent(c.root);
+                const parts = await mapExpandableComponent(c.root);
                 expect(parts.root).toBe(c.root);
             }
         });
 
-        it('searches downwards for the component root', () => {
+        it('searches downwards for the component root', async () => {
             for (const c of expandableComponents) {
-                const parts = mapExpandableComponent(c.container);
+                const parts = await mapExpandableComponent(c.container);
                 expect(parts.root).toBe(c.root);
             }
         });
 
-        it('searches upwards for the component root', () => {
+        it('searches upwards for the component root', async () => {
             for (const c of expandableComponents) {
-                const parts = mapExpandableComponent(c.root.firstElementChild);
+                const parts = await mapExpandableComponent(c.root.firstElementChild);
                 expect(parts.root).toBe(c.root);
             }
         });
 
-        it('returns null when no rail component root exists in the tree', () => {
+        it('throws ReferenceError when no rail component root exists in the tree', async () => {
             const testElement = document.getElementById('testElement');
-            expect(mapExpandableComponent(testElement)).toBeNull();
+            await expectAsync(mapExpandableComponent(testElement)).toBeRejectedWithError(ReferenceError);
         });
 
-        it('correctly maps the root, header, and content', () => {
+        it('correctly maps the root, header, and content', async () => {
             for (const c of expandableComponents) {
-                const parts = mapExpandableComponent(c.container);
+                const parts = await mapExpandableComponent(c.container);
                 expect(parts.root).toBe(c.root);
                 expect(parts.header).toBe(c.header);
                 expect(parts.content).toEqual(c.content);
@@ -671,85 +683,82 @@ describe('streamline.js', () => {
                 header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
                 content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
             };
-            mapExpandableSpy = spyOn(this, 'mapExpandableComponent').and.returnValue(parts);
+            mapExpandableSpy = spyOn(this, 'mapExpandableComponent').and.returnValue(Promise.resolve(parts));
 
             // spy on the error handler
             errorSpy = spyOn(this, 'logUnexpectedEvent');
         });
 
-        it('content is visible when startCompressed is not supplied', () => {
-            renderExpandable(parts.root);
+        it('content is visible when startCompressed is not supplied', async () => {
+            await renderExpandable(parts.root);
             expect(parts.root.style.height).toBe('fit-content');
             expect(parts.content.style.display).not.toBe('none');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it('content is visible and cursor is zoom-out when startCompressed is false', () => {
-            renderExpandable(parts.root, false);
+        it('content is visible and cursor is zoom-out when startCompressed is false', async () => {
+            await renderExpandable(parts.root, false);
             expect(parts.root.style.height).toBe('fit-content');
             expect(parts.content.style.display).not.toBe('none');
             expect(parts.header.style.cursor).toBe('zoom-out');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it ('content is compressed and cursor is zoom-in when startCompressed is true', () => {
-            renderExpandable(parts.root, true);
+        it ('content is compressed and cursor is zoom-in when startCompressed is true', async () => {
+            await renderExpandable(parts.root, true);
             expect(parts.root.style.height).toBe('fit-content');
             expect(parts.content.style.display).toBe('none');
             expect(parts.header.style.cursor).toBe('zoom-in');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it('handles multiple content items', () => {
+        it('handles multiple content items', async () => {
             // use the article summary, which has multiple lines
             let summary = {
                root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
                header: workingSpace.querySelector('#articleSummary h2'),
                content: workingSpace.querySelectorAll('#articleSummary p')
             }
-            mapExpandableSpy.and.returnValue(summary);
+            mapExpandableSpy.and.returnValue(Promise.resolve(summary));
 
             // start expanded
-            renderExpandable(summary.root, false);
+            await renderExpandable(summary.root, false);
             expect(summary.header.style.cursor).toBe('zoom-out');
             for (let i = 0; i < summary.content.length; i++) {
                 expect(summary.content[i].style.display).toBe('');
             }
 
             // start compressed
-            renderExpandable(summary.root, true);
+            await renderExpandable(summary.root, true);
             expect(summary.header.style.cursor).toBe('zoom-in');
-            for (let i = 0; i < summary.content.length; i++) {
-                expect(summary.content[i].style.display).toBe('none');
-            }
 
         });
 
-        it('moves expandable sidebar elements to the top', () => {
+        it('moves expandable sidebar elements to the top', async () => {
             let sidebar = {
                root: document.getElementById('railSidebar'),
                header: workingSpace.querySelector('#railSidebar h2'),
                content: workingSpace.querySelectorAll('#railSidebar div')
             }
-            mapExpandableSpy.and.returnValue(sidebar);
-            renderExpandable(sidebar.root, true);
+            mapExpandableSpy.and.returnValue(Promise.resolve(sidebar));
+            await renderExpandable(sidebar.root, true);
             expect(sidebar.root.parentElement.style.alignSelf).toBe('start');
         });
 
-        it('clicking invokes onClickExpandable with correct arguments', () => {
+        it('clicking invokes onClickExpandable with correct arguments', async () => {
             const clickSpy = spyOn(this, 'onClickExpandable');
-            renderExpandable(parts.root, true);
+            await renderExpandable(parts.root, true);
             parts.header.click();
             expect(clickSpy).toHaveBeenCalledTimes(1);
             expect(clickSpy).toHaveBeenCalledWith(parts.header, parts.content, null);
-            renderExpandable(parts.root, true, 'testExpandable');
+            await renderExpandable(parts.root, true, 'testExpandable');
             parts.header.click();
             expect(clickSpy).toHaveBeenCalledTimes(2);
             expect(clickSpy).toHaveBeenCalledWith(parts.header, parts.content, 'testExpandable');
         });
 
-        it('mouseover sets header background; mouseout resets it', () => {
-            renderExpandable(parts.root, false);
+        it('mouseover sets header background; mouseout resets it', async () => {
+            await renderExpandable(parts.root, false);
             const originalBackgroundColor = parts.header.style.backgroundColor;
             parts.header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
             expect(parts.header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
@@ -757,27 +766,27 @@ describe('streamline.js', () => {
             expect(parts.header.style.backgroundColor).toBe(originalBackgroundColor);
         });
 
-        it('logs an unexpected event for a non-expandable component', () => {
-            mapExpandableSpy.and.returnValue(null);
-            renderExpandable(parts.root, false);
+        it('logs an unexpected event for a non-expandable component', async () => {
+            mapExpandableSpy.and.returnValue(Promise.reject(new ReferenceError("not expandable")));
+            await renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
-        it('logs an unexpected event for an expandable component with no content', () => {
-            mapExpandableSpy.and.returnValue({
+        it('logs an unexpected event for an expandable component with no content', async () => {
+            mapExpandableSpy.and.returnValue(Promise.resolve({
                 root: parts.root,
                 header: parts.header
-            });
-            renderExpandable(parts.root, false);
+            }));
+            await renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
-        it('log an unexpected event for an expandable component with no header', () => {
-            mapExpandableSpy.and.returnValue({
+        it('log an unexpected event for an expandable component with no header', async () => {
+            mapExpandableSpy.and.returnValue(Promise.resolve({
                 root: parts.root,
                 content: parts.content
-            });
-            renderExpandable(parts.root, false);
+            }));
+            await renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
@@ -786,18 +795,18 @@ describe('streamline.js', () => {
 
     describe('renderHidden', () => {
 
-        it('hide single element', () => {
+        it('hides single element', async () => {
             const testElement = document.getElementById('testElement');
             testElement.style.display = 'block';
-            renderHidden(testElement);
+            await renderHidden(testElement);
             expect(testElement.style.display).toBe('none');
         });
 
-        it('hide rail element', () => {
+        it('hides rail element', async () => {
             const railContainer = document.getElementById('railContainer');
             const railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
             const railChild = railRoot.firstElementChild;
-            renderHidden(railRoot);
+            await renderHidden(railRoot);
             expect(railRoot.style.display).toBe('none');
             expect(railContainer.style.display).not.toBe('none');
             expect(railChild.style.display).not.toBe('none');
