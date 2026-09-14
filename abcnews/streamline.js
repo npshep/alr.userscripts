@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-03-25
+// @version          2026-09-14
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -59,44 +59,35 @@ const siteConf = {
     // Dive Deeper (formerly called Today's Topics)
     '#todaysTopics': 'expanded',
 
-    // Story Feeds
-    'Story Feeds': 'compressed',
-
-    // For You
-    'For You': 'compressed',
+    // Spotlight
+    '#spotlight': 'compressed',
 
     // Local News
     '#localNews': 'default',
 
-    // Video Shorts
-    '#videoShorts': 'compressed',
-
     // More News
     '#moreNews': 'expanded',
 
-    // Everyone's Talking About...
-    '#theBigPicture': 'compressed',
+    // Video Shorts
+    '#videoShorts': 'compressed',
 
-    // Around Australia
-    '#aroundAustralia': 'saved',
+    // Analysis
+    '#analysis': 'saved',
 
-    // Politics
-    '#politics': 'saved',
+    // Money & the Economy
+    '#money&TheEconomy': 'saved',
 
-    // World
-    '#world': 'saved',
-
-    // Business
-    '#business': 'saved',
+    // Science & Environment
+    '#science&Environment': 'saved',
 
     // Sport
     '#sport': 'saved',
 
-    // Lifestyle
-    '#lifestyle': 'saved',
+    // Lifestyle & Wellbeing
+    '#lifestyle&Wellbeing': 'saved',
 
-    // Entertainment
-    '#entertainment': 'saved',
+    // Entertainment & Culture
+    '#entertainment&Culture': 'saved',
 
     // the floating copy of Just In that sticks to the right when scrolling done
     '.Home_justin__mnv4y Home_justinSticky__A9Hqa': 'hidden',
