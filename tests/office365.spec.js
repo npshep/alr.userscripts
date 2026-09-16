@@ -39,7 +39,7 @@ describe('moveapprail.js', () => {
 
         // header buttons
         const headerButtonsRegion = document.createElement('div');
-        headerButtonsRegion.id = 'headerButtonsRegionId';
+        headerButtonsRegion.id = 'owaHeaderButtonGroupRight_container';
         headerButtonsRegion.style.display = 'flex';
         workingSpace.appendChild(headerButtonsRegion);
         const button1 = document.createElement('div');
@@ -181,7 +181,7 @@ describe('moveapprail.js', () => {
                 }
 
                 // check that unused regions aren't displayed
-                const headerButtonsRegion = document.getElementById('headerButtonsRegionId');
+                const headerButtonsRegion = document.getElementById('owaHeaderButtonGroupRight_container');
                 const leftRail = document.getElementById('LeftRail');
                 const bottomRail = document.getElementById('bottomRail');
                 if (pos !== 'default') {
@@ -322,13 +322,13 @@ describe('moveapprail.js', () => {
 
         it('returns the header buttons container', () => {
 
-            expect(findHeaderButtonsRegion().id).toBe('headerButtonsRegionId');
+            expect(findHeaderButtonsRegion().id).toBe('owaHeaderButtonGroupRight_container');
 
         });
 
         it('returns null when the header buttons don\'t exist', () => {
 
-            document.getElementById('headerButtonsRegionId').remove();
+            document.getElementById('owaHeaderButtonGroupRight_container').remove();
             expect(findHeaderButtonsRegion()).toBeNull();
 
         });
@@ -449,7 +449,7 @@ describe('moveapprail.js', () => {
         it('returns the header button region', () => {
 
             setAppRailPosition('header');
-            expect(getAppRailRegion().id).toBe('headerButtonsRegionId');
+            expect(getAppRailRegion().id).toBe('owaHeaderButtonGroupRight_container');
 
         });
 
