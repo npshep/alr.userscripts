@@ -39,18 +39,80 @@ describe('streamline.js', () => {
         }
 
         // element identified by H2 heading test
-        const headingContainer = mockRailElement('testHeadingContainer', 'abc123', 'Test Heading');
+        const headingContainer = mockRailElement('testHeadingContainer', 'abc123', 'Test Heading', false);
         workingSpace.appendChild(headingContainer);
 
-        // mock rail element
-        const railContainer = mockRailElement('railContainer', 'abc123');
+        // mock in-body rail element
+        const railContainer = mockRailElement('railContainer', 'abc123', 'In-body rail', false);
         workingSpace.appendChild(railContainer);
+
+        // mock sidebar rail element
+        const railSidebar = document.createElement('aside');
+        railSidebar.className = 'Home_aside1__abc123';
+        railSidebar.appendChild(mockRailElement('railSidebar', 'abc123', 'Sidebar Rail', true));
+        workingSpace.appendChild(railSidebar);
+
+        // mock article summary
+        const articleSummary = document.createElement('div');
+        articleSummary.id = 'articleSummary';
+        articleSummary.innerHTML = '<div class="ArticleSummary_summary__abc123">' +
+            '<div class="Article_main__abc123">' + '<h2>In Short</h2>' +
+            '<p>Paragraph 1</p><p>Paragraph 2</p><p>Paragraph 3</p>' +
+            '</div></div>';
+        workingSpace.appendChild(articleSummary);
+
+        // mock contact form
+        const zendeskForm = document.createElement('div');
+        zendeskForm.id = 'zendeskForm';
+        zendeskForm.innerHTML = '<div class="ZendeskForm_zendeskForm__abc123">' +
+            '<div data-component="ZendeskFormUI">' + '<h3>Contact ...</h3>' +
+            '<form><input type="text" name="zendeskInput"></input></form>' +
+            '</div></div>';
+        workingSpace.appendChild(zendeskForm);
+
+        // mock the top stories panel in the footer
+        const topStoriesFooter = document.createElement('div');
+        topStoriesFooter.id = 'topStoriesFooter';
+        topStoriesFooter.innerHTML = '<div class="TopStories_container__abc123">' +
+            '<header class="SectionHeader_header__4_bXM TopStories_collectionHeading__abc123">'
+            '<div class="SectionHeader_mainSectionHeader___abc123">' + '<h2>Top Stories</h2>' +
+            '</div></header>' +
+            '<ol class="TopStories_list__abc123"><li>Story 1</li></ol>' +
+            '</div></div>';
+        workingSpace.appendChild(topStoriesFooter);
+
+        // mock sidebar element with H2 title
+        const asideWithH2 = document.createElement('aside');
+        asideWithH2.id = 'asideWithH2';
+        asideWithH2.className = 'Article_aside__abc123';
+        asideWithH2.innerHTML = '<div data-component="ArticleAside">' +
+            '<h2 class="ArticleAside_title__abc123">Aside title</h2>' +
+            '<ul><li>Aside1</li><li>Aside2</li></ul>' +
+            '</div>';
+        workingSpace.appendChild(asideWithH2);
+
+        // mock sidebar element with rail header
+        const asideWithRailHeader = document.createElement('div');
+        asideWithRailHeader.id = 'asideWithRailHeader';
+        asideWithRailHeader.className = 'Home_aside1__abc123';
+        asideWithRailHeader.innerHTML = '<div class="Rail_header__abc123">Header</div>' +
+            '<div>Content 1</div>' + '<div>Content 2</div>';
+        workingSpace.appendChild(asideWithRailHeader);
+
+        // mock in-article panel
+        const inArticlePanel = document.createElement('div');
+        inArticlePanel.id = 'inArticlePanel';
+        inArticlePanel.className = 'Panel_root__abc123';
+        inArticlePanel.innerHTML = '<div class="Panel_content__abc123">' +
+            '<div class="Rail_header__abc123"><h2>Title</h2><div>Subtitle</div></div>' +
+            '<div>Panel contents</div></div>';
+         workingSpace.appendChild(inArticlePanel);
 
     });
 
 
     afterEach(() => {
-        // remove the working space and spy
+        // remove the working space
         document.body.removeChild(workingSpace);
     });
 
@@ -64,6 +126,7 @@ describe('streamline.js', () => {
         let applyRendererSpy;
         let renderExpandableSpy;
         let renderHiddenSpy;
+        let onLoadSpy;
 
         beforeEach(() => {
 
@@ -79,46 +142,109 @@ describe('streamline.js', () => {
             applyRendererSpy = spyOn(this, 'applyRenderer').and.callThrough();
             renderExpandableSpy = spyOn(this, 'renderExpandable');
             renderHiddenSpy = spyOn(this, 'renderHidden');
+
+            // spy on the deferred configuration handler
+            onLoadSpy = spyOn(this, 'applyConfigurationOnLoad');
         });
 
-        it('applies configuration without saving', () => {
+        it('applies configuration without saving', (done) => {
             const mockConfNoSave = {
                 '#testElement': 'default',
                 '.testClass': 'expanded',
                 'Test Heading': 'compressed'
             };
-            applyConfiguration(mockConfNoSave);
-            expect(applyRendererSpy).toHaveBeenCalledTimes(2);
-            expect(applyRendererSpy).not.toHaveBeenCalledWith('#testElement', jasmine.any(Function));
-            expect(applyRendererSpy).toHaveBeenCalledWith('.testClass', jasmine.any(Function));
-            expect(applyRendererSpy).toHaveBeenCalledWith('Test Heading', jasmine.any(Function));
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, false, null);
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, true, null);
-            expect(errorSpy).not.toHaveBeenCalled();
+            applyConfiguration("test", mockConfNoSave);
+            setTimeout(() => {
+                expect(applyRendererSpy).toHaveBeenCalledTimes(2);
+                expect(applyRendererSpy).not.toHaveBeenCalledWith('#testElement', jasmine.any(Function));
+                expect(applyRendererSpy).toHaveBeenCalledWith('.testClass', jasmine.any(Function));
+                expect(applyRendererSpy).toHaveBeenCalledWith('Test Heading', jasmine.any(Function));
+                expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, false, null);
+                expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, true, null);
+                expect(errorSpy).not.toHaveBeenCalled();
+                expect(onLoadSpy).not.toHaveBeenCalled();
+                done();
+            }, 0);
         });
 
-        it('applies configuration with saving', () => {
-            GM_setValue('.testClass', 'compressed');
+        it('applies configuration with saving', (done) => {
+            GM_setValue(storageKey('test', '.testClass'), 'compressed');
             const mockConfWithSave = {
                 '#testElement': 'hidden',
                 '.testClass': 'saved',
                 'Test Heading': 'saved'
             };
-            applyConfiguration(mockConfWithSave);
-            expect(applyRendererSpy).toHaveBeenCalledTimes(3);
-            expect(renderHiddenSpy).toHaveBeenCalledWith(elementById);
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, '.testClass');
-            expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, 'Test Heading');
-            expect(errorSpy).not.toHaveBeenCalled();
+            applyConfiguration("test", mockConfWithSave);
+            setTimeout(() => {
+                expect(applyRendererSpy).toHaveBeenCalledTimes(3);
+                expect(renderHiddenSpy).toHaveBeenCalledWith(elementById);
+                expect(renderExpandableSpy).toHaveBeenCalledWith(elementByClass, true, storageKey('test', '.testClass'));
+                expect(renderExpandableSpy).toHaveBeenCalledWith(elementByHeading, false, storageKey('test', 'Test Heading'));
+                expect(errorSpy).not.toHaveBeenCalled();
+                expect(onLoadSpy).not.toHaveBeenCalled();
+                done();
+            }, 0);
         });
 
         it('logs an unexpected event for an invalid configuration value', () => {
             const mockConfBadValue = { '#testElement': 'badValue' };
-            applyConfiguration(mockConfBadValue);
+            applyConfiguration("test", mockConfBadValue);
             expect(applyRendererSpy).not.toHaveBeenCalled();
             expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
         });
 
+        it('forwards unconfigured keys to applyConfigurationOnLoad', () => {
+            const mockConfDeferredLoad = {
+                '#testElement': 'hidden',
+                '.testClass': 'saved',
+                '#deferredElement': 'expanded'
+            };
+            applyConfiguration("test", mockConfDeferredLoad);
+            expect(onLoadSpy).toHaveBeenCalledWith("test", { '#deferredElement': 'expanded' });
+        });
+
+    });
+
+    describe('applyConfigurationOnLoad', () => {
+
+        let errorSpy;
+
+        beforeEach(() => {
+
+            // spy on the error handler
+            errorSpy = spyOn(this, 'logUnexpectedEvent');
+
+        });
+
+        it('installs a MutationObserver on the app container', (done) => {
+
+            // mock the app container
+            const appContainer = document.createElement('div');
+            appContainer.id = 'app-container';
+            workingSpace.appendChild(appContainer);
+
+            // verify that the observer is created and attached
+            const observationSpy = spyOn(MutationObserver.prototype, 'observe').and.callThrough();
+            const mockConf = {};
+            applyConfigurationOnLoad("test", mockConf);
+            expect(observationSpy).toHaveBeenCalledWith(appContainer, jasmine.any(Object));
+            expect(errorSpy).not.toHaveBeenCalled();
+
+            // mock a mutation
+            const mutationSpy = spyOn(this, 'onAppContainerMutation');
+            const lateLoadedElement = document.createElement('div');
+            appContainer.appendChild(lateLoadedElement);
+            setTimeout(() => {
+                expect(mutationSpy).toHaveBeenCalledWith(jasmine.any(Array), jasmine.any(MutationObserver), "test", mockConf );
+                done();
+            }, 0);
+
+        });
+
+        it('logs an error when the app container doesn\'t exist', () => {
+           applyConfigurationOnLoad("test", {});
+           expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+        });
     });
 
     describe('applyRenderer', () => {
@@ -146,9 +272,9 @@ describe('streamline.js', () => {
         });
 
         it('logs unexpected events for invalid configuration keys', () => {
-            applyRenderer('', mockRender);
-            applyRenderer('#', mockRender);
-            applyRenderer('.', mockRender);
+            expect(applyRenderer('', mockRender)).toBeFalse();
+            expect(applyRenderer('#', mockRender)).toBeFalse();
+            expect(applyRenderer('.', mockRender)).toBeFalse();
             expect(elementById.hasAttribute('data-rendered')).toBeFalse();
             expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
             expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
@@ -157,7 +283,7 @@ describe('streamline.js', () => {
         });
 
         it('renders elements identified by id', () => {
-            applyRenderer('#testElement', mockRender);
+            expect(applyRenderer('#testElement', mockRender)).toBeTrue();
             expect(elementById.getAttribute('data-rendered')).toBe('true');
             expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
             expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
@@ -167,7 +293,7 @@ describe('streamline.js', () => {
         });
 
         it('renders elements identified by class', () => {
-            applyRenderer('.testClass', mockRender);
+            expect(applyRenderer('.testClass', mockRender)).toBeTrue();
             for (let e of elementsByClass) {
                 expect(e.getAttribute('data-rendered')).toBe('true');
                 e.removeAttribute('data-rendered');
@@ -177,24 +303,29 @@ describe('streamline.js', () => {
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it('renders elements identified by H2 heading text', () => {
-            applyRenderer('Test Heading', mockRender);
-            expect(elementByHeading.getAttribute('data-rendered')).toBe('true');
-            expect(elementById.hasAttribute('data-rendered')).toBeFalse();
-            expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
-            expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
-            expect(errorSpy).not.toHaveBeenCalled();
+        it('renders elements identified by H2 heading text', (done) => {
+            expect(applyRenderer('Test Heading', mockRender)).toBeTrue();
+            setTimeout(() => {
+                expect(elementByHeading.getAttribute('data-rendered')).toBe('true');
+                expect(elementById.hasAttribute('data-rendered')).toBeFalse();
+                expect(elementsByClass[0].hasAttribute('data-rendered')).toBeFalse();
+                expect(elementsByClass[1].hasAttribute('data-rendered')).toBeFalse();
+                expect(errorSpy).not.toHaveBeenCalled();
+                done();
+            });
         });
 
-        it('logs an unexpected event for an unmatched configuration key', () => {
-            applyRenderer('Garbage', mockRender);
-            expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+        it('returns false for an unmatched configuration key', () => {
+            expect(applyRenderer('Garbage', mockRender)).toBeFalse();
         });
 
-        it('logs an unexpected event for a missing rail root', () => {
-            findRailRoot(elementByHeading).remove();
-            applyRenderer('Test Heading', mockRender);
-            expect(errorSpy).toHaveBeenCalledWith("conf", jasmine.any(String));
+        it('logs an unexpected event for a missing rail root', (done) => {
+            elementByHeading.className = "notRailRoot";
+            expect(applyRenderer('Test Heading', mockRender)).toBeTrue();
+            setTimeout(() => {
+                expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
+                done();
+            });
         });
 
     });
@@ -212,62 +343,81 @@ describe('streamline.js', () => {
         beforeEach(() => {
 
             // mock some stored values
-            GM_setValue('savedExpanded', 'expanded');
-            GM_setValue('savedCompressed', 'compressed');
-            GM_setValue('unsavedExpanded', 'expanded');
-            GM_setValue('unsavedCompressed', 'compressed');
+            GM_setValue(storageKey('article', 'savedExpanded'), 'expanded');
+            GM_setValue(storageKey('article', 'savedCompressed'), 'compressed');
+            GM_setValue(storageKey('article', 'unsavedCompressed'), 'compressed');
+            GM_setValue(storageKey('home', 'unsavedExpanded'), 'expanded');
+            GM_setValue(storageKey('home', 'unsavedCompressed'), 'compressed');
+            GM_setValue(storageKey('home', 'savedCompressed'), 'compressed');
             GM_setValue('deprecatedComponent', 'compressed');
 
-            // clean the stored values
-            cleanStoredValues(mockConf);
         });
 
         it('does not remove configuration for saved components', () => {
-            expect(GM_getValue('savedExpanded', null)).toBe('expanded');
-            expect(GM_getValue('savedCompressed', null)).toBe('compressed');
+            cleanStoredValues('article', mockConf);
+            expect(GM_getValue(storageKey('article', 'savedExpanded'), null)).toBe('expanded');
+            expect(GM_getValue(storageKey('article', 'savedCompressed'), null)).toBe('compressed');
+            expect(GM_getValue(storageKey('home', 'savedCompressed'), null)).toBe('compressed');
         });
 
         it('removes configuration for no-longer-saved components', () => {
-            expect(GM_getValue('unsavedExpanded', null)).toBeNull();
-            expect(GM_getValue('unsavedCompressed', null)).toBeNull();
+            cleanStoredValues('home', mockConf);
+            expect(GM_getValue(storageKey('home', 'unsavedExpanded'), null)).toBeNull();
+            expect(GM_getValue(storageKey('home', 'unsavedCompressed'), null)).toBeNull();
+            expect(GM_getValue(storageKey('article', 'unsavedCompressed'), null)).toBe('compressed');
         });
 
         it('removes configuration for deprecated components', () => {
+            cleanStoredValues('home', mockConf);
             expect(GM_getValue('deprecatedComponent', null)).toBeNull();
         });
 
     });
 
-    describe('findRailRoot', () => {
+    describe('getContainingAside', () => {
 
-        let railRoot;
-
-        beforeEach(() => {
-            // get a reference to the expected rail root
-            railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
+        it('returns null when not in the sidebar', () => {
+            const e = document.getElementById('articleSummary');
+            expect(getContainingAside(e)).toBeNull();
         });
 
-        it('finds roots passed directly', () => {
-            const trivialRailRoot = findRailRoot(railRoot);
-            expect(trivialRailRoot).toBe(railRoot);
+        it('returns the containing aside on an article page', () => {
+            const e = workingSpace.querySelector('#asideWithH2 h2');
+            expect(getContainingAside(e).id).toBe('asideWithH2');
         });
 
-        it('searches downwards for the rail root', () => {
-            const railContainer = document.getElementById('railContainer');
-            const downwardsRailRoot = findRailRoot(railContainer);
-            expect(downwardsRailRoot).toBe(railRoot);
+        it ('returns the containing aside on the home page', () => {
+            const e = workingSpace.querySelector('#railSidebar div');
+            expect(getContainingAside(e).className).toBe('Home_aside1__abc123');
         });
 
-        it('searches upwards for the rail root', () => {
-            const railChild = railRoot.firstElementChild;
-            const upwardsRailRoot = findRailRoot(railChild);
-            expect(upwardsRailRoot).toBe(railRoot);
+    });
+
+    describe('getPageType', () => {
+
+        it('recognises the home page', () => {
+
+            expect(getPageType('https://www.abc.net.au/')).toBe('home');
+
         });
 
-        it('returns null when no rail root exists in the tree', () => {
-            const testElement = document.getElementById('testElement');
-            const nullRailRoot = findRailRoot(testElement);
-            expect(nullRailRoot).toBeNull();
+        it('recognises an article page', () => {
+
+            expect(getPageType('https://www.abc.net.au/news/2026-05-27/article-title/number')).toBe('article');
+
+        });
+
+        it('recognises unit testing', () => {
+
+            expect(getPageType('file:///home/alittler/src/alr.userscripts/spec.html')).toBe('test');
+
+        });
+
+        it('returns null for unrecognised pages', () => {
+
+            expect(getPageType('https://www.abc.net.au/news/politics')).toBeNull();
+            expect(getPageType('https://www.alittleresearch.com.au')).toBeNull();
+
         });
 
     });
@@ -295,49 +445,226 @@ describe('streamline.js', () => {
 
     });
 
-    describe('onClickExpandable', () => {
+    describe('mapExpandableComponent', () => {
 
-        let root;
-        let header;
-        let content;
-
+        let expandableComponents;
         beforeEach(() => {
 
-            // get references to the test elements
-            root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-            header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
-            content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
+            // get references to the known expandable components
+            expandableComponents = [];
+
+            // in-body rail component
+            expandableComponents.push({
+                container: document.getElementById('railContainer'),
+                root: workingSpace.querySelector('#railContainer > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
+            });
+
+            // sidebar rail component
+            expandableComponents.push({
+                container: document.getElementById('railSidebar'),
+                root: workingSpace.querySelector('#railSidebar > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railSidebar .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railSidebar .Grid_row__abc123')
+             });
+
+             // article summary
+             expandableComponents.push({
+                container: document.getElementById('articleSummary'),
+                root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
+                header: workingSpace.querySelector('#articleSummary h2'),
+                content: workingSpace.querySelectorAll('#articleSummary p')
+            });
+
+            // contact form
+            expandableComponents.push({
+                container: document.getElementById('zendeskForm'),
+                root: workingSpace.querySelector('#zendeskForm .ZendeskForm_zendeskForm__abc123'),
+                header: workingSpace.querySelector('#zendeskForm h3'),
+                content: workingSpace.querySelector('#zendeskForm form')
+            });
+
+            // top stories
+            expandableComponents.push({
+                container: document.getElementById('topStoriesFooter'),
+                root: workingSpace.querySelector('#topStoriesFooter .TopStories_container__abc123'),
+                header: workingSpace.querySelector('#topStoriesFooter header'),
+                content: workingSpace.querySelector('#topStoriesFooter ol')
+            });
+
+            // aside with h2 heading
+            expandableComponents.push({
+                container: document.getElementById('asideWithH2'),
+                root: workingSpace.querySelector('#asideWithH2'),
+                header: workingSpace.querySelector('#asideWithH2 h2'),
+                content: [ workingSpace.querySelector('#asideWithH2 ul') ]
+            });
+
+            // aside with rail header
+            expandableComponents.push({
+                container: document.getElementById('asideWithRailHeader'),
+                root: workingSpace.querySelector('#asideWithRailHeader'),
+                header: workingSpace.querySelector('#asideWithRailHeader .Rail_header__abc123'),
+                content: [
+                    workingSpace.querySelector('#asideWithRailHeader > div:nth-child(2)'),
+                    workingSpace.querySelector('#asideWithRailHeader > div:nth-child(3)')
+                ]
+            });
+
+            // in-article panel
+            expandableComponents.push({
+                container: document.getElementById('inArticlePanel'),
+                root: workingSpace.querySelector('#inArticlePanel'),
+                header: workingSpace.querySelector('#inArticlePanel h2'),
+                content: [
+                    workingSpace.querySelector('#inArticlePanel .Rail_header__abc123 > div:nth-child(2)'),
+                    workingSpace.querySelector('#inArticlePanel .Panel_content__abc123 > div:nth-child(2)')
+                ]
+            });
+
+        });
+
+        it('finds roots passed directly', async () => {
+            for (const c of expandableComponents) {
+                const parts = await mapExpandableComponent(c.root);
+                expect(parts.root).toBe(c.root);
+            }
+        });
+
+        it('searches downwards for the component root', async () => {
+            for (const c of expandableComponents) {
+                const parts = await mapExpandableComponent(c.container);
+                expect(parts.root).toBe(c.root);
+            }
+        });
+
+        it('searches upwards for the component root', async () => {
+            for (const c of expandableComponents) {
+                const parts = await mapExpandableComponent(c.root.firstElementChild);
+                expect(parts.root).toBe(c.root);
+            }
+        });
+
+        it('throws ReferenceError when no rail component root exists in the tree', async () => {
+            const testElement = document.getElementById('testElement');
+            await expectAsync(mapExpandableComponent(testElement)).toBeRejectedWithError(ReferenceError);
+        });
+
+        it('correctly maps the root, header, and content', async () => {
+            for (const c of expandableComponents) {
+                const parts = await mapExpandableComponent(c.container);
+                expect(parts.root).toBe(c.root);
+                expect(parts.header).toBe(c.header);
+                expect(parts.content).toEqual(c.content);
+            }
+        });
+    });
+
+    describe('onAppContainerMutation', () => {
+
+        let connected = true;
+        const mockObserver = {
+            disconnect: function () { connected = false; }
+        };
+
+        it('disconnects the observer', () => {
+            connected = true;
+            onAppContainerMutation(null, mockObserver, "test", {});
+            expect(connected).toBeFalse();
+        });
+
+        it('forwards configuration to applyConfiguration', () => {
+            const applyConfigurationSpy = spyOn(this, 'applyConfiguration');
+            const mockConf = { '#testElement': 'hidden' };
+            onAppContainerMutation(null, mockObserver, "test", mockConf);
+            expect(applyConfigurationSpy).toHaveBeenCalledWith("test", mockConf);
+        });
+    });
+
+    describe('onClickExpandable', () => {
+
+        // verify that the parts of an expandable component respond property
+        function expectExpandable(parts) {
+
+            // compress expanded component
+            onClickExpandable(parts.header, parts.content, null);
+            for (let i = 0; i < parts.content.length; i++) {
+                expect(parts.content[i].style.display).toBe('none');
+            }
+            expect(parts.header.style.cursor).toBe('zoom-in');
+
+            // expand compressed component
+            onClickExpandable(parts.header, parts.content, null);
+            for (let i = 0; i < parts.content.length; i++) {
+                expect(parts.content[i].style.display).toBe('block');
+            }
+            expect(parts.header.style.cursor).toBe('zoom-out');
+        }
+
+        let parts;
+        beforeEach(() => {
+
+            // get references to some test elements
+            parts = {
+                root: workingSpace.querySelector('#railContainer > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
+            };
 
         });
 
         it('clicking on the default header hides content and makes the cursor zoom-in, without saving', () => {
-            onClickExpandable(header, content, null);
-            expect(content.style.display).toBe('none');
-            expect(header.style.cursor).toBe('zoom-in');
+            onClickExpandable(parts.header, parts.content, null);
+            expect(parts.content.style.display).toBe('none');
+            expect(parts.header.style.cursor).toBe('zoom-in');
             expect(GM_getValue('testExpandable', null)).toBeNull();
         });
 
         it('clicking on a compressed header makes content visible and cursor zoom-out', () => {
-            onClickExpandable(header, content, null); // compresses the element
-            onClickExpandable(header, content, null); // expands it again
-            expect(content.style.display).toBe('block');
-            expect(header.style.cursor).toBe('zoom-out');
+            onClickExpandable(parts.header, parts.content, null); // compresses the element
+            onClickExpandable(parts.header, parts.content, null); // expands it again
+            expect(parts.content.style.display).toBe('block');
+            expect(parts.header.style.cursor).toBe('zoom-out');
             expect(GM_getValue('testExpandable', null)).toBeNull();
         });
 
         it('clicking on an expanded header hides the content, with saving', () => {
-            onClickExpandable(header, content, 'testExpandable');
-            expect(content.style.display).toBe('none');
-            expect(header.style.cursor).toBe('zoom-in');
+            onClickExpandable(parts.header, parts.content, 'testExpandable');
+            expect(parts.content.style.display).toBe('none');
+            expect(parts.header.style.cursor).toBe('zoom-in');
             expect(GM_getValue('testExpandable', null)).toBe('compressed');
         });
 
         it('clicking on a compressed header makes the content visible, with saving', () => {
-            onClickExpandable(header, content, 'testExpandable'); // compresses the element
-            onClickExpandable(header, content, 'testExpandable'); // expands it again
-            expect(content.style.display).toBe('block');
-            expect(header.style.cursor).toBe('zoom-out');
+            onClickExpandable(parts.header, parts.content, 'testExpandable'); // compresses the element
+            onClickExpandable(parts.header, parts.content, 'testExpandable'); // expands it again
+            expect(parts.content.style.display).toBe('block');
+            expect(parts.header.style.cursor).toBe('zoom-out');
             expect(GM_getValue('testExpandable', null)).toBe('expanded');
+        });
+
+        it('handles NodeList contents', () => {
+            // use the article summary, which has multiple paragraphs
+            const parts = {
+               root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
+               header: workingSpace.querySelector('#articleSummary h2'),
+               content: workingSpace.querySelectorAll('#articleSummary p')
+           };
+           expectExpandable(parts);
+        });
+
+        it('handles array contents', () => {
+            // use the aside with rail header, which has mutliple div's
+            const parts = {
+                root: workingSpace.querySelector('#asideWithRailHeader'),
+                header: workingSpace.querySelector('#asideWithRailHeader .Rail_header__abc123'),
+                content: [
+                    workingSpace.querySelector('#asideWithRailHeader > div:nth-child(2)'),
+                    workingSpace.querySelector('#asideWithRailHeader > div:nth-child(3)')
+                ]
+            };
+            expectExpandable(parts);
         });
 
     });
@@ -345,77 +672,121 @@ describe('streamline.js', () => {
 
     describe('renderExpandable', () => {
 
-        let root;
-        let header;
-        let content;
+        let parts;
+        let mapExpandableSpy;
         let errorSpy;
-
         beforeEach(() => {
-            // get references to the test elements
-            root = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
-            header = workingSpace.querySelector('#railContainer .Rail_header__abc123')
-            content = workingSpace.querySelector('#railContainer .Rail_content__abc123');
+
+            // mock mapExpandableComponent
+            parts = {
+                root: workingSpace.querySelector('#railContainer > .Rail_root__abc123'),
+                header: workingSpace.querySelector('#railContainer .Rail_header__abc123'),
+                content: workingSpace.querySelector('#railContainer .Rail_content__abc123')
+            };
+            mapExpandableSpy = spyOn(this, 'mapExpandableComponent').and.returnValue(Promise.resolve(parts));
 
             // spy on the error handler
             errorSpy = spyOn(this, 'logUnexpectedEvent');
         });
 
-        it('content is visible when startCompressed is not supplied', () => {
-            renderExpandable(root);
-            expect(content.style.display).not.toBe('none');
+        it('content is visible when startCompressed is not supplied', async () => {
+            await renderExpandable(parts.root);
+            expect(parts.root.style.height).toBe('fit-content');
+            expect(parts.content.style.display).not.toBe('none');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it('content is visible and cursor is zoom-out when startCompressed is false', () => {
-            renderExpandable(root, false);
-            expect(content.style.display).not.toBe('none');
-            expect(header.style.cursor).toBe('zoom-out');
+        it('content is visible and cursor is zoom-out when startCompressed is false', async () => {
+            await renderExpandable(parts.root, false);
+            expect(parts.root.style.height).toBe('fit-content');
+            expect(parts.content.style.display).not.toBe('none');
+            expect(parts.header.style.cursor).toBe('zoom-out');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it ('content is compressed and cursor is zoom-in when startCompressed is true', () => {
-            renderExpandable(root, true);
-            expect(content.style.display).toBe('none');
-            expect(header.style.cursor).toBe('zoom-in');
+        it ('content is compressed and cursor is zoom-in when startCompressed is true', async () => {
+            await renderExpandable(parts.root, true);
+            expect(parts.root.style.height).toBe('fit-content');
+            expect(parts.content.style.display).toBe('none');
+            expect(parts.header.style.cursor).toBe('zoom-in');
             expect(errorSpy).not.toHaveBeenCalled();
         });
 
-        it('clicking invokes onClickExpandable with correct arguments', () => {
+        it('handles multiple content items', async () => {
+            // use the article summary, which has multiple lines
+            let summary = {
+               root: workingSpace.querySelector('#articleSummary .ArticleSummary_summary__abc123'),
+               header: workingSpace.querySelector('#articleSummary h2'),
+               content: workingSpace.querySelectorAll('#articleSummary p')
+            }
+            mapExpandableSpy.and.returnValue(Promise.resolve(summary));
+
+            // start expanded
+            await renderExpandable(summary.root, false);
+            expect(summary.header.style.cursor).toBe('zoom-out');
+            for (let i = 0; i < summary.content.length; i++) {
+                expect(summary.content[i].style.display).toBe('');
+            }
+
+            // start compressed
+            await renderExpandable(summary.root, true);
+            expect(summary.header.style.cursor).toBe('zoom-in');
+
+        });
+
+        it('moves expandable sidebar elements to the top', async () => {
+            let sidebar = {
+               root: document.getElementById('railSidebar'),
+               header: workingSpace.querySelector('#railSidebar h2'),
+               content: workingSpace.querySelectorAll('#railSidebar div')
+            }
+            mapExpandableSpy.and.returnValue(Promise.resolve(sidebar));
+            await renderExpandable(sidebar.root, true);
+            expect(sidebar.root.parentElement.style.alignSelf).toBe('start');
+        });
+
+        it('clicking invokes onClickExpandable with correct arguments', async () => {
             const clickSpy = spyOn(this, 'onClickExpandable');
-            renderExpandable(root, true);
-            header.click();
+            await renderExpandable(parts.root, true);
+            parts.header.click();
             expect(clickSpy).toHaveBeenCalledTimes(1);
-            expect(clickSpy).toHaveBeenCalledWith(header, content, null);
-            renderExpandable(root, true, 'testExpandable');
-            header.click();
+            expect(clickSpy).toHaveBeenCalledWith(parts.header, parts.content, null);
+            await renderExpandable(parts.root, true, 'testExpandable');
+            parts.header.click();
             expect(clickSpy).toHaveBeenCalledTimes(2);
-            expect(clickSpy).toHaveBeenCalledWith(header, content, 'testExpandable');
+            expect(clickSpy).toHaveBeenCalledWith(parts.header, parts.content, 'testExpandable');
         });
 
-        it('mouseover sets header background; mouseout resets it', () => {
-            renderExpandable(root, false);
-            const originalBackgroundColor = header.style.backgroundColor;
-            header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-            expect(header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
-            header.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-            expect(header.style.backgroundColor).toBe(originalBackgroundColor);
+        it('mouseover sets header background; mouseout resets it', async () => {
+            await renderExpandable(parts.root, false);
+            const originalBackgroundColor = parts.header.style.backgroundColor;
+            parts.header.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+            expect(parts.header.style.backgroundColor).toBe('var(--nw-colour-theme-surface-tint)');
+            parts.header.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+            expect(parts.header.style.backgroundColor).toBe(originalBackgroundColor);
         });
 
-        it('logs an unexpected event for an element with no rail root', () => {
-            const testElement = document.getElementById('testElement');
-            renderExpandable(testElement, false);
+        it('logs an unexpected event for a non-expandable component', async () => {
+            mapExpandableSpy.and.returnValue(Promise.reject(new ReferenceError("not expandable")));
+            await renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
-        it('logs an unexpected event for a rail element with no content', () => {
-            content.remove();
-            renderExpandable(root, false);
+        it('logs an unexpected event for an expandable component with no content', async () => {
+            mapExpandableSpy.and.returnValue(Promise.resolve({
+                root: parts.root,
+                header: parts.header
+            }));
+            await renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
-        it('log an unexpected event for a rail element with no header', () => {
-            header.remove();
-            renderExpandable(root, false);
+        it('log an unexpected event for an expandable component with no header', async () => {
+            mapExpandableSpy.and.returnValue(Promise.resolve({
+                root: parts.root,
+                content: parts.content
+            }));
+            await renderExpandable(parts.root, false);
             expect(errorSpy).toHaveBeenCalledWith("dom", jasmine.any(String));
         });
 
@@ -424,21 +795,83 @@ describe('streamline.js', () => {
 
     describe('renderHidden', () => {
 
-        it('hide single element', () => {
+        it('hides single element', async () => {
             const testElement = document.getElementById('testElement');
             testElement.style.display = 'block';
-            renderHidden(testElement);
+            await renderHidden(testElement);
             expect(testElement.style.display).toBe('none');
         });
 
-        it('hide rail element', () => {
+        it('hides rail element', async () => {
             const railContainer = document.getElementById('railContainer');
             const railRoot = workingSpace.querySelector('#railContainer > .Rail_root__abc123');
             const railChild = railRoot.firstElementChild;
-            renderHidden(railRoot);
+            await renderHidden(railRoot);
             expect(railRoot.style.display).toBe('none');
             expect(railContainer.style.display).not.toBe('none');
             expect(railChild.style.display).not.toBe('none');
+        });
+
+    });
+
+    describe('storageKey', () => {
+
+        it('constructs and deconstructs storage keys', () => {
+            const sk = storageKey('cat', 'dog');
+            expect(storageKeyCategory(sk)).toBe('cat');
+            expect(storageKeyBare(sk)).toBe('dog');
+        });
+
+        it('handles keys containing the separator', () => {
+            const sk = storageKey('cat', 'dog*');
+            expect(storageKeyCategory(sk)).toBe('cat');
+            expect(storageKeyBare(sk)).toBe('dog*');
+        });
+
+        it('handles keys containing CSS selectors', () => {
+            const sk1 = storageKey('cat', '.dog');
+            expect(storageKeyCategory(sk1)).toBe('cat');
+            expect(storageKeyBare(sk1)).toBe('.dog');
+            const sk2 = storageKey('cat', '#dog');
+            expect(storageKeyCategory(sk2)).toBe('cat');
+            expect(storageKeyBare(sk2)).toBe('#dog');
+        });
+
+        it('deconstructs deprecated keys', () => {
+            const sk = '.deprecated_key';
+            expect(storageKeyCategory(sk)).toBeNull();
+            expect(storageKeyBare(sk)).toBe(sk);
+        });
+
+    });
+
+    describe('stringifyElement', () => {
+
+        it('handles elements with ids', () => {
+            const e = document.createElement('div');
+            e.id = "testid";
+            workingSpace.appendChild(e);
+            expect(stringifyElement(e)).toBe("#testid");
+        });
+
+        it('handles elements with a single class', () => {
+            const e = document.createElement('div');
+            e.className = "testclass";
+            workingSpace.appendChild(e);
+            expect(stringifyElement(e)).toBe(".testclass");
+        });
+
+        it('handles elements with multiple classes', () => {
+            const e = document.createElement('div');
+            e.className = "testclass1 testclass2";
+            workingSpace.appendChild(e);
+            expect(stringifyElement(e)).toBe(".testclass1");
+        });
+
+        it('handles elements with neither id nor class', () => {
+            const e = document.createElement('div');
+            workingSpace.appendChild(e);
+            expect(stringifyElement(e)).toBe("anonymous DIV");
         });
 
     });
@@ -453,9 +886,10 @@ describe('streamline.js', () => {
 //   id (string) - an id for the containing div
 //   nonce (string) - an arbitrary string to append to class names
 //   title (string) - the text content of the header
+//   sidebar (boolean) - true to use sidebar style; false to use in-text style
 //
 // Returns: a div containing a rail element in the format used by the ABC site
-function mockRailElement(id, nonce, title = null) {
+function mockRailElement(id, nonce, title, sidebar = false) {
 
     // containing div
     const container = document.createElement('div');
@@ -476,14 +910,18 @@ function mockRailElement(id, nonce, title = null) {
         header.append(headerContent);
     }
 
-    // scrolling window
-    const navigation = document.createElement('div');
-    navigation.className = 'Rail_scollNavigation__' + nonce;
-    root.appendChild(navigation);
+    if (!sidebar) {
+        // scrolling window
+        const navigation = document.createElement('div');
+        navigation.className = 'Rail_scrollNavigation__' + nonce;
+        root.appendChild(navigation);
+    }
 
     // content
     const content = document.createElement('div');
-    content.className = 'Rail_content__' + nonce;
+    content.className = (sidebar) ?
+        'Grid_row__' + nonce :
+        'Rail_content__' + nonce;
     root.appendChild(content);
 
     return container;

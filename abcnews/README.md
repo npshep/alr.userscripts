@@ -11,7 +11,7 @@ ABC trademarks remain the property of the Australian Broadcasting Corporation.
 The ABC is free to change its site at any time in such a way that this script
 may no longer work.
 
-Copyright (c) 2025 Nicholas Paul Sheppard (npsheppard@alittleresearch.com.au)
+Copyright (c) 2025-6 Nicholas Paul Sheppard (npsheppard@alittleresearch.com.au)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

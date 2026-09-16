@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-09-14
+// @version          2026-09-16
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
 // @contributionURL  https://ko-fi.com/npsheppard
 // @match            https://www.abc.net.au
-// @match            https://www.abc.net.au/news
+// @match            https://www.abc.net.au/news/*
 // @icon             https://www.alittleresearch.com.au/sites/default/files/alriconbl-transbg-32x32.png
 // @grant            GM_deleteValue
 // @grant            GM_getValue
@@ -47,118 +47,199 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 const siteConf = {
-    // Top Stories
-    '#topStories': 'default',
 
-    // State Top Storeis
-    '#stateTopStories': 'default',
+    //
+    // Components appearing on the home page, https://www.abc.net.au
+    //
+    home: {
 
-    // the fixed copy of Just In that appears at the top right)
-    '#justIn': 'default',
+        // Top Stories
+        '#topStories': 'default',
 
-    // Dive Deeper (formerly called Today's Topics)
-    '#todaysTopics': 'expanded',
+        // State Top Stories
+        '#stateTopStories': 'default',
 
-    // Spotlight
-    '#spotlight': 'compressed',
+        // the fixed copy of Just In that appears at the top right)
+        '#justIn': 'default',
 
-    // Local News
-    '#localNews': 'default',
+        // Dive Deeper (formerly called Today's Topics)
+        '#todaysTopics': 'expanded',
 
-    // More News
-    '#moreNews': 'expanded',
+        // Spotlight
+        '#spotlight': 'compressed',
 
-    // Video Shorts
-    '#videoShorts': 'compressed',
+        // Local News
+        '#localNews': 'default',
 
-    // Analysis
-    '#analysis': 'saved',
+        // More News
+        '#moreNews': 'expanded',
 
-    // Money & the Economy
-    '#money&TheEconomy': 'saved',
+        // Video Shorts
+        '#videoShorts': 'compressed',
 
-    // Science & Environment
-    '#science&Environment': 'saved',
+        // Analysis
+        '#analysis': 'saved',
 
-    // Sport
-    '#sport': 'saved',
+        // Money & the Economy
+        '#money&TheEconomy': 'saved',
 
-    // Lifestyle & Wellbeing
-    '#lifestyle&Wellbeing': 'saved',
+        // Science & Environment
+        '#science&Environment': 'saved',
 
-    // Entertainment & Culture
-    '#entertainment&Culture': 'saved',
+        // Sport
+        '#sport': 'saved',
 
-    // the floating copy of Just In that sticks to the right when scrolling done
-    '.Home_justin__mnv4y Home_justinSticky__A9Hqa': 'hidden',
+        // Lifestyle & Wellbeing
+        '#lifestyle&Wellbeing': 'saved',
 
-    // marketing banners (usually promoting ABC iView)
-    '.Home_marketingBannerMain__zEIHT': 'hidden',
-    '.Home_marketingBannerMobile__u2kCT': 'hidden',
-    '.Home_marketingBannerSidebar__L7di0': 'hidden',
+        // Entertainment & Culture
+        '#entertainment&Culture': 'saved',
 
-    // the category headings that appear above each story
-    '.Tag_container__7_5W6': 'default'
+        // the floating copy of Just In that sticks to the right when scrolling done
+        '.Home_justin__mnv4y Home_justinSticky__A9Hqa': 'hidden',
+
+        // marketing banners (usually promoting ABC iView)
+        '.Home_marketingBannerMain__zEIHT': 'hidden',
+        '.Home_marketingBannerMobile__u2kCT': 'hidden',
+        '.Home_marketingBannerSidebar__L7di0': 'hidden',
+
+        // the category headings that appear above each story
+        '.Tag_container__7_5W6': 'default'
+    },
+
+    //
+    // Components appearing on article pages, https://www.abc.net.au/news/YYYY-DD-MM/*
+    //
+    article: {
+
+        // "In short" summary at the top of the article
+        '.ArticleSummary_summary__Zf0LG': 'compressed',
+
+        // in-article panels linking to other stories -
+        // "More about...", "More analysis..." and "Sign up to...", respectively
+        '.RecirculationRecommendations_container__7nH0U': 'hidden',
+        '.AnalysisCarouselEmbed_container__9jCk1': 'compressed',
+        '.Newsletter_newsletterContainer__ki2K6': 'compressed',
+
+        // "Top Stories" - the first is the sidebar; the second is panel at the bottom
+        'Top Stories': 'compressed',
+        '.TopStories_container__G_Fb1': 'hidden',
+
+        // "Related stories" sidebar
+        '#Related stories': 'compressed',
+
+        // "Popular now" sidebar
+        'Popular now': 'compressed',
+
+        // "Sport" sidebar
+        '#Sport': 'compressed',
+
+        // "Share your view" form at the bottom of the article
+        '.ZendeskForm_zendeskForm__5eLgR': 'compressed',
+
+        // the marketing banner at the end of the article (usually for ABC iView)
+        '.ArticleWeb_marketingBanner__WEtHh': 'hidden',
+
+        // the "Related topics" that appear near the bottom
+        '.RelatedTopics_title__W9qTi': 'hidden',
+
+        // the "Just In" stories that appear at the bottom
+        '.LatestStories_heading__0dNMm': 'hidden'
+
+    }
 };
+
+// separator used for building compound GM_setValue() keys
+const storageKeySeparator = '**';
 
 
 (function() {
     'use strict';
 
-    // if the location is a file, we're executing unit tests, so suppress the main function
-    if (!window.location.href.startsWith('file://')) {
-        // check for unused configuration values
-        cleanStoredValues(siteConf);
-
-        // apply site configuration
-        applyConfiguration(siteConf);
-    };
+    // check the page type and apply corresponding configuration
+    const pageType = getPageType(window.location.href);
+    if (pageType != null && pageType != 'test') {
+        cleanStoredValues(pageType, siteConf[pageType]);
+        applyConfiguration(pageType, siteConf[pageType]);
+    }
 
 })();
 
 
-// Configure the ABC News web site. See the comment above siteConf for the
+// Configure the current page. See the comment above siteConf for the
 // format of component identifiers and display states
 //
 // Input:
-//   conf (Object) - an array of component identifiers mapped to display states
-function applyConfiguration(conf) {
+//   category (String) - the configuration category, "home" or "article"
+//   conf (Object) - an associative array mapping component identifiers to display states
+function applyConfiguration(category, conf) {
 
+    // build a list of keys to be configured
+    let unconf = {};
     for (const key of Object.keys(conf)) {
-
         let componentConf = conf[key];
         let componentSaveKey = null;
         if (componentConf === 'saved') {
             // restore saved value, defaulting to 'expanded'
-            componentConf = GM_getValue(key, 'expanded');
-            componentSaveKey = key;
+            componentSaveKey = storageKey(category, key);
+            componentConf = GM_getValue(componentSaveKey, 'expanded');
         }
 
+        let configured = false;
         switch (componentConf) {
-        	case 'hidden':
-        		applyRenderer(key, (element) => { renderHidden(element); });
-        		break;
-
-        	case 'compressed':
-                applyRenderer(key, (element) => { renderExpandable(element, true, componentSaveKey); });
+            case 'hidden':
+                configured = applyRenderer(key, (element) => { renderHidden(element); });
                 break;
 
-        	case 'expanded':
-                applyRenderer(key, (element) => { renderExpandable(element, false, componentSaveKey); });
+            case 'compressed':
+                configured = applyRenderer(key, (element) => { renderExpandable(element, true, componentSaveKey); });
+                break;
+
+            case 'expanded':
+                configured = applyRenderer(key, (element) => { renderExpandable(element, false, componentSaveKey); });
                 break;
 
             case 'default':
                 // do nothing
+                configured = true;
                 break;
 
             default:
                 // not a recognised rendering style (probably a typo in siteConf)
-                logUnexpectedEvent("conf", "Invalid value '" + componentConf + "' for configuration key '" + key + "'.");
+                logUnexpectedEvent("conf", "Invalid value '" + conf[key] + "' for configuration key '" + key + "'.");
+                configured = true;
                 break;
+        }
+        if (!configured) {
+            unconf[key] = conf[key];
         }
     }
 
+    // if any unconfigured keys remain, forward to applyConfigurationOnLoad
+    if (Object.keys(unconf).length > 0) {
+        applyConfigurationOnLoad(category, unconf);
+    }
+
 }
+
+
+// Watch for components to be loaded before configuring them.
+//
+// Input:
+//   category (String) - the configuration category, "home" or "article"
+//   conf (Object) - an associative array mapping component identifiers to display states
+function applyConfigurationOnLoad(category, conf) {
+
+    const appContainer = document.getElementById("app-container");
+    if (appContainer != null) {
+        const appContainerObserver = new MutationObserver((m, o) => { onAppContainerMutation(m, o, category, conf); });
+        appContainerObserver.observe(appContainer, { childList: true, subtree: true, attributes: false, characterData: false });
+    } else {
+        logUnexpectedEvent("dom", "No app container found.");
+    }
+
+}
+
 
 // Apply a renderer to all of the elements matching a given key from the
 // siteConf structure.
@@ -166,30 +247,36 @@ function applyConfiguration(conf) {
 // Input:
 //   key - the key from the siteConf structure
 //   render - a function taking a single DOMElement object as input
+//
+// Returns: true if at least one matching element was found; false otherwise
 function applyRenderer(key, render) {
 
     let gotMatch = false;
-    if (key.charAt(0) === "#" && key.length > 1) {
-
-        // component identified by id
-        const element = document.getElementById(key.substring(1, key.length));
-        if (element != null) {
-            gotMatch = true;
-            render(element);
-        }
-
-    } else if (key.charAt(0) === "." && key.length > 1) {
-
-        // component identified by class name
-        const elements = document.getElementsByClassName(key.substring(1, key.length));
-        if (elements != null) {
-            for (let i = 0; i < elements.length; i++) {
+    if (key.charAt(0) === "#") {
+        if (key.length > 1) {
+            // component identified by id
+            const element = document.getElementById(key.substring(1, key.length));
+            if (element != null) {
                 gotMatch = true;
-                render(elements[i]);
+                render(element);
             }
+        } else {
+            logUnexpectedEvent("conf", "Configuration key # with no id.");
         }
-
-    } else {
+    } else if (key.charAt(0) === ".") {
+        if (key.length > 1) {
+            // component identified by class name
+            const elements = document.getElementsByClassName(key.substring(1, key.length));
+            if (elements != null) {
+                for (let i = 0; i < elements.length; i++) {
+                    gotMatch = true;
+                   render(elements[i]);
+                }
+            }
+        } else {
+            logUnexpectedEvent("conf", "Configuration key . with no class name.");
+        }
+    } else if (key.length > 1) {
 
         // component identified by <h2>
         const headings = document.getElementsByTagName("H2");
@@ -197,21 +284,19 @@ function applyRenderer(key, render) {
             for (let i = 0; i < headings.length; i++) {
                 if (headings[i].innerHTML === key) {
                     gotMatch = true;
-                    const railRoot = findRailRoot(headings[i]);
-                    if (railRoot != null) {
-                        render(railRoot);
-                    } else {
+                    mapExpandableComponent(headings[i]).then((parts) => {
+                        render(parts.root);
+                    }).catch(() => {
                         logUnexpectedEvent("dom", "No rail root found for configuration key '" + key + "'.");
-                    }
+                    });
                 }
             }
         }
+    } else {
+        logUnexpectedEvent("conf", "Empy configuration key.");
     }
 
-    if (!gotMatch) {
-        // the key didn't match anything; this may indicate a change in the ABC site
-        logUnexpectedEvent("conf", "No matches for configuration key '" + key + "'.");
-    }
+    return gotMatch;
 
 }
 
@@ -221,54 +306,643 @@ function applyRenderer(key, render) {
 // configuration was previously 'saved' but is now fixed in siteConf.
 //
 // Input:
+//   category (String) - the configuration category, "home" or "article"
 //   conf (Object) - an array of component identifiers mapped to display states
-function cleanStoredValues(conf) {
+function cleanStoredValues(category, conf) {
 
-    for (const key of GM_listValues()) {
-        if (!(key in conf) || conf[key] !== 'saved') {
-            GM_deleteValue(key);
+    for (const storageKey of GM_listValues()) {
+        const storageCategory = storageKeyCategory(storageKey);
+        if (storageCategory != "home" && storageCategory != "article") {
+            // deprecated key from pre-2026 version
+            GM_deleteValue(storageKey);
+        } else if (storageCategory === category) {
+            const confKey = storageKeyBare(storageKey);
+            if (!(confKey in conf) || conf[confKey] !== 'saved') {
+                GM_deleteValue(storageKey);
+            }
         }
     }
 
 }
 
 
-// Find the root element of a rail component associated with a given
-// element. The rail component may either enclose the element, or be
-// contained within the element.
+// Get the <aside> element that contains the given element.
+//
+// Most of the time, the container is an <aside> element with class
+// Home_aside1__xxxxx or Article_aside__xxxxx, but occassionally it's a <div>,
+// so we use the class names.
 //
 // Input:
-//   element (DOMElement) - an element with the rail component
+//   e (DOMElement) - an element
 //
-// Returns: the root element of the rail component, or null if no element is found
-function findRailRoot(element) {
+// Returns: the enclosing <aside> element if it exists, or null otherwise
+function getContainingAside(e) {
 
-    // first, search downwards for a rail component contained within the element
-    let railRootElement = element;
-    while (railRootElement != null && (!railRootElement.hasAttribute('class') || !railRootElement.className.startsWith("Rail_root__"))) {
-        railRootElement = railRootElement.firstElementChild;
-    }
-    if (railRootElement != null) {
-        return railRootElement;
+    let container = e;
+    while (container != null && !container.className.startsWith("Home_aside1__") && !container.className.startsWith("Article_aside__")) {
+        container = container.parentElement;
     }
 
-    // now search upwards for a rail component containing the element
-    railRootElement = element;
-    while (railRootElement != null && (!railRootElement.hasAttribute('class') || !railRootElement.className.startsWith("Rail_root__"))) {
-        railRootElement = railRootElement.parentElement;
-    }
-
-    return railRootElement;
+    return container;
 
 }
 
 
-// Log an unexpected configuration value or DOM structure. For now, we just
-// add a warning to the console.
+// Get the type of page corresponding to a URL.
+//
+// Input:
+//  url (String) - the page URL
+//
+// Returns: "home" for the home page; "article" for an article; "test" for unit tests
+//    null if the URL is not one recognises by this script
+function getPageType(url) {
+
+    if (url === "https://www.abc.net.au/") {
+        return "home";
+    } else if (url.search(/^https:\/\/www\.abc\.net\.au\/news\/\d\d\d\d-\d\d-\d\d/) != -1) {
+        return "article";
+    } else if (url.startsWith("file://")) {
+        return "test";
+    }
+
+    return null;
+
+}
+
+
+// Create Promise object that will resolve when a content matching a given
+// specification has loaded
+//
+// Input:
+//  container (DOMElement) - the element to watch for mutations
+//  matcher (function) - the matching function
+//
+// The matching function accepts the container as its only parameter. It should
+// return null if the content has not been loaded, or the return value expected
+// by the Promise user otherwise.
+function makePromiseOnLoad(container, matcher) {
+
+    const match0 = matcher(container);
+    if (matcher(container)) {
+        // the target content already exists
+        return Promise.resolve(match0);
+    } else {
+        // set a MutationObserver to wait for matching content
+        return new Promise((resolve, reject) => {
+            const observer = new MutationObserver((m , o) => {
+                const match = matcher(container);
+                if (match != null) {
+                    // stop observeing and resolve the promise
+                    o.disconnect();
+                    resolve(match);
+                }
+            });
+            observer.observe(container, { childList: true, subtree: true, attributes: false, characterData: false });
+        });
+    }
+
+}
+
+
+// Find the components of an article summary used for renderExpandable().
+//
+// The article summary has the following structure, where the xxxxx's are
+// sequences of letters and numbers with no obvious meaning.
+//
+// <div class="ArticleSummary_summary__xxxxx Article_head__xxxxx">
+//   <div class="Article_main__xxxxx">
+//     <h2>In Short</h2>
+//     ...a series of <p> elements containing the body...
+//   </div>
+// </div>
+//
+// Input:
+//   container (DOMElement) - the root element of the article summary
+//
+// Returns: as mapExpandableComponent()
+function mapExpandableArticleSummary(container) {
+
+    if (container.className.startsWith("ArticleSummary_summary__")) {
+        return Promise.resolve({
+            root: container,
+            header: container.querySelector("h2"),
+            content: container.querySelectorAll("p, h2:not(h2:first-of-type)")
+        });
+    } else {
+        // not an article summary
+        return Promise.reject(new ReferenceError("A container passed to mapExpandableArticleSummary() is not an article summary."));
+    }
+
+}
+
+
+// Find the components of an <aside> element (used in the sidebar).
+//
+// "Aside" elements have several slightly different structures, but the basic
+// idea is:
+//
+//  <aside class="Article_aside_xxxxx"> or <div class="Home_aside1__xxxxx">
+//     <div class="Rail_header__xxxxxx">...</div> or <h2>...<h2>
+//     ...more elements...
+//  </aside> or </div>
+//
+// Input:
+//   container (DOMElement) - the <aside> element
+//
+// Returns: as mapExpandableComponent()
+function mapExpandableAside(container) {
+
+    // identify known header elements
+    function isAsideHeader(e) {
+        if (e.tagName === "H2" || e.tagName === "H3") {
+            return true;
+        } else if (e.hasAttribute("class") && e.className.startsWith("Rail_header__")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    // the root element is the <aside> element itself
+    let parts = { root: container };
+
+    // descend until we find the header
+    parts.header = container.firstElementChild;
+    while (parts.header != null && !isAsideHeader(parts.header)) {
+        parts.header = parts.header.firstElementChild;
+    }
+
+    if (parts.header != null) {
+
+        // the content is made up of the siblings of the header
+        parts.content = [];
+        let e = parts.header.nextElementSibling;
+        while (e != null) {
+            parts.content.push(e);
+            e = e.nextElementSibling;
+        }
+
+        return Promise.resolve(parts);
+
+    } else {
+
+        // we can't expand elements without a header, so give up
+        return Promise.reject(new ReferenceError("No header found in mapExpandableAside()."));
+
+    }
+
+}
+
+
+// Find the parts of an expandable element.
+//
+// Input:
+//   element (DOMElement) - an element within the componnet
+//
+// Returns: a Promise for an associative array with properties root, header, content
+function mapExpandableComponent(element) {
+
+    // identify known expandable components
+    function isExpandableComponentRoot(e) {
+        if (e.hasAttribute('class')) {
+            if (e.className.startsWith("ArticleSummary_summary__")) {
+                return "ArticleSummary";
+            } else if (e.className.startsWith("Home_aside1__") || e.className.startsWith("Article_aside__")) {
+                return "Aside";
+            } else if (e.className.startsWith("Panel_root__")) {
+                return "PanelRoot";
+            } else if (e.className.startsWith("Rail_root__")) {
+                return "RailRoot";
+            } else if (e.className.startsWith("TopStories_container__")) {
+                return "TopStories";
+            } else if (e.className.startsWith("ZendeskForm_zendeskForm__")) {
+                return "ZendeskForm";
+            }
+        }
+        return null;
+    }
+
+    // first, search downwards for a recognised root element contained within the element
+    let e = element;
+    while (e != null && !isExpandableComponentRoot(e)) {
+        e = e.firstElementChild;
+    }
+
+    if (e == null) {
+        // now search upwards for a recognised root element containing the element
+        e = element;
+        while (e != null && !isExpandableComponentRoot(e)) {
+            e = e.parentElement;
+        }
+    }
+
+    // invoke the mapper for the kind of root we found
+    if (e != null) {
+        switch (isExpandableComponentRoot(e)) {
+            case "ArticleSummary": return mapExpandableArticleSummary(e);
+            case "Aside": return mapExpandableAside(e);
+            case "PanelRoot": return mapExpandablePanel(e);
+            case "RailRoot": return mapExpandableRailComponent(e);
+            case "TopStories": return mapExpandableTopStories(e);
+            case "ZendeskForm": return mapExpandableContactForm(e);
+            default: Promise.reject(new ReferenceError("Unrecognised root element."));
+        }
+    } else {
+        return Promise.reject(new ReferenceError("No root element found."));
+    }
+
+}
+
+
+// Find the components of a contact form used for renderExpandable().
+//
+// The contact form has the following structure, where the xxxxx's are
+// sequences of letters and numbers with no obvious meaning.
+//
+// <div class="ZendeskForm_zendeskForm__xxxxx" data-component="ZendeskForm">
+//   <div data-component="ZendeskFormUI">
+//     <h3>Contact...</h3>
+//     <form>...</form>
+//   </div>
+// </div>
+//
+// Input:
+//   container (DOMElement) - the root element of the article summary
+//
+// Returns: as mapExpandableComponent()
+function mapExpandableContactForm(container) {
+
+    // map the contact form synchronously for makePromiseOnLoad()
+    function mapExpandableContactFormSync(container) {
+        const header = container.querySelector("h3");
+        const content = container.querySelector("form");
+        if (header != null && content != null) {
+            return {
+                root: container,
+                header: container.querySelector("h3"),
+                content: container.querySelector("form")
+            }
+        } else {
+            return null;
+        }
+    }
+
+    if (container.className.startsWith("ZendeskForm_zendeskForm__")) {
+        // the contact form isn't loaded right away, so make a promise to return it
+        return makePromiseOnLoad(container, mapExpandableContactFormSync);
+    } else {
+        // not a contact form
+        return Promise.reject(new ReferenceError("mapExpandableContactForm() called on an unrecognised container."));
+    }
+
+}
+
+
+// Find the components of an expandable panel for use with renderExpandable.
+//
+// Panels have thhe structure below, where the xxxxxx's are a code that
+// differs from component to component but has no obvious meaning.
+//
+// <div id="..." or class="...">
+//   <div class="Panel_root__xxxxxx">
+//     <div class="Panel_content__xxxxxx">
+//       <div class="Rail_header__xxxxxx">
+//         <h2>...header text...</h2>
+//         <div>...introductory text...</div>
+//       </div>
+//     <div>...form content...</div>
+//   </div>
+// </div>
+//
+// Input:
+//   container (DOMElement) - the root element of the rail component
+//
+// Returns: as mapExpandableComponent()
+function mapExpandablePanel(container) {
+
+    if (container.className.startsWith("Panel_root__")) {
+        // first, look for the Panel_content element
+        let parts = { root: container, content: [] };
+        let panelContent = null;
+        let e = parts.root.firstElementChild;
+        while (e != null) {
+            if (e.className != null && e.className.startsWith("Panel_content__")) {
+                // found it
+                panelContent = e;
+                break;
+            }
+            e = e.nextElementSibling;
+        }
+
+        if (panelContent != null) {
+            // now, look for the Rail_header element and content
+            let e = panelContent.firstElementChild;
+            while (e != null) {
+                if (e.className != null && e.className.startsWith("Rail_header__")) {
+                    // the h2 child of Rail_header is the header; everything afterwards is content
+                    for (let i = 0; i < e.children.length; i++) {
+                        if (e.children.item(i).tagName == "H2") {
+                            parts.header = e.children.item(i);
+                        } else if ('header' in parts && parts.header != null) {
+                            parts.content.push(e.children.item(i));
+                        }
+                    }
+                } else if ('header' in parts && parts.header != null) {
+                    // elements after Rail_header are content
+                    parts.content.push(e);
+                }
+                e = e.nextElementSibling;
+            }
+        }
+        return Promise.resolve(parts);
+    } else {
+        // not a panel we recognise
+        return Promise.reject(new ReferenceError("mapExpandablePanel() called on an unrecognised panel."));
+    }
+
+}
+
+
+// Find the components of a "rail" element for use with renderExpandable().
+//
+// Rail components have the structure below, where the xxxxxx's are a code that
+// differs from component to component but has no obvious meaning.
+//
+// <div id="..." or class="...">
+//   <!-- sometimes a div contains the Rail_root -->
+//     <div class="Rail_root__xxxxxx Rail_sideScrolling__xxxxxx">
+//       <div class="Rail_header__xxxxxx">
+//         <h2>...</h2>
+//         <div>...</div>
+//       </div>
+//       <div class="Rail_scollNavigation__xxxxxx">
+//         <button title="Move left"><svg .../></button>
+//         <button title="Move right"><svg .../></button>
+//       </div>
+//       <div class="Rail_content__xxxxxx"> or <div class="Grid_row__xxxxxx">
+//         <ul .../>
+//       </div>
+//     </div>
+//   <!-- end of optional containing div -->
+// </div>
+//
+// Input:
+//   container (DOMElement) - the root element of the rail component
+//
+// Returns: as mapExpandableComponent()
+function mapExpandableRailComponent(container) {
+
+    if (container.className.startsWith("Rail_root__")) {
+        // search the children of the container for the components of interest
+        let parts = { root: container };
+        let e = parts.root.firstElementChild;
+        while (e != null) {
+            if (e.className != null) {
+                if (e.className.startsWith("Rail_header__")) {
+                    parts.header = e;
+                } else if (e.className.startsWith("Rail_scollNavigation__")) {
+                    parts.nav = e;
+                } else if (e.className.startsWith("Rail_content__")) {
+                    // in-text components use Rail_content__xxxxx
+                    parts.content = e;
+                } else if (e.className.startsWith("Grid_row__")) {
+                    // sidebars use Grid_row__xxxxx
+                    parts.content = e;
+                }
+            }
+            e = e.nextElementSibling;
+        }
+        return Promise.resolve(parts);
+    } else {
+        // not a rail component
+        return Promise.reject(new ReferenceError("mapExpandableRailComponent() called on non-rail component."));
+    }
+
+}
+
+
+// Find the components of the Top Stories box used for renderExpandable().
+//
+// The Top Stories has the following structure, where the xxxxx's are
+// sequences of letters and numbers with no obvious meaning.
+//
+// <div class="TopStories_container__G_Fb1__xxxxx" data-component="TopStories">
+//   <header class="SectionHeader_header__xxxxx TopStories_collectionHeading__xxxxx>
+//     ...
+//   </header>
+//   <ol class="TopStories_list__URxOJ">...</ol>
+// </div>
+//
+// Input:
+//   container (DOMElement) - the root element of the article summary
+//
+// Returns: as mapExpandablePanel()
+function mapExpandableTopStories(container) {
+
+    if (container.className.startsWith("TopStories_container__")) {
+        return Promise.resolve({
+            root: container,
+            header: container.querySelector("header"),
+            content: container.querySelector("ol")
+        });
+    } else {
+        // not the Top Stories box
+        return Promise.reject(new ReferenceError("mapExpandableTopStories() called on an unrecognised container."));
+    }
+
+}
+
+
+// Respond to mutation of the app container.
+//
+// Input:
+//   mutations (Array) - the list of mutations
+//   observer (MutationObserver) - the MutationObserver that triggered this event
+//   category (String) - the configuration category, "home" or "article"
+//   unconf (Object) - the unconfigured keys
+function onAppContainerMutation(mutations, observer, category, unconf) {
+
+    // stop observing
+    observer.disconnect();
+
+    // re-execute applyConfiguration to clean up unconfigured components
+    applyConfiguration(category, unconf);
+
+}
+
+
+// Respond to a click on an expandable component.
+//
+// Input:
+//   header (DOMElement) - the header element
+//   content (DOMElement or NodeList) - the content
+//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
+function onClickExpandable(header, content, saveKey = null) {
+
+    // work out the styles after clicking
+    let targetDisplayStyle;
+    let headerCursorStyle;
+    const currentDisplayStyle = (content instanceof NodeList || Array.isArray(content)) ?
+        content[0].style.display : content.style.display;
+    if (currentDisplayStyle === "none") {
+        // expanding a compressed component
+        targetDisplayStyle = "block";
+        headerCursorStyle = "zoom-out";
+    } else {
+        // compressing an expanded component
+        targetDisplayStyle = "none";
+        headerCursorStyle = "zoom-in";
+    }
+
+    // apply styles
+    header.style.cursor = headerCursorStyle;
+    if (content instanceof NodeList || Array.isArray(content)) {
+        content.forEach((e) => { e.style.display = targetDisplayStyle; });
+    } else {
+        content.style.display = targetDisplayStyle;
+    }
+
+    if (saveKey != null) {
+        // save state
+        GM_setValue(saveKey, targetDisplayStyle === "block" ? 'expanded' : 'compressed');
+    }
+
+}
+
+
+// Make a component expandable. In the expanded state, the component displays
+// as usual, but its header region changes colour when the cursor hovers over
+// it. When clicked, the contents are hidden. Similarly, clicking on the
+// header region in the compressed state re-expands the component.
+//
+// See the comments above each mapExpandable*() function for the structure of
+// each kind of expandable element.
+//
+// Input:
+//   element (DOMElement) - the root element of the component to be suppressed
+//   startCompressed (boolean) - true to start in the compressed state; false to start in the expanded state
+//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
+//
+// Returns: a Promise that resolve to true (successful) or false (failed)
+function renderExpandable(element, startCompressed = false, saveKey = null) {
+
+    // get the parts of the expandable element
+    return mapExpandableComponent(element).then((parts) => {
+        if ('root' in parts && parts.root != null) {
+            // make the container shrink and expand according to its contents
+            parts.root.style.height = 'fit-content';
+
+            // if the expandable element is inside the sidebar, align it to the top
+            let aside = getContainingAside(parts.root);
+            if (aside != null) {
+                aside.style.alignSelf = "start";
+            }
+        }
+
+        // suppress display of the component content
+        if ('content' in parts && parts.content != null) {
+            const targetDisplayStyle = startCompressed ? "none" : "";
+            if (parts.content instanceof NodeList || Array.isArray(parts.content)) {
+                parts.content.forEach((e) => { e.style.display = targetDisplayStyle; });
+            } else {
+                parts.content.style.display = targetDisplayStyle;
+            }
+            if ('header' in parts && parts.header != null) {
+                const originalHeaderBackground = parts.header.style.backgroundColor;
+                parts.header.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
+                parts.header.style.borderRadius = "8px";
+                parts.header.onclick = function () {
+                    onClickExpandable(parts.header, parts.content, saveKey);
+                };
+                parts.header.onmouseover = function() {
+                    parts.header.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
+                };
+                parts.header.onmouseout = function() {
+                    parts.header.style.backgroundColor = originalHeaderBackground;
+                };
+                return true;
+            } else {
+                logUnexpectedEvent("dom", "No expandable header found for " + stringifyElement(element));
+                return false;
+            }
+        } else {
+            logUnexpectedEvent("dom", "No expandable content found for " + stringifyElement(element));
+            return false;
+        }
+    }).catch((error) => {
+        // the element is not expandable; bail out
+        logUnexpectedEvent("dom", "Expandability not supported for " + stringifyElement(element) + "(" + error.message + ")");
+        return false;
+    });
+
+}
+
+
+// Hide a component by setting its display style to "none".
+//
+// Input:
+//   element (DOMElement) - the DOM element at the root of the component to be suppressed
+//
+// Returns: a Promise that resolves to true (this function never fails)
+function renderHidden(element) {
+
+    return mapExpandableComponent(element).then((parts) => {
+        // hide the whole component that contains the element
+        parts.root.style.display = "none";
+        return true;
+    }).catch(() => {
+        // only need to hide the given element
+        element.style.display = "none";
+        return true;
+    });
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Storage key functions.
+//
+// Configuration keys have the format 'category*key' where 'category' is the
+// page type and 'key' is the element identifier used in the siteConf structure.
+//
+////////////////////////////////////////////////////////////////////////////////
+function storageKey(category, key) {
+
+    return category + storageKeySeparator + key;
+
+}
+
+function storageKeyCategory(sk) {
+
+    const pos = sk.indexOf(storageKeySeparator);
+    if (pos != -1) {
+        return sk.substring(0, pos);
+    } else {
+        return null;
+    }
+
+}
+
+function storageKeyBare(sk) {
+
+    const pos = sk.indexOf(storageKeySeparator);
+    if (pos != -1) {
+        return sk.substring(pos + storageKeySeparator.length);
+    } else {
+        return sk;
+    }
+
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// The following functions are used to log an unexpected configuration value or
+// DOM structure. For now, we just add a warning to the console.
 //
 // Input:
 //   source (String) - 'conf' for local configuration errors; 'dom' for unexpected DOM structure
 //   message (String) - a message describing the unexpected event
+////////////////////////////////////////////////////////////////////////////////
 function logUnexpectedEvent(source, message) {
 
     let prefix = "logUnexpectedEvent called with invalid source";
@@ -285,126 +959,15 @@ function logUnexpectedEvent(source, message) {
 
 }
 
+// get a readable string for an element
+function stringifyElement(e) {
 
-// Respond to a click on an expandable rail component.
-//
-// Input:
-//   headerElement (DOMElement) - the rail header element
-//   contentElement (DOMElement) - the rail content element
-//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
-function onClickExpandable(headerElement, contentElement, saveKey = null) {
-
-    if (contentElement.style.display === "none") {
-        // expand a compressed element
-        contentElement.style.display = "block";
-        headerElement.style.cursor = "zoom-out";
-        if (saveKey != null) {
-            GM_setValue(saveKey, 'expanded');
-        }
+    if (e.hasAttribute('id') && e.id != null) {
+        return "#" + e.id;
+    } else if (e.hasAttribute('class') && e.classList.length > 0) {
+        return '.' + e.classList[0];
     } else {
-        contentElement.style.display = "none";
-        headerElement.style.cursor = "zoom-in";
-        if (saveKey != null) {
-            GM_setValue(saveKey, 'compressed');
-        }
+        return 'anonymous ' + e.tagName;
     }
-
-}
-
-
-// Make a "rail" component expandable. In the expanded state, the component
-// displays as usual, but its header region changes colour when the cursor
-// hovers over it. When clicked, the contents are hidden. Similarly, clicking
-// on the header region in the compressed state re-expands the component.
-//
-// The general structure of a rail component is as follows, where the xxxxx's
-// are code that differs from component to component but has no obvious
-// meaning.
-//
-//
-// <div id="..." or class="...">
-//   <!-- sometimes a div contains the Rail_root -->
-//     <div class="Rail_root__xxxxx Rail_sideScrolling__xxxxx">
-//       <div class="Rail_header__xxxxx">
-//         <h2>...</h2>
-//         <div>...</div>
-//       </div>
-//       <div class="Rail_scollNavigation__xxxxx">
-//         <button title="Move left"><svg .../></button>
-//         <button title="Move right"><svg .../></button>
-//       </div>
-//       <div class="Rail_content__xxxxx">
-//         <ul .../>
-//       </div>
-//     </div>
-//   <!-- end of optional containing div -->
-// </div>
-//
-// Input:
-//   element (DOMElement) - the root element of the rail component to be suppressed
-//   startCompressed (boolean) - true to start in the compressed state; false to start in the expanded state
-//   saveKey (string) - key for saving the state with GM_setValue(); null to disable saving
-function renderExpandable(element, startCompressed = false, saveKey = null) {
-
-    // find the rail root
-    let railRootElement = findRailRoot(element);
-    if (railRootElement == null) {
-        // couldn't find the rail root; bail out
-        logUnexpectedEvent("dom", "No rail root found for " + element.toString());
-        return;
-    }
-
-    // get the components of the rail root
-    let railHeaderElement = null;
-    let railNavigationElement = null;
-    let railContentElement = null;
-    let railChild = railRootElement.firstElementChild;
-    while (railChild != null) {
-        if(railChild.className != null) {
-            if (railChild.className.startsWith("Rail_header__")) {
-                railHeaderElement = railChild;
-            } else if (railChild.className.startsWith("Rail_scollNavigation__")) {
-                railNavigationElement = railChild;
-            } else if (railChild.className.startsWith("Rail_content__")) {
-                railContentElement = railChild;
-            }
-        }
-        railChild = railChild.nextElementSibling;
-    }
-
-    // suppress display of the rail content
-    if (railContentElement != null) {
-        railContentElement.style.display = startCompressed ? "none" : "";
-        if (railHeaderElement != null) {
-            const originalHeaderBackground = railHeaderElement.style.backgroundColor;
-            railHeaderElement.style.cursor = startCompressed ? "zoom-in" : "zoom-out";
-            railHeaderElement.style.borderRadius = "8px";
-            railHeaderElement.onclick = function () {
-                onClickExpandable(railHeaderElement, railContentElement, saveKey);
-            };
-            railHeaderElement.onmouseover = function() {
-                railHeaderElement.style.backgroundColor = 'var(--nw-colour-theme-surface-tint)';
-            };
-            railHeaderElement.onmouseout = function() {
-                railHeaderElement.style.backgroundColor = originalHeaderBackground;
-            };
-        } else {
-            logUnexpectedEvent("dom", "No rail header found for " + element.toString());
-        }
-    } else {
-        logUnexpectedEvent("dom", "No rail content found for " + element.toString());
-    }
-
-}
-
-
-// Hide a component by setting its display style to "none".
-//
-// Input:
-//   element (DOMElement) - the DOM element at the root of the component to be suppressed
-//
-function renderHidden(element) {
-
-    element.style.display = "none";
 
 }
