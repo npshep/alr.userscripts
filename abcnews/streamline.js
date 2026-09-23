@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-09-16
+// @version          2026-09-23
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -116,8 +116,8 @@ const siteConf = {
         '.ArticleSummary_summary__Zf0LG': 'compressed',
 
         // in-article panels linking to other stories -
-        // "More about...", "More analysis..." and "Sign up to...", respectively
-        '.RecirculationRecommendations_container__7nH0U': 'hidden',
+        // "More about/on/news...", "More analysis..." and "Sign up to...", respectively
+        '.RecirculationRecommendationsLayout_container__57DMg': 'compressed',
         '.AnalysisCarouselEmbed_container__9jCk1': 'compressed',
         '.Newsletter_newsletterContainer__ki2K6': 'compressed',
 
@@ -293,7 +293,7 @@ function applyRenderer(key, render) {
             }
         }
     } else {
-        logUnexpectedEvent("conf", "Empy configuration key.");
+        logUnexpectedEvent("conf", "Empty configuration key.");
     }
 
     return gotMatch;
@@ -504,10 +504,12 @@ function mapExpandableComponent(element) {
 
     // identify known expandable components
     function isExpandableComponentRoot(e) {
-        if (e.hasAttribute('class')) {
+        if (e.tagName === "ASIDE") {
+            return "Aside";
+        } else if (e.hasAttribute('class')) {
             if (e.className.startsWith("ArticleSummary_summary__")) {
                 return "ArticleSummary";
-            } else if (e.className.startsWith("Home_aside1__") || e.className.startsWith("Article_aside__")) {
+            } else if (e.className.startsWith("Home_aside1__")) {
                 return "Aside";
             } else if (e.className.startsWith("Panel_root__")) {
                 return "PanelRoot";
