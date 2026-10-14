@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-09-23
+// @version          2026-10-14
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -353,13 +353,13 @@ function getContainingAside(e) {
 // Input:
 //  url (String) - the page URL
 //
-// Returns: "home" for the home page; "article" for an article; "test" for unit tests
-//    null if the URL is not one recognises by this script
+// Returns: "home" for the home page; "article" for an article; "test" for unit tests;
+//    null if the URL is not one recognised by this script
 function getPageType(url) {
 
     if (url === "https://www.abc.net.au/") {
         return "home";
-    } else if (url.search(/^https:\/\/www\.abc\.net\.au\/news\/\d\d\d\d-\d\d-\d\d/) != -1) {
+    } else if (url.search(/^https:\/\/www\.abc\.net\.au\/news\/(\w+\/)?\d\d\d\d-\d\d-\d\d/) != -1) {
         return "article";
     } else if (url.startsWith("file://")) {
         return "test";

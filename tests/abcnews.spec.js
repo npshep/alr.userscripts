@@ -401,9 +401,15 @@ describe('streamline.js', () => {
 
         });
 
-        it('recognises an article page', () => {
+        it('recognises an article page with no sub-catgeroy', () => {
 
             expect(getPageType('https://www.abc.net.au/news/2026-05-27/article-title/number')).toBe('article');
+
+        });
+
+        it('recognises an article page within a sub-category', () => {
+
+            expect(getPageType('https://www.abc.net.au/news/science/2026-05-27/article-title/number')).toBe('article');
 
         });
 
