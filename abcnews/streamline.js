@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             A Little ABC News
 // @namespace        https://www.alittleresearch.com.au
-// @version          2026-10-14
+// @version          2026-11-19
 // @description      Remove undesired components from the ABC News web site.
 // @author           Nick Sheppard
 // @license          MIT
@@ -96,7 +96,7 @@ const siteConf = {
         '#entertainment&Culture': 'saved',
 
         // the floating copy of Just In that sticks to the right when scrolling done
-        '.Home_justin__mnv4y Home_justinSticky__A9Hqa': 'hidden',
+        '.HomeLocalIntegrated_justin__WKZzC HomeLocalIntegrated_justinSticky__0XDhR': 'hidden',
 
         // marketing banners (usually promoting ABC iView)
         '.Home_marketingBannerMain__zEIHT': 'hidden',
